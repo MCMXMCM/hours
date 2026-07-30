@@ -1,0 +1,8 @@
+.DS_Store
+.build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+Tools/ContentCompiler/node_modules/
+Tools/ContentCompiler/Snapshots/
+Tools/ContentCompiler/Output/

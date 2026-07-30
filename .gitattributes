@@ -1,0 +1,2 @@
+HoursApp/Resources/base-office.sqlite filter=lfs diff=lfs merge=lfs -text
+HoursApp/Resources/ChurchOrgan.sf2 filter=lfs diff=lfs merge=lfs -text

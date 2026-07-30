@@ -1,0 +1,16 @@
+{
+  "name": "hours-content-compiler",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test Tests/*.test.ts",
+    "validate:fixture": "node Sources/cli.ts validate --input Fixtures/evening-pilot.json --allow-incomplete",
+    "compile:fixture": "node Sources/cli.ts compile --input Fixtures/evening-pilot.json --output ../../HoursApp/Resources/base-office.sqlite --allow-incomplete"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "parse5": "8.0.0"
+  }
+}

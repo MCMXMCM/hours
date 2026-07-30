@@ -1,0 +1,21 @@
+Nocturnale Romanum chant transcriptions
+
+Hours includes 1,547 chant transcriptions identified as material from the
+Nocturnale Romanum project.
+
+Upstream repository:
+https://github.com/Nocturnale-Romanum/nocturnale-romanum
+
+Pinned revision:
+84ce1514306be54bf4e693c9e8aa3bfd5e5aa3f2
+
+License: GNU General Public License version 3 only (GPL-3.0-only).
+The full license is included as GPL-3.0.txt.
+
+Hours packaging date: 2026-07-24.
+Hours modifications: selected transcriptions were assigned application
+identifiers and provenance records, combined with other office content, and
+packaged into SQLite.
+
+The exact corresponding source for this build, including editable GABC files
+and checksums, is published with the Hours source repository.

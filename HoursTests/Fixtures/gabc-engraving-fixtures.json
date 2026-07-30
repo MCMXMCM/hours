@@ -1,0 +1,23 @@
+[
+  {
+    "name": "pilot-opening",
+    "scoreID": "opening",
+    "gabc": "name: Deus in adiutorium; mode: 6; %% (c4) De(f)us(g) in(g) ad(g)ju(h)tó(g)ri(f)um(g) me(h)um(g) in(f)tén(g)de.(f.) (::)",
+    "eventCount": 13,
+    "neumeSizes": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  },
+  {
+    "name": "grouping-and-signs",
+    "scoreID": "signs",
+    "gabc": "name: signs; mode: 1; %% (c4) Ky(fg_)ri(h.w)e(ixj~) (;) test(k) (::)",
+    "eventCount": 5,
+    "neumeSizes": [2, 1, 1, 1]
+  },
+  {
+    "name": "clef-change-and-forced-break",
+    "scoreID": "clefs",
+    "gabc": "name: clefs; mode: 4; %% (c3) Al(dfe)le(g) (z) (f3) lú(hi)ia.(g.) (::)",
+    "eventCount": 7,
+    "neumeSizes": [3, 1, 2, 1]
+  }
+]

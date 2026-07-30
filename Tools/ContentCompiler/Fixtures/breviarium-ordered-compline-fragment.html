@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<body>
+  <div class="section">
+    <div class="section">
+      <h3>Lectio brevis</h3>
+      <div id="jube" class="chant" title="Iube Dómine benedícere"></div>
+      <script>
+        var gabc = "(c3) Iu(h)be(h) Dó(h)mi(h)ne(h) be(h)ne(h)dí(h)ce(g)re.(f.) (::)";
+        document.getElementById("jube");
+      </script>
+      <span class="red">Benedictio:</span>
+      <iframe
+        id="blessing"
+        src="/tones-api/lesson_ordinary_tone/readings.html?text=Noctem+qui%C3%A9tam+et+finem+perf%C3%A9ctum+conc%C3%A9dat+nobis+D%C3%B3minus+omn%C3%ADpotens."
+      ></iframe>
+      <p class="tr">May the almighty Lord grant us a quiet night and a perfect end.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section">
+      <h3>Prex poenitentialis</h3>
+      <span class="rubrics">Examen conscientiæ vel Pater Noster totum secreto.</span>
+      <p>Pater noster, qui es in cælis.</p>
+      <p>Confíteor Deo omnipoténti.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section">
+      <h4>Canticum: Nunc dimittis</h4>
+
+      <div id="salva-before" class="chant" title="Salva nos, Dómine" data-mode="3a"></div>
+      <script>
+        var gabc = "(c4) Sal(g)va(hj) nos,(j.) *() Dó(jk)mi(j)ne.(ji) (::)";
+        document.getElementById("salva-before");
+      </script>
+      <p class="tr">Protect us, Lord, while we are awake.</p>
+
+      <div id="nunc" class="compact chant"></div>
+      <p class="tr">Now thou dost dismiss thy servant, O Lord.</p>
+      <ol start="2" class="with_translation">
+        <li>Quia vidérunt óculi mei * salutáre tuum,</li>
+        <p class="tr">Because my eyes have seen thy salvation,</p>
+        <li>Quod parásti * ante fáciem ómnium populórum,</li>
+        <p class="tr">Which thou hast prepared before all peoples:</p>
+      </ol>
+      <!-- The source emits this score script after the remaining prose even
+           though its visible container belongs before it. -->
+      <script>
+        var gabc = "(c4) 1. Nunc(g) di(hj)mít(j)tis(j) ser(j)vum(j) tu(k)um.(j) (::)";
+        document.getElementById("nunc");
+      </script>
+
+      <div id="salva-after" class="chant" title="Salva nos, Dómine" data-mode="3a"></div>
+      <script>
+        var gabc = "(c4) Sal(g)va(hj) nos,(j.) *() Dó(jk)mi(j)ne.(ji) (::)";
+        document.getElementById("salva-after");
+      </script>
+      <p class="tr">Protect us, Lord, while we are awake.</p>
+    </div>
+  </div>
+</body>
+</html>

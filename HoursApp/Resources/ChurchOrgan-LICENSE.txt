@@ -1,0 +1,22 @@
+Bureå Funeral Chapel Organ — Gedackt 8′ stop
+
+Original stereo pipe-organ samples by Lars Palo.
+
+Upstream distribution:
+https://www.purgatorycreek.com/index.php/lars-pipe-organs/
+
+Original project information:
+https://familjenpalo.se/vpo/download/
+
+Hours adapts the left and right Korg KMP/KSF multisamples into a single-preset
+SoundFont 2 bank. Every chromatically sampled stereo pipe from MIDI 36 through
+96 is retained, together with its original sustain-loop metadata. Their levels
+are normalized for a consistent teaching guide, and the PCM is repackaged
+without lossy compression.
+
+Bundled SF2 SHA-256:
+5e30e974376a6693ebfd604d49cafd29825e272c73f7bec87392f33906f8f1d6
+
+The original samples and this adapted sound bank are licensed under the
+Creative Commons Attribution-ShareAlike 2.5 Generic license:
+https://creativecommons.org/licenses/by-sa/2.5/

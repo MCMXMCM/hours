@@ -1,0 +1,1010 @@
+{
+  "manifest": {
+    "schemaVersion": 1,
+    "corpusVersion": "development-do-79a596eeb682",
+    "minimumAppVersion": "0.1.0",
+    "createdAt": "2026-07-24T00:00:00Z",
+    "rubrics": "Rubrics 1960 - 1960",
+    "sources": [
+      {
+        "name": "Divinum Officium",
+        "revision": "79a596eeb68268c35334f25122af7ffc376934d5",
+        "license": "MIT",
+        "url": "https://github.com/DivinumOfficium/divinum-officium",
+        "checksum": "9c31cdae75c9d0b48340a462c14e166781e47adda0a2b73b86e49639c49cc9cc"
+      }
+    ],
+    "coverage": {
+      "startDate": {
+        "year": 2026,
+        "month": 7,
+        "day": 23
+      },
+      "endDate": {
+        "year": 2026,
+        "month": 7,
+        "day": 23
+      },
+      "expectedOfficeCount": 8,
+      "generatedOfficeCount": 8,
+      "unresolvedScoreCount": 0,
+      "ambiguousScoreCount": 0,
+      "isSample": true
+    },
+    "packSHA256": "",
+    "signature": ""
+  },
+  "days": [
+    {
+      "date": {
+        "year": 2026,
+        "month": 7,
+        "day": 23
+      },
+      "observanceID": "divinum-officium/2026-07-23/s-apollinaris-episcopi-et-martyris",
+      "titleLatin": "S. Apollinaris Episcopi et Martyris",
+      "titleEnglish": null,
+      "rank": "thirdClass",
+      "color": "red",
+      "season": "Tempora: Feria quinta infra Hebdomadam VIII post Octavam Pentecostes",
+      "eveningContext": "ferialVespers",
+      "commemorations": [],
+      "sourceVersion": "Rubrics 1960 - 1960"
+    }
+  ],
+  "offices": [
+    {
+      "id": "2026-07-23-matins",
+      "date": {
+        "year": 2026,
+        "month": 7,
+        "day": 23
+      },
+      "hour": "matins",
+      "titleLatin": "Ad Matutinum",
+      "titleEnglish": "Matins",
+      "contextLabel": "S. Apollinaris Episcopi et Martyris",
+      "sourceVersion": "Rubrics 1960 - 1960 · pinned Divinum Officium development import",
+      "sections": [
+        {
+          "id": "matins-matutinum1",
+          "kind": "opening",
+          "title": "Incipit",
+          "rubric": null,
+          "latin": "Incipit\n\n℣. Dómine, lábia ︎+︎ mea apéries.\n\n℟. Et os meum annuntiábit laudem tuam.\n\n℣. Deus ✠ in adiutórium meum inténde.\n\n℟. Dómine, ad adiuvándum me festína.\n\nGlória Patri, et Fílio, * et Spirítui Sancto.\n\nSicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAllelúia.",
+          "english": "Start\n\n℣. O Lord, ︎+︎ open thou my lips.\n\n℟. And my mouth shall declare thy praise.\n\n℣. O God, ✠ come to my assistance;\n\n℟. O Lord, make haste to help me.\n\nGlory be to the Father, and to the Son, * and to the Holy Ghost.\n\nAs it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAlleluia.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum2",
+          "kind": "invitatory",
+          "title": "Invitatorium",
+          "rubric": "Antiphona ex Commune aut Festo",
+          "latin": "Invitatorium {Antiphona ex Commune aut Festo}\n\nAnt. Regem Mártyrum Dóminum, * Veníte, adorémus.\n\nAnt. Regem Mártyrum Dóminum, * Veníte, adorémus.\n\nVeníte, exsultémus Dómino, iubilémus Deo, salutári nostro: præoccupémus fáciem eius in confessióne, et in psalmis iubilémus ei.\n\nAnt. Regem Mártyrum Dóminum, * Veníte, adorémus.\n\nQuóniam Deus magnus Dóminus, et Rex magnus super omnes deos, quóniam non repéllet Dóminus plebem suam: quia in manu eius sunt omnes fines terræ, et altitúdines móntium ipse cónspicit.\n\nAnt. Veníte, adorémus.\n\nQuóniam ipsíus est mare, et ipse fecit illud, et áridam fundavérunt manus eius (genuflectitur) veníte, adorémus, et procidámus ante Deum: plorémus coram Dómino, qui fecit nos, quia ipse est Dóminus, Deus noster; nos autem pópulus eius, et oves páscuæ eius.\n\nAnt. Regem Mártyrum Dóminum, * Veníte, adorémus.\n\nHódie, si vocem eius audiéritis, nolíte obduráre corda vestra, sicut in exacerbatióne secúndum diem tentatiónis in desérto: ubi tentavérunt me patres vestri, probavérunt et vidérunt ópera mea.\n\nAnt. Veníte, adorémus.\n\nQuadragínta annis próximus fui generatióni huic, et dixi: Semper hi errant corde, ipsi vero non cognovérunt vias meas: quibus iurávi in ira mea: Si introíbunt in réquiem meam.\n\nAnt. Regem Mártyrum Dóminum, * Veníte, adorémus.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Veníte, adorémus.\n\nAnt. Regem Mártyrum Dóminum, * Veníte, adorémus.",
+          "english": "Invitatory {Antiphon from the Common or Feast}\n\nAnt. The Lord, the King of Martyrs, * O come, let us worship.\n\nAnt. The Lord, the King of Martyrs, * O come, let us worship.\n\nCome let us praise the Lord with joy: let us joyfully sing to God our saviour. Let us come before his presence with thanksgiving; and make a joyful noise to him with psalms.\n\nAnt. The Lord, the King of Martyrs, * O come, let us worship.\n\nFor the Lord is a great God, and a great King above all gods. For the Lord will not cast off his people: for in his hand are all the ends of the earth, and the heights of the mountains are his.\n\nAnt. O come, let us worship.\n\nFor the sea is his, and he made it: and his hands formed the dry land. (genuflect) Come let us adore and fall down: and weep before the Lord that made us: For he is the Lord our God: and we are the people of his pasture and the sheep of his hand.\n\nAnt. The Lord, the King of Martyrs, * O come, let us worship.\n\nToday if you shall hear his voice, harden not your hearts: As in the provocation, according to the day of temptation in the wilderness: where your fathers tempted me, they proved me, and saw my works.\n\nAnt. O come, let us worship.\n\nForty years long was I offended with that generation, and I said: These always err in heart. And these men have not known my ways: so I swore in my wrath that they shall not enter into my rest.\n\nAnt. The Lord, the King of Martyrs, * O come, let us worship.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. O come, let us worship.\n\nAnt. The Lord, the King of Martyrs, * O come, let us worship.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum3",
+          "kind": "hymn",
+          "title": "Hymnus",
+          "rubric": "ex Commune aut Festo",
+          "latin": "Hymnus {ex Commune aut Festo}\n\nDeus tuórum mílitum\n\nSors, et córona, prǽmium,\n\nLaudes canéntes Mártyris\n\nAbsólve nexu críminis.\n\nHic nempe mundi gáudia,\n\nEt blanda fraudum pábula\n\nImbúta felle députans,\n\nPervénit ad cæléstia.\n\nPœnas cucúrrit fórtiter,\n\nEt sústulit viríliter,\n\nFundénsque pro te sánguinem,\n\nÆtérna dona póssidet.\n\nOb hoc precátu súpplici\n\nTe póscimus, piíssime;\n\nIn hoc triúmpho Mártyris\n\nDimítte noxam sérvulis.\n\nLaus et perénnis glória\n\nPatri sit, atque Fílio,\n\nSancto simul Paráclito,\n\nIn sempitérna sǽcula.\n\nAmen.",
+          "english": "Hymn {from the Common or Feast}\n\nO God, of those that fought thy fight,\n\nPortion, and prize, and crown of light,\n\nBreak every bond of sin and shame\n\nAs now we praise thy martyr's name.\n\nHe recked not of the world's allure,\n\nBut sin and pomp of sin forswore:\n\nKnew all their gall, and passed them by,\n\nAnd reached the throne prepared on high.\n\nBravely the course of pain he ran,\n\nAnd bare his torments as a man:\n\nFor love of thee his blood outpoured,\n\nAnd thus obtained the great reward.\n\nWith humble voice and suppliant word\n\nWe pray thee therefore, holy Lord,\n\nWhile we thy martyr's feast-day keep,\n\nForgive thy loved and erring sheep.\n\nGlory and praise for aye be done\n\nTo God the Father, and the Son,\n\nAnd Holy Ghost, who reign on high,\n\nOne God, to all eternity.\n\nAmen.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum4",
+          "kind": "reading",
+          "title": "Psalmi cum lectionibus",
+          "rubric": "Antiphonæ ex Psalterio secundum tempora",
+          "latin": "Psalmi cum lectionibus {Antiphonæ ex Psalterio secundum tempora}\n\nAd Nocturnum\n\nAnt. In Deo salutáre meum * et glória mea: et spes mea in Deo est.\n\nPsalmus 61 [1]\n\n61:2 Nonne Deo subiécta erit ánima mea? * ab ipso enim salutáre meum.\n\n61:3 Nam et ipse Deus meus, et salutáris meus: * suscéptor meus, non movébor ámplius.\n\n61:4 Quoúsque irrúitis in hóminem? * interfícitis univérsi vos: tamquam paríeti inclináto et macériæ depúlsæ?\n\n61:5 Verúmtamen prétium meum cogitavérunt repéllere, cucúrri in siti: * ore suo benedicébant, et corde suo maledicébant.\n\n61:6 Verúmtamen Deo subiécta esto, ánima mea: * quóniam ab ipso patiéntia mea.\n\n61:7 Quia ipse Deus meus, et salvátor meus: * adiútor meus, non emigrábo.\n\n61:8 In Deo salutáre meum, et glória mea: * Deus auxílii mei, et spes mea in Deo est.\n\n61:9 Speráte in eo omnis congregátio pópuli, effúndite coram illo corda vestra: * Deus adiútor noster in ætérnum.\n\n61:10 Verúmtamen vani fílii hóminum, mendáces fílii hóminum in statéris: * ut decípiant ipsi de vanitáte in idípsum.\n\n61:11 Nolíte speráre in iniquitáte, et rapínas nolíte concupíscere: * divítiæ si áffluant, nolíte cor appónere.\n\n61:12 Semel locútus est Deus, duo hæc audívi, quia potéstas Dei est, et tibi, Dómine, misericórdia: * quia tu reddes unicuíque iuxta ópera sua.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. In Deo salutáre meum et glória mea: et spes mea in Deo est.",
+          "english": "Psalms with lections {Antiphons from the Psalter for the season of the Church year}\n\nAt the Nocturn\n\nAnt. In God is my salvation * and my glory: and my hope is in God.\n\nPsalm 61 [1]\n\n61:2 Shall not my soul be subject to God? * for from him is my salvation.\n\n61:3 For he is my God and my saviour: * he is my protector, I shall be moved no more.\n\n61:4 How long do you rush in upon a man? * you all kill, as if you were thrusting down a leaning wall, and a tottering fence.\n\n61:5 But they have thought to cast away my price; I ran in thirst: * they blessed with their mouth, but cursed with their heart.\n\n61:6 But be thou, O my soul, subject to God: * for from him is my patience.\n\n61:7 For he is my God and my saviour: * he is my helper, I shall not be moved.\n\n61:8 In God is my salvation and my glory: * he is the God of my help, and my hope is in God.\n\n61:9 Trust in him, all ye congregation of people: pour out your hearts before him. * God is our helper for ever.\n\n61:10 But vain are the sons of men, the sons of men are liars in the balances: * that by vanity they may together deceive.\n\n61:11 Trust not in iniquity, and cover not robberies: * if riches abound, set not your heart upon them.\n\n61:12 God hath spoken once, these two things have I heard, that power belongeth to God, and mercy to thee, O Lord; * for thou wilt render to every man according to his works.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. In God is my salvation and my glory: and my hope is in God.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum5",
+          "kind": "opening",
+          "title": "Section 5",
+          "rubric": "[2]",
+          "latin": "Ant. Vidéte ópera Dómini, * et audítam fácite vocem laudis eius.\n\nPsalmus 65(1-12) [2]\n\n65:1 Iubiláte Deo, omnis terra, psalmum dícite nómini eius: * date glóriam laudi eius.\n\n65:3 Dícite Deo: Quam terribília sunt ópera tua, Dómine! * in multitúdine virtútis tuæ mentiéntur tibi inimíci tui.\n\n65:4 Omnis terra adóret te, et psallat tibi: * psalmum dicat nómini tuo.\n\n65:5 Veníte, et vidéte ópera Dei: * terríbilis in consíliis super fílios hóminum.\n\n65:6 Qui convértit mare in áridam, in flúmine pertransíbunt pede: * ibi lætábimur in ipso.\n\n65:7 Qui dominátur in virtúte sua in ætérnum, óculi eius super gentes respíciunt: * qui exásperant non exalténtur in semetípsis.\n\n65:8 Benedícite, gentes, Deum nostrum: * et audítam fácite vocem laudis eius,\n\n65:9 Qui pósuit ánimam meam ad vitam: * et non dedit in commotiónem pedes meos.\n\n65:10 Quóniam probásti nos, Deus: * igne nos examinásti, sicut examinátur argéntum.\n\n65:11 Induxísti nos in láqueum, posuísti tribulatiónes in dorso nostro: * imposuísti hómines super cápita nostra.\n\n65:12 Transívimus per ignem et aquam: * et eduxísti nos in refrigérium.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Vidéte ópera Dómini, et audítam fácite vocem laudis eius.",
+          "english": "Ant. Behold the works of the Lord * and make the voice of his praise to be heard.\n\nPsalm 65(1-12) [2]\n\n65:1 Shout with joy to God, all the earth, sing ye a psalm to his name; * give glory to his praise.\n\n65:3 Say unto God, How terrible are thy works, O Lord! * in the multitude of thy strength thy enemies shall lie to thee.\n\n65:4 Let all the earth adore thee, * and sing to thee: let it sing a psalm to thy name.\n\n65:5 Come and see the works of God; * who is terrible in his counsels over the sons of men.\n\n65:6 Who turneth the sea into dry land, in the river they shall pass on foot: * there shall we rejoice in him.\n\n65:7 Who by his power ruleth for ever: his eyes behold the nations; * let not them that provoke him be exalted in themselves.\n\n65:8 O bless our God, ye Gentiles: * and make the voice of his praise to be heard.\n\n65:9 Who hath set my soul to live: * and hath not suffered my feet to be moved:\n\n65:10 For thou, O God, hast proved us: * thou hast tried us by fire, as silver is tried.\n\n65:11 Thou hast brought us into a net, thou hast laid afflictions on our back: * thou hast set men over our heads.\n\n65:12 We have passed through fire and water, * and thou hast brought us out into a refreshment.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. Behold the works of the Lord and make the voice of his praise to be heard.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum6",
+          "kind": "opening",
+          "title": "Section 6",
+          "rubric": "[3]",
+          "latin": "Ant. Audíte, omnes * qui timétis Deum, quanta fecit ánimæ meæ.\n\nPsalmus 65(13-20) [3]\n\n65:13 Introíbo in domum tuam in holocáustis: * reddam tibi vota mea, quæ distinxérunt lábia mea.\n\n65:14 Et locútum est os meum, * in tribulatióne mea.\n\n65:15 Holocáusta medulláta ófferam tibi cum incénso aríetum: * ófferam tibi boves cum hircis.\n\n65:16 Veníte, audíte, et narrábo, omnes, qui timétis Deum: * quanta fecit ánimæ meæ.\n\n65:17 Ad ipsum ore meo clamávi, * et exaltávi sub lingua mea.\n\n65:18 Iniquitátem si aspéxi in corde meo, * non exáudiet Dóminus.\n\n65:19 Proptérea exaudívit Deus, * et atténdit voci deprecatiónis meæ.\n\n65:20 Benedíctus Deus, * qui non amóvit oratiónem meam, et misericórdiam suam a me.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Audíte, omnes qui timétis Deum, quanta fecit ánimæ meæ.",
+          "english": "Ant. Come and hear, all ye that fear God * what great things he hath done for my soul.\n\nPsalm 65(13-20) [3]\n\n65:13 I will go into thy house with burnt offerings: * I will pay thee my vows, which my lips have uttered,\n\n65:14 And my mouth hath spoken, * when I was in trouble.\n\n65:15 I will offer up to thee holocausts full of marrow, with burnt offerings of rams: * I will offer to thee bullocks with goats.\n\n65:16 Come and hear, all ye that fear God, * and I will tell you what great things he hath done for my soul.\n\n65:17 I cried to him with my mouth: * and I extolled him with my tongue.\n\n65:18 If I have looked at iniquity in my heart, * the Lord will not hear me.\n\n65:19 Therefore hath God heard me, * and hath attended to the voice of my supplication.\n\n65:20 Blessed be God, * who hath not turned away my prayer, nor his mercy from me.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. Come and hear, all ye that fear God what great things he hath done for my soul.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum7",
+          "kind": "opening",
+          "title": "Section 7",
+          "rubric": "[4]",
+          "latin": "Ant. Exsúrgat Deus, * et dissipéntur inimíci eius. ‡\n\nPsalmus 67(2-11) [4]\n\n67:2 Exsúrgat Deus, et dissipéntur inimíci eius, * ‡ et fúgiant qui odérunt eum, a fácie eius.\n\n67:3 Sicut déficit fumus, defíciant: * sicut fluit cera a fácie ignis, sic péreant peccatóres a fácie Dei.\n\n67:4 Et iusti epuléntur, et exsúltent in conspéctu Dei: * et delecténtur in lætítia.\n\n67:5 Cantáte Deo, psalmum dícite nómini eius: * iter fácite ei, qui ascéndit super occásum: (fit reverentia) Dóminus nomen illi.\n\n67:5 Exsultáte in conspéctu eius: * turbabúntur a fácie eius, patris orphanórum et iúdicis viduárum.\n\n67:6 Deus in loco sancto suo: * Deus, qui inhabitáre facit uníus moris in domo:\n\n67:7 Qui edúcit vinctos in fortitúdine, * simíliter eos qui exásperant, qui hábitant in sepúlcris.\n\n67:8 Deus, cum egrederéris in conspéctu pópuli tui, * cum pertransíres in desérto:\n\n67:9 Terra mota est, étenim cæli distillavérunt a fácie Dei Sínai, * a fácie Dei Israël.\n\n67:10 Plúviam voluntáriam segregábis, Deus, hereditáti tuæ: * et infirmáta est, tu vero perfecísti eam.\n\n67:11 Animália tua habitábunt in ea: * parásti in dulcédine tua páuperi, Deus.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Exsúrgat Deus, et dissipéntur inimíci eius.",
+          "english": "Ant. Let God arise, * and let his enemies be scattered. ‡\n\nPsalm 67(2-11) [4]\n\n67:2 Let God arise, and let his enemies be scattered: * ‡ and let them that hate him flee from before his face.\n\n67:3 As smoke vanisheth, so let them vanish away: * as wax melteth before the fire, so let the wicked perish at the presence of God.\n\n67:4 And let the just feast, and rejoice before God: * and be delighted with gladness.\n\n67:5 Sing ye to God, sing a psalm to his name, * make a way for him who ascendeth upon the west: (bow head) the Lord is his name.\n\n67:5 Rejoice ye before him: * but the wicked shall be troubled at his presence, who is the father of orphans, and the judge of widows.\n\n67:6 God in his holy place: * God who maketh men of one manner to dwell in a house:\n\n67:7 Who bringeth out them that were bound in strength; * in like manner them that provoke, that dwell in sepulchres.\n\n67:8 O God, when thou didst go forth in the sight of thy people, * when thou didst pass through the desert:\n\n67:9 The earth was moved, and the heavens dropped at the presence of the God of Sinai, * at the presence of the God of Israel.\n\n67:10 Thou shalt set aside for thy inheritance a free rain, * O God: and it was weakened, but thou hast made it perfect.\n\n67:11 In it shall thy animals dwell; * in thy sweetness, O God, thou hast provided for the poor.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. Let God arise, and let his enemies be scattered.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum8",
+          "kind": "opening",
+          "title": "Section 8",
+          "rubric": "[5]",
+          "latin": "Ant. Deus noster, * Deus salvos faciéndi: et Dómini sunt éxitus mortis.\n\nPsalmus 67(12-24) [5]\n\n67:12 Dóminus dabit verbum evangelizántibus, * virtúte multa.\n\n67:13 Rex virtútum dilécti, dilécti: * et speciéi domus divídere spólia.\n\n67:14 Si dormiátis inter médios cleros, pennæ colúmbæ deargentátæ, * et posterióra dorsi eius in pallóre auri.\n\n67:15 Dum discérnit cæléstis reges super eam, nive dealbabúntur in Selmon: * mons Dei, mons pinguis.\n\n67:16 Mons coagulátus, mons pinguis: * ut quid suspicámini montes coagulátos?\n\n67:17 Mons, in quo beneplácitum est Deo habitáre in eo: * étenim Dóminus habitábit in finem.\n\n67:18 Currus Dei decem míllibus múltiplex, míllia lætántium: * Dóminus in eis in Sina in sancto.\n\n67:19 Ascendísti in altum, cepísti captivitátem: * accepísti dona in homínibus.\n\n67:19 Étenim non credéntes, * inhabitáre Dóminum Deum.\n\n67:20 Benedíctus Dóminus die cotídie: * prósperum iter fáciet nobis Deus salutárium nostrórum.\n\n67:21 Deus noster, Deus salvos faciéndi: * et Dómini Dómini éxitus mortis.\n\n67:22 Verúmtamen Deus confrínget cápita inimicórum suórum: * vérticem capílli perambulántium in delíctis suis.\n\n67:23 Dixit Dóminus: Ex Basan convértam, * convértam in profúndum maris:\n\n67:24 Ut intingátur pes tuus in sánguine: * lingua canum tuórum ex inimícis, ab ipso.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Deus noster, Deus salvos faciéndi: et Dómini sunt éxitus mortis.",
+          "english": "Ant. Our God * is the God of salvation: and the Lord of the issues from death.\n\nPsalm 67(12-24) [5]\n\n67:12 The Lord shall give the word to them that preach good tidings, * with great power.\n\n67:13 The king of powers is of the beloved, * of the beloved; and the beauty of the house shall divide spoils.\n\n67:14 If you sleep among the midst of lots, you shall be as the wings of a dove covered with silver, * and the hinder parts of her back with the paleness of gold.\n\n67:15 When he that is in heaven appointeth kings over her, they shall be whited with snow in Selmon. * The mountain of God is a fat mountain,\n\n67:16 a curdled mountain, a fat mountain; * Why suspect, ye curdled mountains?\n\n67:17 A mountain in which God is well pleased to dwell: * for there the Lord shall dwell unto the end.\n\n67:18 The chariot of God is attended by ten thousands; thousands of them that rejoice: * the Lord is among them in Sinai, in the holy place.\n\n67:19 Thou hast ascended on high, thou hast led captivity captive; * thou hast received gifts in men.\n\n67:19 Yea for those also that do not believe, * the dwelling of the Lord God.\n\n67:20 Blessed be the Lord day by day: * the God of our salvation will make our journey prosperous to us.\n\n67:21 Our God is the God of salvation: * and of the Lord, of the Lord are the issues from death.\n\n67:22 But God shall break the heads of his enemies: * the hairy crown of them that walk on in their sins.\n\n67:23 The Lord said: I will turn them from Basan, * I will turn them into the depth of the sea:\n\n67:24 That thy foot may be dipped in the blood of thy enemies; * the tongue of thy dogs be red with the same.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. Our God is the God of salvation: and the Lord of the issues from death.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum9",
+          "kind": "opening",
+          "title": "Section 9",
+          "rubric": "[6]",
+          "latin": "Ant. In ecclésiis * benedícite Dómino Deo.\n\nPsalmus 67(25-36) [6]\n\n67:25 Vidérunt ingréssus tuos, Deus: * ingréssus Dei mei: regis mei qui est in sancto.\n\n67:26 Prævenérunt príncipes coniúncti psalléntibus: * in médio iuvenculárum tympanistriárum.\n\n67:27 In ecclésiis benedícite Deo Dómino, * de fóntibus Israël.\n\n67:28 Ibi Béniamin adolescéntulus: * in mentis excéssu.\n\n67:28 Príncipes Iuda, duces eórum: * príncipes Zábulon, príncipes Néphtali.\n\n67:29 Manda, Deus, virtúti tuæ: * confírma hoc, Deus, quod operátus es in nobis.\n\n67:30 A templo tuo in Ierúsalem, * tibi ófferent reges múnera.\n\n67:31 Íncrepa feras arúndinis, congregátio taurórum in vaccis populórum: * ut exclúdant eos, qui probáti sunt argénto.\n\n67:31 Díssipa gentes, quæ bella volunt: vénient legáti ex Ægýpto: * Æthiópia prævéniet manus eius Deo.\n\n67:33 Regna terræ, cantáte Deo: * psállite Dómino.\n\n67:33 Psállite Deo, qui ascéndit super cælum cæli, * ad Oriéntem.\n\n67:34 Ecce dabit voci suæ vocem virtútis, date glóriam Deo super Israël, * magnificéntia eius, et virtus eius in núbibus.\n\n67:36 Mirábilis Deus in sanctis suis, Deus Israël ipse dabit virtútem, et fortitúdinem plebi suæ, * benedíctus Deus.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. In ecclésiis benedícite Dómino Deo.",
+          "english": "Ant. In the churches * bless ye God the Lord.\n\nPsalm 67(25-36) [6]\n\n67:25 They have seen thy goings, O God, * the goings of my God: of my king who is in his sanctuary.\n\n67:26 Princes went before joined with singers, * in the midst of young damsels playing on timbrels.\n\n67:27 In the churches bless ye God the Lord, * from the fountains of Israel.\n\n67:28 There is Benjamin a youth, * in ecstasy of mind.\n\n67:28 The princes of Juda are their leaders: * the princes of Zabulon, the princes of Nephthali.\n\n67:29 Command thy strength, O God: * confirm, O God, what thou hast wrought in us.\n\n67:30 From thy temple in Jerusalem, * kings shall offer presents to thee.\n\n67:31 Rebuke the wild beasts of the reeds, the congregation of bulls with the kine of the people; * who seek to exclude them who are tried with silver.\n\n67:31 Scatter thou the nations that delight in wars: ambassadors shall come out of Egypt: * Ethiopia shall soon stretch out her hands to God.\n\n67:33 Sing to God, ye kingdoms of the earth: * sing ye to the Lord:\n\n67:33 Sing ye to God, who mounteth above the heaven of heavens, * to the east.\n\n67:34 Behold he will give to his voice the voice of power: give ye glory to God for Israel, * his magnificence, and his power is in the clouds.\n\n67:36 God is wonderful in his saints: the God of Israel is he who will give power and strength to his people; * blessed be God.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. In the churches bless ye God the Lord.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum10",
+          "kind": "opening",
+          "title": "Section 10",
+          "rubric": "[7]",
+          "latin": "Ant. Salvum me fac, * Deus, quóniam intravérunt aquæ usque ad ánimam meam. ‡\n\nPsalmus 68(2-13) [7]\n\n68:2 Salvum me fac, Deus: quóniam intravérunt aquæ usque ad ánimam meam.\n\n68:3 ‡ Infíxus sum in limo profúndi: * et non est substántia.\n\n68:3 Veni in altitúdinem maris: * et tempéstas demérsit me.\n\n68:4 Laborávi clamans, raucæ factæ sunt fauces meæ: * defecérunt óculi mei, dum spero in Deum meum.\n\n68:5 Multiplicáti sunt super capíllos cápitis mei, * qui odérunt me gratis.\n\n68:5 Confortáti sunt qui persecúti sunt me inimíci mei iniúste: * quæ non rápui, tunc exsolvébam.\n\n68:6 Deus, tu scis insipiéntiam meam: * et delícta mea a te non sunt abscóndita.\n\n68:7 Non erubéscant in me qui exspéctant te, Dómine, * Dómine virtútum.\n\n68:7 Non confundántur super me * qui quærunt te, Deus Israël.\n\n68:8 Quóniam propter te sustínui oppróbrium: * opéruit confúsio fáciem meam.\n\n68:9 Extráneus factus sum frátribus meis, * et peregrínus fíliis matris meæ.\n\n68:10 Quóniam zelus domus tuæ comédit me: * et oppróbria exprobrántium tibi cecidérunt super me.\n\n68:11 Et opérui in ieiúnio ánimam meam: * et factum est in oppróbrium mihi.\n\n68:12 Et pósui vestiméntum meum cilícium: * et factus sum illis in parábolam.\n\n68:13 Advérsum me loquebántur, qui sedébant in porta: * et in me psallébant qui bibébant vinum.\n\n68:13 Ego vero oratiónem meam ad te, Dómine: * tempus benepláciti, Deus.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Salvum me fac, Deus, quóniam intravérunt aquæ usque ad ánimam meam.",
+          "english": "Ant. Save me, O God * for the waters are come in even unto my soul. ‡\n\nPsalm 68(2-13) [7]\n\n68:2 Save me, O God: for the waters are come in even unto my soul.\n\n68:3 ‡ I stick fast in the mire of the deep: * and there is no sure standing.\n\n68:3 I am come into the depth of the sea: * and a tempest hath overwhelmed me.\n\n68:4 I have laboured with crying; my jaws are become hoarse: * my eyes have failed, whilst I hope in my God.\n\n68:5 They are multiplied above the hairs of my head, * who hate me without cause.\n\n68:5 My enemies are grown strong who have wrongfully persecuted me: * then did I pay that which I took not away.\n\n68:6 O God, thou knowest my foolishness; * and my offences are not hidden from thee.\n\n68:7 Let not them be ashamed for me, who look for thee, O Lord, * the Lord of hosts.\n\n68:7 Let them not be confounded on my account, * who seek thee, O God of Israel.\n\n68:8 Because for thy sake I have borne reproach; * shame hath covered my face.\n\n68:9 I am become a stranger to my brethren, * and an alien to the sons of my mother.\n\n68:10 For the zeal of thy house hath eaten me up: * and the reproaches of them that reproached thee are fallen upon me.\n\n68:11 And I covered my soul in fasting: * and it was made a reproach to me.\n\n68:12 And I made haircloth my garment: * and I became a byword to them.\n\n68:13 They that sat in the gate spoke against me: * and they that drank wine made me their song.\n\n68:13 But as for me, my prayer is to thee, O Lord; * for the time of thy good pleasure, O God.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. Save me, O God for the waters are come in even unto my soul.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum11",
+          "kind": "opening",
+          "title": "Section 11",
+          "rubric": "[8]",
+          "latin": "Ant. Propter inimícos meos * éripe me, Dómine.\n\nPsalmus 68(14-29) [8]\n\n68:14 In multitúdine misericórdiæ tuæ exáudi me, * in veritáte salútis tuæ:\n\n68:15 Éripe me de luto, ut non infígar: * líbera me ab iis, qui odérunt me, et de profúndis aquárum.\n\n68:16 Non me demérgat tempéstas aquæ, neque absórbeat me profúndum: * neque úrgeat super me púteus os suum.\n\n68:17 Exáudi me, Dómine, quóniam benígna est misericórdia tua: * secúndum multitúdinem miseratiónum tuárum réspice in me.\n\n68:18 Et ne avértas fáciem tuam a púero tuo: * quóniam tríbulor, velóciter exáudi me.\n\n68:19 Inténde ánimæ meæ, et líbera eam: * propter inimícos meos éripe me.\n\n68:20 Tu scis impropérium meum, et confusiónem meam, * et reveréntiam meam.\n\n68:21 In conspéctu tuo sunt omnes qui tríbulant me: * impropérium exspectávit cor meum, et misériam.\n\n68:21 Et sustínui qui simul contristarétur, et non fuit: * et qui consolarétur, et non invéni.\n\n68:22 Et dedérunt in escam meam fel: * et in siti mea potavérunt me acéto.\n\n68:23 Fiat mensa eórum coram ipsis in láqueum, * et in retributiónes, et in scándalum.\n\n68:24 Obscuréntur óculi eórum ne vídeant: * et dorsum eórum semper incúrva.\n\n68:25 Effúnde super eos iram tuam: * et furor iræ tuæ comprehéndat eos.\n\n68:26 Fiat habitátio eórum desérta: * et in tabernáculis eórum non sit qui inhábitet.\n\n68:27 Quóniam quem tu percussísti, persecúti sunt: * et super dolórem vúlnerum meórum addidérunt.\n\n68:28 Appóne iniquitátem super iniquitátem eórum: * et non intrent in iustítiam tuam.\n\n68:29 Deleántur de libro vivéntium: * et cum iustis non scribántur.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Propter inimícos meos éripe me, Dómine.",
+          "english": "Ant. O Lord, save me * from my enemies.\n\nPsalm 68(14-29) [8]\n\n68:14 In the multitude of thy mercy hear me, * in the truth of thy salvation.\n\n68:15 Draw me out of the mire, that I may not stick fast: * deliver me from them that hate me, and out of the deep waters.\n\n68:16 Let not the tempest of water drown me, nor the deep swallow me up: * and let not the pit shut her mouth upon me.\n\n68:17 Hear me, O Lord, for thy mercy is kind; * look upon me according to the multitude of thy tender mercies.\n\n68:18 And turn not away thy face from thy servant: * for I am in trouble, hear me speedily.\n\n68:19 Attend to my soul, and deliver it: * save me because of my enemies.\n\n68:20 Thou knowest my reproach, and my confusion, * and my shame.\n\n68:21 In thy sight are all they that afflict me; * my heart hath expected reproach and misery.\n\n68:21 And I looked for one that would grieve together with me, * but there was none: and for one that would comfort me, and I found none.\n\n68:22 And they gave me gall for my food, * and in my thirst they gave me vinegar to drink.\n\n68:23 Let their table become as a snare before them, * and a recompense, and a stumblingblock.\n\n68:24 Let their eyes be darkened that they see not; * and their back bend thou down always.\n\n68:25 Pour out thy indignation upon them: * and let thy wrathful anger take hold of them.\n\n68:26 Let their habitation be made desolate: * and let there be none to dwell in their tabernacles.\n\n68:27 Because they have persecuted him whom thou hast smitten; * and they have added to the grief of my wounds.\n\n68:28 Add thou iniquity upon their iniquity: * and let them not come into thy justice.\n\n68:29 Let them be blotted out of the book of the living; * and with the just let them not be written.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. O Lord, save me from my enemies.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum12",
+          "kind": "opening",
+          "title": "Section 12",
+          "rubric": "[9]",
+          "latin": "Ant. Quǽrite Dóminum, * et vivet ánima vestra.\n\nPsalmus 68(30-37) [9]\n\n68:30 Ego sum pauper et dolens: * salus tua, Deus, suscépit me.\n\n68:31 Laudábo nomen Dei cum cántico: * et magnificábo eum in laude:\n\n68:32 Et placébit Deo super vítulum novéllum: * córnua producéntem et úngulas.\n\n68:33 Vídeant páuperes et læténtur: * quǽrite Deum, et vivet ánima vestra.\n\n68:34 Quóniam exaudívit páuperes Dóminus: * et vinctos suos non despéxit.\n\n68:35 Laudent illum cæli et terra, * mare et ómnia reptília in eis.\n\n68:36 Quóniam Deus salvam fáciet Sion: * et ædificabúntur civitátes Iuda.\n\n68:36 Et inhabitábunt ibi, * et hereditáte acquírent eam.\n\n68:37 Et semen servórum eius possidébit eam: * et qui díligunt nomen eius, habitábunt in ea.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Quǽrite Dóminum, et vivet ánima vestra.",
+          "english": "Ant. Look for the Lord * and your soul shall live.\n\nPsalm 68(30-37) [9]\n\n68:30 I am poor and sorrowful: * thy salvation, O God, hath set me up.\n\n68:31 I will praise the name of God with a canticle: * and I will magnify him with praise.\n\n68:32 And it shall please God better than a young calf, * that bringeth forth horns and hoofs.\n\n68:33 Let the poor see and rejoice: * seek ye God, and your soul shall live.\n\n68:34 For the Lord hath heard the poor: * and hath not despised his prisoners.\n\n68:35 Let the heavens and the earth praise him; * the sea, and every thing that creepeth therein.\n\n68:36 For God will save Sion, * and the cities of Juda shall be built up.\n\n68:36 And they shall dwell there, * and acquire it by inheritance.\n\n68:37 And the seed of his servants shall possess it; * and they that love his name shall dwell therein.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. Look for the Lord and your soul shall live.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum13",
+          "kind": "opening",
+          "title": "Section 13",
+          "rubric": null,
+          "latin": "℣. Laudábo nomen Dei cum cántico.\n\n℟. Et magnificábo eum in laude.",
+          "english": "℣. I will praise the name of God.\n\n℟. And I will magnify him with praise.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum14",
+          "kind": "opening",
+          "title": "Section 14",
+          "rubric": null,
+          "latin": "Pater Noster dicitur secreto usque ad Et ne nos indúcas in tentatiónem:\n\nPater noster, qui es in cælis, sanctificétur nomen tuum: advéniat regnum tuum: fiat volúntas tua, sicut in cælo et in terra. Panem nostrum cotidiánum da nobis hódie: et dimítte nobis débita nostra, sicut et nos dimíttimus debitóribus nostris:\n\n℣. Et ne nos indúcas in tentatiónem:\n\n℟. Sed líbera nos a malo.\n\nAbsolutio. Exáudi, Dómine Iesu Christe, preces servórum tuórum, et miserére nobis: Qui cum Patre et Spíritu Sancto vivis et regnas in sǽcula sæculórum.\n\n℟. Amen.",
+          "english": "Our Father is said silently until And lead us not into temptation:.\n\nOur Father, who art in heaven, Hallowed be thy name. Thy kingdom come. Thy will be done on earth as it is in heaven. Give us this day our daily bread. And forgive us our trespasses, as we forgive those who trespass against us.\n\n℣. And lead us not into temptation:\n\n℟. But deliver us from evil.\n\nAbsolution. O Lord Jesus Christ, graciously hear the prayers of Thy servants, and have mercy upon us, Who livest and reignest with the Father, and the Holy Ghost, ever world without end.\n\n℟. Amen.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum15",
+          "kind": "blessing",
+          "title": "Benedictio. Ille nos benedícat, qui sine fine vivit et regnat.\n\n℟. Amen.\n\nLectio 1",
+          "rubric": null,
+          "latin": "℣. Iube, Dómine, benedícere.\n\nBenedictio. Ille nos benedícat, qui sine fine vivit et regnat.\n\n℟. Amen.\n\nLectio 1\n\nDe libro tértio Regum\n\n3 Reg 12:1-5\n\n1 Venit autem Róboam in Sichem; illuc enim congregátus erat omnis Israël ad constituéndum eum regem.\n\n2 At vero Ieróboam fílius Nabat, cum adhuc esset in Ægýpto prófugus a fácie regis Salomónis, audíta morte eius, revérsus est de Ægýpto.\n\n3 Miserúntque et vocavérunt eum. Venit ergo Ieróboam, et omnis multitúdo Israël, et locúti sunt ad Róboam, dicéntes:\n\n4 Pater tuus duríssimum iugum impósuit nobis; tu ítaque nunc immínue páululum de império patris tui duríssimo, et de iugo gravíssimo quod impósuit nobis, et serviémus tibi.\n\n5 Qui ait eis: Ite usque ad tértium diem, et revertímini ad me.\n\n℣. Tu autem, Dómine, miserére nobis.\n\n℟. Deo grátias.\n\n℟. Præparáte corda vestra Dómino, et servíte illi soli:\n\n* Et liberábit vos de mánibus inimicórum vestrórum.\n\n℣. Convertímini ad eum in toto corde vestro, et auférte deos aliénos de médio vestri.\n\n℟. Et liberábit vos de mánibus inimicórum vestrórum.",
+          "english": "℣. Grant, Lord, a blessing.\n\nBenediction. May His blessing be upon us who doth live and reign for ever.\n\n℟. Amen.\n\nReading 1\n\nLesson from the first book of Kings\n\n1 Kgs 12:1-5\n\n1 And Roboam went to Sichem: for thither were all Israel come together to make him king.\n\n2 But Jeroboam the son of Nabat, who was yet in Egypt, a fugitive from the face of king Solomon, hearing of his death, returned out of Egypt.\n\n3 And they sent and called him: and Jeroboam came, and all the multitude of Israel, and they spoke to Roboam, saying:\n\n4 Thy father laid a grievous yoke upon us: now therefore do thou take off a little of the grievous service of thy father, and of his most heavy yoke, which he put upon us, and we will serve thee.\n\n5 And he said to them: Go till the third day, and come to me again.\n\n℣. But thou, O Lord, have mercy upon us.\n\n℟. Thanks be to God.\n\n℟. Prepare your hearts unto the Lord, and serve Him Only\n\n* And He will deliver you out of the hand of your enemies.\n\n℣. Return unto Him with all your hearts, and put away the strange gods from among you.\n\n℟. And He will deliver you out of the hand of your enemies.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum16",
+          "kind": "blessing",
+          "title": "Benedictio. Cuius festum cólimus, ipse intercédat pro nobis ad Dóminum.\n\n℟. Amen.\n\nLectio 2",
+          "rubric": null,
+          "latin": "℣. Iube, Dómine, benedícere.\n\nBenedictio. Cuius festum cólimus, ipse intercédat pro nobis ad Dóminum.\n\n℟. Amen.\n\nLectio 2\n\n3 Reg 12:5-8\n\n5 Cumque abiísset pópulus,\n\n6 Íniit consílium rex Róboam cum senióribus, qui assistébant coram Salomóne patre eius cum adhuc víveret, et ait: Quod datis mihi consílium ut respóndeam pópulo huic?\n\n7 Qui dixérunt ei: Si hódie obedíeris pópulo huic et servíeris et petitióni eórum césseris locutúsque fúeris ad eos verba lénia, erunt tibi servi cunctis diébus.\n\n8 Qui derelíquit consílium senum, quod déderant ei, at adhíbuit adolescéntes, qui nutríti fúerant cum eo, et assistébant illi.\n\n3 Reg 12:13-16\n\n13 Respondítque rex pópulo dura, derelícto consílio seniórum quod ei déderant,\n\n14 Et locútus est eis secúndum consílium iúvenum dicens: Pater meus aggravávit iugum vestrum, ego autem addam iugo vestro; pater meus cécidit vos flagéllis, ego autem cædam vos scorpiónibus.\n\n15 Et non acquiévit rex pópulo, quóniam aversátus fúerat eum Dóminus, ut suscitáret verbum suum, quod locútus fúerat in manu Ahíæ Silonítæ, ad Ieróboam fílium Nabat.\n\n16 Videns ítaque pópulus quod noluísset eos audíre rex, respóndit ei, dicens: Quæ nobis pars in David? vel quæ heréditas in fílio Isai?\n\n℣. Tu autem, Dómine, miserére nobis.\n\n℟. Deo grátias.\n\n℟. Dóminus, qui erípuit me de ore leónis, et de manu béstiæ liberávit me,\n\n* Ipse me erípiet de mánibus inimicórum meórum.\n\n℣. Misit Deus misericórdiam suam et veritátem suam: ánimam meam erípuit de médio catulórum leónum.\n\n℟. Ipse me erípiet de mánibus inimicórum meórum.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Ipse me erípiet de mánibus inimicórum meórum.",
+          "english": "℣. Grant, Lord, a blessing.\n\nBenediction. He whose feast-day we are keeping, be our Advocate with God.\n\n℟. Amen.\n\nReading 2\n\n1 Kgs 12:5-8\n\n5 And when the people was gone,\n\n6 King Roboam took counsel with the old men, that stood before Solomon his father while he yet lived, and he said: What counsel do you give me, that I may answer this people?\n\n7 They said to him: If thou wilt yield to this people today, and condescend to them, and grant their petition, and wilt speak gentle words to them, they will be thy servants always.\n\n8 But he left the counsel of the old men, which they had given him, and consulted with the young men, that had been brought up with him, and stood before him.\n\n1 Kgs 12:13-16\n\n13 And the king answered the people roughly, leaving the counsel of the old men, which they had given him,\n\n14 And he spoke to them according to the counsel of the young men, saying: My father made your yoke heavy, but I will add to your yoke: my father beat you with whips, but I will beat you with scorpions.\n\n15 And the king condescended not to the people: for the Lord was turned away from him, to make good his word, which he had spoken in the hand of Ahias the Silonite, to Jeroboam the son of Nabat.\n\n16 Then the people seeing that the king would not hearken to them, answered him, saying: What portion have we in David? or what inheritance in the son of Isai? Go home to thy dwellings, O Israel, now David look to thy own house. So Israel departed to their dwellings.\n\n℣. But thou, O Lord, have mercy upon us.\n\n℟. Thanks be to God.\n\n℟. The Lord That delivered me out of the mouth of the lion, and out of the paw of the bear\n\n* He will deliver me out of the hand of mine enemies.\n\n℣. God hath sent forth His mercy and His truth, and delivered my soul from among the lion's whelps.\n\n℟. He will deliver me out of the hand of mine enemies.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. He will deliver me out of the hand of mine enemies.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum17",
+          "kind": "blessing",
+          "title": "Benedictio. Ad societátem cívium supernórum perdúcat nos Rex Angelórum.\n\n℟. Amen.\n\nLectio 3",
+          "rubric": null,
+          "latin": "℣. Iube, Dómine, benedícere.\n\nBenedictio. Ad societátem cívium supernórum perdúcat nos Rex Angelórum.\n\n℟. Amen.\n\nLectio 3\n\nApollináris cum Príncipe Apostolórum Antiochía Romam venit; a quo, ordinátus epíscopus, Ravénnam ad Christi Dómini Evangélium prædicándum míttitur; ubi, cum ad Christi fidem plúrimos convérteret, captus ab idolórum sacerdótibus, gráviter cæsus est. Cumque ipso oránte Bonifátius nóbilis vir, qui diu mutus fúerat, loquerétur, eiúsque fília immúndo spíritu liberáta esset, íterum est in illum commóta sedítio. Quare divérsas et multíplices pœnas perpéssus est. Póstea per Æmíliam Evangélium prǽdicans, plúrimos ab idolórum cultu revocávit. Ravénnam revérsus, exhórtans Christiános ad fídei constántiam, gloriósum martýrium consummávit. Eius corpus prope murum urbis sepúltum est.\n\n℣. Tu autem, Dómine, miserére nobis.\n\n℟. Deo grátias.\n\nTe Deum\n\nTe Deum laudámus: * te Dóminum confitémur.\n\nTe ætérnum Patrem * omnis terra venerátur.\n\nTibi omnes Ángeli, * tibi Cæli, et univérsæ Potestátes:\n\nTibi Chérubim et Séraphim * incessábili voce proclámant:\n\n(Fit reverentia) Sanctus, Sanctus, Sanctus * Dóminus Deus Sábaoth.\n\nPleni sunt cæli et terra * maiestátis glóriæ tuæ.\n\nTe gloriósus * Apostolórum chorus,\n\nTe Prophetárum * laudábilis númerus,\n\nTe Mártyrum candidátus * laudat exércitus.\n\nTe per orbem terrárum * sancta confitétur Ecclésia,\n\nPatrem * imménsæ maiestátis;\n\nVenerándum tuum verum * et únicum Fílium;\n\nSanctum quoque * Paráclitum Spíritum.\n\nTu Rex glóriæ, * Christe.\n\nTu Patris * sempitérnus es Fílius.\n\n(Fit reverentia) Tu, ad liberándum susceptúrus hóminem: * non horruísti Vírginis úterum.\n\nTu, devícto mortis acúleo, * aperuísti credéntibus regna cælórum.\n\nTu ad déxteram Dei sedes, * in glória Patris.\n\nIudex créderis * esse ventúrus.\n\n(Sequens versus dicitur flexis genibus) Te ergo quǽsumus, tuis fámulis súbveni, * quos pretióso sánguine redemísti.\n\nÆtérna fac cum Sanctis tuis * in glória numerári.\n\nSalvum fac pópulum tuum, Dómine, * et bénedic hereditáti tuæ.\n\nEt rege eos, * et extólle illos usque in ætérnum.\n\nPer síngulos dies * benedícimus te.\n\n(Fit reverentia, secundum consuetudinem) Et laudámus nomen tuum in sǽculum, * et in sǽculum sǽculi.\n\nDignáre, Dómine, die isto * sine peccáto nos custodíre.\n\nMiserére nostri, Dómine, * miserére nostri.\n\nFiat misericórdia tua, Dómine, super nos, * quemádmodum sperávimus in te.\n\nIn te, Dómine, sperávi: * non confúndar in ætérnum.",
+          "english": "℣. Grant, Lord, a blessing.\n\nBenediction. May He that is the Angels' King to that high realm His people bring.\n\n℟. Amen.\n\nReading 3\n\nApollinaris came from Antioch to Rome with the Prince of the Apostles, who ordained him a bishop and sent him to Ravenna to preach the Gospel of the Lord Christ. Here, when Apollinaris had converted many pagans to faith in Christ, he was seized by the priests of the idols and beaten severely. When his prayers brought the gift of speech to a nobleman named Boniface who had been dumb for a long time and freed his daughter from an unclean spirit, a commotion was again raised against Apollinaris, and he suffered many kinds of torments. Afterwards, preaching the Gospel throughout Emilia, he turned many of the people away from the worship of idols. He came back to Ravenna, exhorted the Christians to constancy in the faith and died the glorious death of a martyr. His body was buried near the city wall.\n\n℣. But thou, O Lord, have mercy upon us.\n\n℟. Thanks be to God.\n\nTe Deum\n\nWe praise thee, O God, * we acknowledge thee to be the Lord.\n\nAll the earth doth worship thee, * the Father everlasting.\n\nTo thee all Angels cry aloud, * the Heavens, and all the Powers therein.\n\nTo thee Cherubim and Seraphim * continually do cry.\n\nbow head Holy, Holy, Holy * Lord God of Sabaoth;\n\nHeaven and earth are full * of the Majesty of thy glory.\n\nThe glorious company of the Apostles * praise thee.\n\nThe goodly fellowship of the Prophets * praise thee.\n\nThe noble army of Martyrs * praise thee.\n\nThe holy Church throughout all the world * doth acknowledge thee;\n\nThe Father, * of an infinite Majesty.\n\nThine honourable, true, * and only Son;\n\nAlso the Holy Ghost, * the Comforter.\n\nThou art the King of Glory, * O Christ.\n\nThou art the everlasting * Son of the Father.\n\nDuring the following verse all make a profound bow: When thou tookest upon thee to deliver man, * thou didst not abhor the Virgin's womb.\n\nWhen thou hadst overcome the sharpness of death, * thou didst open the Kingdom of Heaven to all believers.\n\nThou sittest at the right hand of God, * in the glory of the Father.\n\nWe believe that thou shalt come * to be our Judge.\n\nKneel for the following verse We therefore pray thee, help thy servants, * whom thou hast redeemed with thy precious Blood.\n\nMake them to be numbered with thy Saints, * in glory everlasting.\n\nO Lord, save thy people, * and bless thine heritage.\n\nGovern them, * and lift them up for ever.\n\nDay by day * we magnify thee;\n\nDuring the following verse, by local custom, all make a profound bow. And we worship thy Name * ever, world without end.\n\nVouchsafe, O Lord, to keep us * this day without sin.\n\nO Lord, have mercy upon us, * have mercy upon us.\n\nO Lord, let thy mercy lighten upon us, * as our trust is in thee.\n\nO Lord, in thee have I trusted, * let me never be confounded.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum18",
+          "kind": "opening",
+          "title": "Section 18",
+          "rubric": null,
+          "latin": "Reliqua omittuntur, nisi Laudes separandæ sint.",
+          "english": "Skip the rest, unless praying Lauds separately.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum19",
+          "kind": "collect",
+          "title": "Oratio",
+          "rubric": "ex Proprio Sanctorum",
+          "latin": "Oratio {ex Proprio Sanctorum}\n\n℣. Dómine, exáudi oratiónem meam.\n\n℟. Et clamor meus ad te véniat.\n\nOrémus.\n\nDeus, fidélium remunerátor animárum, qui hunc diem beáti Apollináris Sacerdótis tui martýrio consecrásti: tríbue nobis, quǽsumus, fámulis tuis; ut, cuius venerándam celebrámus festivitátem, précibus eius indulgéntiam consequámur.\n\nPer Dóminum nostrum Iesum Christum, Fílium tuum: qui tecum vivit et regnat in unitáte Spíritus Sancti, Deus, per ómnia sǽcula sæculórum.\n\n℟. Amen.",
+          "english": "Prayer {from the Proper of Saints}\n\n℣. O Lord, hear my prayer.\n\n℟. And let my cry come unto thee.\n\nLet us pray.\n\nO God, Who art thyself the exceeding great Reward of all faithful souls, and in Whose sight this day is holy because thy blessed Priest Apollinaris did hereon lift up his last earthly testimony, we beseech thee to grant unto us thy servants, who do keep his worshipful Feast-day, to obtain by his prayers thy gracious remission for our offences.\n\nThrough Jesus Christ, thy Son our Lord, Who liveth and reigneth with thee, in the unity of the Holy Ghost, God, world without end.\n\n℟. Amen.",
+          "chant": null
+        },
+        {
+          "id": "matins-matutinum20",
+          "kind": "conclusion",
+          "title": "Conclusio",
+          "rubric": null,
+          "latin": "Conclusio\n\n℣. Dómine, exáudi oratiónem meam.\n\n℟. Et clamor meus ad te véniat.\n\n℣. Benedicámus Dómino.\n\n℟. Deo grátias.\n\n℣. Fidélium ánimæ per misericórdiam Dei requiéscant in pace.\n\n℟. Amen.",
+          "english": "Conclusion\n\n℣. O Lord, hear my prayer.\n\n℟. And let my cry come unto thee.\n\n℣. Let us bless the Lord.\n\n℟. Thanks be to God.\n\n℣. May the souls of the faithful, through the mercy of God, rest in peace.\n\n℟. Amen.",
+          "chant": null
+        }
+      ]
+    },
+    {
+      "id": "2026-07-23-lauds",
+      "date": {
+        "year": 2026,
+        "month": 7,
+        "day": 23
+      },
+      "hour": "lauds",
+      "titleLatin": "Ad Laudes",
+      "titleEnglish": "Lauds",
+      "contextLabel": "S. Apollinaris Episcopi et Martyris",
+      "sourceVersion": "Rubrics 1960 - 1960 · pinned Divinum Officium development import",
+      "sections": [
+        {
+          "id": "lauds-laudes1",
+          "kind": "opening",
+          "title": "Incipit",
+          "rubric": null,
+          "latin": "Incipit\n\n℣. Deus ✠ in adiutórium meum inténde.\n\n℟. Dómine, ad adiuvándum me festína.\n\nGlória Patri, et Fílio, * et Spirítui Sancto.\n\nSicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAllelúia.",
+          "english": "Start\n\n℣. O God, ✠ come to my assistance;\n\n℟. O Lord, make haste to help me.\n\nGlory be to the Father, and to the Son, * and to the Holy Ghost.\n\nAs it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAlleluia.",
+          "chant": null
+        },
+        {
+          "id": "lauds-laudes2",
+          "kind": "psalm",
+          "title": "Psalmi",
+          "rubric": "Psalmi & antiphonæ ex Psalterio secundum diem",
+          "latin": "Psalmi {Psalmi & antiphonæ ex Psalterio secundum diem}\n\nAnt. Iubiláte * in conspéctu regis Dómini.\n\nPsalmus 97 [1]\n\n97:1 Cantáte Dómino cánticum novum: * quia mirabília fecit.\n\n97:1 Salvávit sibi déxtera eius: * et brácchium sanctum eius.\n\n97:2 Notum fecit Dóminus salutáre suum: * in conspéctu géntium revelávit iustítiam suam.\n\n97:3 Recordátus est misericórdiæ suæ, * et veritátis suæ dómui Israël.\n\n97:3 Vidérunt omnes términi terræ * salutáre Dei nostri.\n\n97:4 Iubiláte Deo, omnis terra: * cantáte, et exsultáte, et psállite.\n\n97:5 Psállite Dómino in cíthara, in cíthara et voce psalmi: * in tubis ductílibus, et voce tubæ córneæ.\n\n97:6 Iubiláte in conspéctu regis Dómini: * moveátur mare, et plenitúdo eius: orbis terrárum, et qui hábitant in eo.\n\n97:8 Flúmina plaudent manu, simul montes exsultábunt a conspéctu Dómini: * quóniam venit iudicáre terram.\n\n97:9 Iudicábit orbem terrárum in iustítia, * et pópulos in æquitáte.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Iubiláte in conspéctu regis Dómini.",
+          "english": "Psalms {Psalms & antiphons from the Psalter for the day of the week}\n\nAnt. Make a joyful noise * before the Lord our King.\n\nPsalm 97 [1]\n\n97:1 Sing ye to the Lord a new canticle: * because he hath done wonderful things.\n\n97:1 His right hand hath wrought for him salvation, * and his arm is holy.\n\n97:2 The Lord hath made known his salvation: * he hath revealed his justice in the sight of the Gentiles.\n\n97:3 He hath remembered his mercy * and his truth toward the house of Israel.\n\n97:3 All the ends of the earth have seen * the salvation of our God.\n\n97:4 Sing joyfully to God, all the earth; * make melody, rejoice and sing.\n\n97:5 Sing praise to the Lord on the harp, on the harp, and with the voice of a psalm: * with long trumpets, and sound of cornet.\n\n97:6 Make a joyful noise before the Lord our king: * let the sea be moved and the fulness thereof: the world and they that dwell therein.\n\n97:8 The rivers shall clap their hands, the mountains shall rejoice together at the presence of the Lord: * because he cometh to judge the earth.\n\n97:9 He shall judge the world with justice, * and the people with equity.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. Make a joyful noise before the Lord our King.",
+          "chant": null
+        },
+        {
+          "id": "lauds-laudes3",
+          "kind": "opening",
+          "title": "Section 3",
+          "rubric": "[2]",
+          "latin": "Ant. Dómine, * refúgium factus es nobis. ‡\n\nPsalmus 89 [2]\n\n89:1 Dómine, refúgium factus es nobis: * ‡ a generatióne in generatiónem.\n\n89:2 Priúsquam montes fíerent, aut formarétur terra et orbis: * a sǽculo et usque in sǽculum tu es, Deus.\n\n89:3 Ne avértas hóminem in humilitátem: * et dixísti: Convertímini, fílii hóminum.\n\n89:4 Quóniam mille anni ante óculos tuos, * tamquam dies hestérna, quæ prætériit,\n\n89:5 Et custódia in nocte, * quæ pro níhilo habéntur, eórum anni erunt.\n\n89:6 Mane sicut herba tránseat, mane flóreat, et tránseat: * véspere décidat, indúret et aréscat.\n\n89:7 Quia defécimus in ira tua, * et in furóre tuo turbáti sumus.\n\n89:8 Posuísti iniquitátes nostras in conspéctu tuo: * sǽculum nostrum in illuminatióne vultus tui.\n\n89:9 Quóniam omnes dies nostri defecérunt: * et in ira tua defécimus.\n\n89:9 Anni nostri sicut aránea meditabúntur: * dies annórum nostrórum in ipsis, septuagínta anni.\n\n89:10 Si autem in potentátibus, octogínta anni: * et ámplius eórum, labor et dolor.\n\n89:10 Quóniam supervénit mansuetúdo: * et corripiémur.\n\n89:11 Quis novit potestátem iræ tuæ: * et præ timóre tuo iram tuam dinumeráre?\n\n89:12 Déxteram tuam sic notam fac: * et erudítos corde in sapiéntia.\n\n89:13 Convértere, Dómine, úsquequo? * et deprecábilis esto super servos tuos.\n\n89:14 Repléti sumus mane misericórdia tua: * et exsultávimus, et delectáti sumus ómnibus diébus nostris.\n\n89:15 Lætáti sumus pro diébus, quibus nos humiliásti: * annis, quibus vídimus mala.\n\n89:16 Réspice in servos tuos, et in ópera tua: * et dírige fílios eórum.\n\n89:17 Et sit splendor Dómini, Dei nostri, super nos, et ópera mánuum nostrárum dírige super nos: * et opus mánuum nostrárum dírige.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Dómine, refúgium factus es nobis.",
+          "english": "Ant. Lord, * thou hast been our refuge. ‡\n\nPsalm 89 [2]\n\n89:1 Lord, thou hast been our refuge * ‡ from generation to generation.\n\n89:2 Before the mountains were made, or the earth and the world was formed; * from eternity and to eternity thou art God.\n\n89:3 Turn not man away to be brought low: * and thou hast said: Be converted, O ye sons of men.\n\n89:4 For a thousand years in thy sight * are as yesterday, which is past.\n\n89:5 And as a watch in the night, * things that are counted nothing, shall their years be.\n\n89:6 In the morning man shall grow up like grass; in the morning he shall flourish and pass away: * in the evening he shall fall, grow dry, and wither.\n\n89:7 For in thy wrath we have fainted away: * and are troubled in thy indignation.\n\n89:8 Thou hast set our iniquities before thy eyes: * our life in the light of thy countenance.\n\n89:9 For all our days are spent; * and in thy wrath we have fainted away.\n\n89:9 Our years shall be considered as a spider: * the days of our years in them are threescore and ten years.\n\n89:10 But if in the strong they be fourscore years: * and what is more of them is labour and sorrow.\n\n89:10 For mildness is come upon us: * and we shall be corrected.\n\n89:11 Who knoweth the power of thy anger, * and for thy fear can number thy wrath?\n\n89:12 So make thy right hand known: * and men learned in heart, in wisdom.\n\n89:13 Return, O Lord, how long? * and be entreated in favour of thy servants.\n\n89:14 We are filled in the morning with thy mercy: * and we have rejoiced, and are delighted all our days.\n\n89:15 We have rejoiced for the days in which thou hast humbled us: * for the years in which we have seen evils.\n\n89:16 Look upon thy servants and upon their works: * and direct their children.\n\n89:17 And let the brightness of the Lord our God be upon us: and direct thou the works of our hands over us; * yea, the work of our hands do thou direct.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. Lord, thou hast been our refuge.",
+          "chant": null
+        },
+        {
+          "id": "lauds-laudes4",
+          "kind": "opening",
+          "title": "Section 4",
+          "rubric": "[3]",
+          "latin": "Ant. Dómine, * in cælo misericórdia tua.\n\nPsalmus 35 [3]\n\n35:2 Dixit iniústus ut delínquat in semetípso: * non est timor Dei ante óculos eius.\n\n35:3 Quóniam dolóse egit in conspéctu eius: * ut inveniátur iníquitas eius ad ódium.\n\n35:4 Verba oris eius iníquitas, et dolus: * nóluit intellégere ut bene ágeret.\n\n35:5 Iniquitátem meditátus est in cubíli suo: * ástitit omni viæ non bonæ, malítiam autem non odívit.\n\n35:6 Dómine, in cælo misericórdia tua: * et véritas tua usque ad nubes.\n\n35:7 Iustítia tua sicut montes Dei: * iudícia tua abýssus multa.\n\n35:7 Hómines, et iuménta salvábis, Dómine: * quemádmodum multiplicásti misericórdiam tuam, Deus.\n\n35:8 Fílii autem hóminum, * in tégmine alárum tuárum sperábunt.\n\n35:9 Inebriabúntur ab ubertáte domus tuæ: * et torrénte voluptátis tuæ potábis eos.\n\n35:10 Quóniam apud te est fons vitæ: * et in lúmine tuo vidébimus lumen.\n\n35:11 Præténde misericórdiam tuam sciéntibus te, * et iustítiam tuam his, qui recto sunt corde.\n\n35:12 Non véniat mihi pes supérbiæ: * et manus peccatóris non móveat me.\n\n35:13 Ibi cecidérunt qui operántur iniquitátem: * expúlsi sunt, nec potuérunt stare.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Dómine, in cælo misericórdia tua.",
+          "english": "Ant. O Lord, * thy mercy is in heaven.\n\nPsalm 35 [3]\n\n35:2 The unjust hath said within himself, that he would sin: * there is no fear of God before his eyes.\n\n35:3 For in his sight he hath done deceitfully, * that his iniquity may be found unto hatred.\n\n35:4 The words of his mouth are iniquity and guile: * he would not understand that he might do well.\n\n35:5 He hath devised iniquity on his bed, * he hath set himself on every way that is not good: but evil he hath not hated.\n\n35:6 O Lord, thy mercy is in heaven, * and thy truth reacheth even to the clouds.\n\n35:7 Thy justice is as the mountains of God, * thy judgments are a great deep.\n\n35:7 Men and beasts thou wilt preserve, O Lord: * O how hast thou multiplied thy mercy, O God!\n\n35:8 But the children of men * shall put their trust under the covert of thy wings.\n\n35:9 They shall be inebriated with the plenty of thy house; * and thou shalt make them drink of the torrent of thy pleasure.\n\n35:10 For with thee is the fountain of life; * and in thy light we shall see light.\n\n35:11 Extend thy mercy to them that know thee, * and thy justice to them that are right in heart.\n\n35:12 Let not the foot of pride come to me, * and let not the hand of the sinner move me.\n\n35:13 There the workers of iniquity are fallen, * they are cast out, and could not stand.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. O Lord, thy mercy is in heaven.",
+          "chant": null
+        },
+        {
+          "id": "lauds-laudes5",
+          "kind": "opening",
+          "title": "Section 5",
+          "rubric": "[4]",
+          "latin": "Ant. Pópulus meus, * ait Dóminus, bonis meis adimplébitur.\n\nCanticum Ieremiæ [4]\n\nIer 31:10-18\n\n31:10 Audíte verbum Dómini, gentes, * et annuntiáte in ínsulis, quæ procul sunt,\n\n31:11 Et dícite: Qui dispérsit Israël, congregábit eum: * et custódiet eum sicut pastor gregem suum.\n\n31:12 Redémit enim Dóminus Iacob, * et liberávit eum de manu potentióris.\n\n31:13 Et vénient, et laudábunt in monte Sion: * et cónfluent ad bona Dómini,\n\n31:14 Super fruménto, et vino, et óleo, * et fœtu pécorum et armentórum:\n\n31:15 Erítque ánima eórum quasi hortus irríguus, * et ultra non esúrient.\n\n31:16 Tunc lætábitur virgo in choro, * iúvenes et senes simul:\n\n31:17 Et convértam luctum eórum in gáudium, * et consolábor eos, et lætificábo a dolóre suo.\n\n31:18 Et inebriábo ánimam sacerdótum pinguédine: * et pópulus meus bonis meis adimplébitur.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Pópulus meus, ait Dóminus, bonis meis adimplébitur.",
+          "english": "Ant. My people, * said the Lord, shall be filled with good things.\n\nCanticle of Jeremias [4]\n\nJer 31:10-18\n\n31:10 Hear the word of the Lord, O ye nations, * and declare it in the islands that are afar off,\n\n31:11 And say: He that scattered Israel will gather him: * and he will keep him as the shepherd doth his flock.\n\n31:12 For the Lord hath redeemed Jacob, * and delivered him out of the hand of one that was mightier than he.\n\n31:13 And they shall come, and shall give praise in mount Sion: * and they shall flow together to the good things of the Lord,\n\n31:14 For the corn, and wine, and oil, * and the increase of cattle and herds,\n\n31:15 And their soul shall be as a watered garden, * and they shall be hungry no more.\n\n31:16 Then shall the virgin rejoice in the dance, * the young men and old men together:\n\n31:17 And I will turn their mourning into joy, * and will comfort them, and make them joyful after their sorrow.\n\n31:18 And I will fill the soul of the priests with fatness: * and my people shall be filled with my good things.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. My people, said the Lord, shall be filled with good things.",
+          "chant": null
+        },
+        {
+          "id": "lauds-laudes6",
+          "kind": "opening",
+          "title": "Section 6",
+          "rubric": "[5]",
+          "latin": "Ant. Deo nostro * iucúnda sit laudátio.\n\nPsalmus 146 [5]\n\n146:1 Laudáte Dóminum quóniam bonus est psalmus: * Deo nostro sit iucúnda, decóraque laudátio.\n\n146:2 Ædíficans Ierúsalem Dóminus: * dispersiónes Israélis congregábit.\n\n146:3 Qui sanat contrítos corde: * et álligat contritiónes eórum.\n\n146:4 Qui númerat multitúdinem stellárum: * et ómnibus eis nómina vocat.\n\n146:5 Magnus Dóminus noster, et magna virtus eius: * et sapiéntiæ eius non est númerus.\n\n146:6 Suscípiens mansuétos Dóminus: * humílians autem peccatóres usque ad terram.\n\n146:7 Præcínite Dómino in confessióne: * psállite Deo nostro in cíthara.\n\n146:8 Qui óperit cælum núbibus: * et parat terræ plúviam.\n\n146:8 Qui prodúcit in móntibus fænum: * et herbam servitúti hóminum.\n\n146:9 Qui dat iuméntis escam ipsórum: * et pullis corvórum invocántibus eum.\n\n146:10 Non in fortitúdine equi voluntátem habébit: * nec in tíbiis viri beneplácitum erit ei.\n\n146:11 Beneplácitum est Dómino super timéntes eum: * et in eis, qui sperant super misericórdia eius.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Deo nostro iucúnda sit laudátio.",
+          "english": "Ant. To our God * be joyful and fitting praise.\n\nPsalm 146 [5]\n\n146:1 Praise ye the Lord, because psalm is good: * to our God be joyful and comely praise.\n\n146:2 The Lord buildeth up Jerusalem: * he will gather together the dispersed of Israel\n\n146:3 Who healeth the broken of heart, * and bindeth up their bruises.\n\n146:4 Who telleth the number of the stars: * and calleth them all by their names.\n\n146:5 Great is our Lord, and great is his power: * and of his wisdom there is no number.\n\n146:6 The Lord lifteth up the meek, * and bringeth the wicked down even to the ground.\n\n146:7 Sing ye to the Lord with praise: * sing to our God upon the harp.\n\n146:8 Who covereth the heaven with clouds, * and prepareth rain for the earth.\n\n146:8 Who maketh grass to grow on the mountains, * and herbs for the service of men.\n\n146:9 Who giveth to beasts their food: * and to the young ravens that call upon him.\n\n146:10 He shall not delight in the strength of the horse: * nor take pleasure in the legs of a man.\n\n146:11 The Lord taketh pleasure in them that fear him: * and in them that hope in his mercy.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. To our God be joyful and fitting praise.",
+          "chant": null
+        },
+        {
+          "id": "lauds-laudes7",
+          "kind": "chapter",
+          "title": "Capitulum Hymnus Versus",
+          "rubric": "ex Commune aut Festo",
+          "latin": "Capitulum Hymnus Versus {ex Commune aut Festo}\n\nIac 1:12\n\nBeátus vir, qui suffert tentatiónem: quóniam cum probátus fúerit, accípiet corónam vitæ, quam repromísit Deus diligéntibus se.\n\n℟. Deo grátias.\n\nHymnus\n\nInvícte Martyr, únicum\n\nPatris secútus Fílium,\n\nVictis triúmphas hóstibus,\n\nVictor fruens cæléstibus.\n\nTui precátus múnere\n\nNostrum reátum dílue,\n\nArcens mali contágium,\n\nVitæ repéllens tǽdium.\n\nSolúta sunt iam víncula\n\nTui sacráti córporis:\n\nNos solve vinclis sǽculi,\n\nDono supérni Núminis.\n\nDeo Patri sit glória,\n\nEiúsque soli Fílio,\n\nCum Spíritu Paráclito,\n\nNunc, et per omne sǽculum.\n\nAmen.\n\n℣. Iustus ut palma florébit.\n\n℟. Sicut cedrus Líbani multiplicábitur.",
+          "english": "Chapter Hymn Verse {from the Common or Feast}\n\nJas 1:12\n\nBlessed is the man that endureth temptation; for when he hath been proved, he shall receive a crown of life, which God hath promised to them that love him.\n\n℟. Thanks be to God.\n\nHymn\n\nMartyr of God, whose strength was steeled\n\nTo follow close God's only Son,\n\nWell didst thou brave thy battlefield,\n\nAnd well thy heavenly bliss was won!\n\nNow join thy prayers with ours, who pray\n\nThat God may pardon us and bless;\n\nFor prayer keeps evil's plague away,\n\nAnd draws from life its weariness.\n\nLong, long ago, were loosed the chains\n\nThat held thy body once in thrall;\n\nFor us how many a bond remains!\n\nO love of God release us all.\n\nAll praise to God the Father be,\n\nAll praise to thee, Eternal Son;\n\nAll praise, O Holy Ghost, to thee,\n\nWhile never-ending ages run.\n\nAmen.\n\n℣. The righteous shall flourish like the palm-tree.\n\n℟. He shall grow like a cedar in Lebanon.",
+          "chant": null
+        },
+        {
+          "id": "lauds-laudes8",
+          "kind": "blessing",
+          "title": "Canticum: Benedictus",
+          "rubric": "Antiphona ex Proprio Sanctorum",
+          "latin": "Canticum: Benedictus {Antiphona ex Proprio Sanctorum}\n\nAnt. Qui odit * ánimam suam in hoc mundo, in vitam ætérnam custódit eam.\n\nCanticum Zachariæ\n\nLuc. 1:68-79\n\n1:68 Benedíctus ✠ Dóminus, Deus Israël: * quia visitávit, et fecit redemptiónem plebis suæ:\n\n1:69 Et eréxit cornu salútis nobis: * in domo David, púeri sui.\n\n1:70 Sicut locútus est per os sanctórum, * qui a sǽculo sunt, prophetárum eius:\n\n1:71 Salútem ex inimícis nostris, * et de manu ómnium, qui odérunt nos.\n\n1:72 Ad faciéndam misericórdiam cum pátribus nostris: * et memorári testaménti sui sancti.\n\n1:73 Iusiurándum, quod iurávit ad Ábraham patrem nostrum, * datúrum se nobis:\n\n1:74 Ut sine timóre, de manu inimicórum nostrórum liberáti, * serviámus illi.\n\n1:75 In sanctitáte, et iustítia coram ipso, * ómnibus diébus nostris.\n\n1:76 Et tu, puer, Prophéta Altíssimi vocáberis: * præíbis enim ante fáciem Dómini, paráre vias eius:\n\n1:77 Ad dandam sciéntiam salútis plebi eius: * in remissiónem peccatórum eórum:\n\n1:78 Per víscera misericórdiæ Dei nostri: * in quibus visitávit nos, óriens ex alto:\n\n1:79 Illumináre his, qui in ténebris, et in umbra mortis sedent: * ad dirigéndos pedes nostros in viam pacis.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Qui odit ánimam suam in hoc mundo, in vitam ætérnam custódit eam.",
+          "english": "Canticle: Benedictus {Antiphon from the Proper of Saints}\n\nAnt. He that hateth his life * in this world, shall keep it unto life eternal.\n\nCanticle of Zacharias\n\nLuke 1:68-79\n\n1:68 Blessed be the Lord ✠ God of Israel; * because he hath visited and wrought the redemption of his people:\n\n1:69 And hath raised up an horn of salvation to us, * in the house of David his servant:\n\n1:70 As he spoke by the mouth of his holy Prophets, * who are from the beginning:\n\n1:71 Salvation from our enemies, * and from the hand of all that hate us:\n\n1:72 To perform mercy to our fathers, * and to remember his holy testament,\n\n1:73 The oath, which he swore to Abraham our father, * that he would grant to us,\n\n1:74 That being delivered from the hand of our enemies, * we may serve him without fear,\n\n1:75 In holiness and justice before him, * all our days.\n\n1:76 And thou, child, shalt be called the prophet of the Highest: * for thou shalt go before the face of the Lord to prepare his ways:\n\n1:77 To give knowledge of salvation to his people, * unto the remission of their sins:\n\n1:78 Through the bowels of the mercy of our God, * in which the Orient from on high hath visited us:\n\n1:79 To enlighten them that sit in darkness, and in the shadow of death: * to direct our feet into the way of peace.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. He that hateth his life in this world, shall keep it unto life eternal.",
+          "chant": null
+        },
+        {
+          "id": "lauds-laudes9",
+          "kind": "collect",
+          "title": "Oratio",
+          "rubric": "ex Proprio Sanctorum",
+          "latin": "Oratio {ex Proprio Sanctorum}\n\n℣. Dómine, exáudi oratiónem meam.\n\n℟. Et clamor meus ad te véniat.\n\nOrémus.\n\nDeus, fidélium remunerátor animárum, qui hunc diem beáti Apollináris Sacerdótis tui martýrio consecrásti: tríbue nobis, quǽsumus, fámulis tuis; ut, cuius venerándam celebrámus festivitátem, précibus eius indulgéntiam consequámur.\n\nPer Dóminum nostrum Iesum Christum, Fílium tuum: qui tecum vivit et regnat in unitáte Spíritus Sancti, Deus, per ómnia sǽcula sæculórum.\n\n℟. Amen.\n\nCommemoratio S. Liborii Episcopi et Confessoris\n\nAnt. Euge, serve bone et fidélis, quia in pauca fuísti fidélis, supra multa te constítuam, dicit Dóminus.\n\n℣. Iustum dedúxit Dóminus per vias rectas.\n\n℟. Et osténdit illi regnum Dei.\n\nOrémus.\n\nDa, quǽsumus, omnípotens Deus: ut beáti Libórii Confessóris tui atque Pontíficis veneránda solémnitas, et devotiónem nobis áugeat et salútem.\n\nPer Dóminum nostrum Iesum Christum, Fílium tuum: qui tecum vivit et regnat in unitáte Spíritus Sancti, Deus, per ómnia sǽcula sæculórum.\n\n℟. Amen.",
+          "english": "Prayer {from the Proper of Saints}\n\n℣. O Lord, hear my prayer.\n\n℟. And let my cry come unto thee.\n\nLet us pray.\n\nO God, Who art thyself the exceeding great Reward of all faithful souls, and in Whose sight this day is holy because thy blessed Priest Apollinaris did hereon lift up his last earthly testimony, we beseech thee to grant unto us thy servants, who do keep his worshipful Feast-day, to obtain by his prayers thy gracious remission for our offences.\n\nThrough Jesus Christ, thy Son our Lord, Who liveth and reigneth with thee, in the unity of the Holy Ghost, God, world without end.\n\n℟. Amen.\n\nCommemoration of St. Liborius, Bishop and Confessor\n\nAnt. Well done, thou good and faithful servant thou hast been faithful over a few things, I will make thee ruler over many things, saith the Lord.\n\n℣. The Lord guided the just in right paths.\n\n℟. And showed him the kingdom of God.\n\nLet us pray.\n\nGrant, we beseech thee, almighty God, that the venerable feast of Liborius thy blessed Confessor and Bishop may increase our devotion and promote our salvation.\n\nThrough Jesus Christ, thy Son our Lord, Who liveth and reigneth with thee, in the unity of the Holy Ghost, God, world without end.\n\n℟. Amen.",
+          "chant": null
+        },
+        {
+          "id": "lauds-laudes10",
+          "kind": "conclusion",
+          "title": "Conclusio",
+          "rubric": null,
+          "latin": "Conclusio\n\n℣. Dómine, exáudi oratiónem meam.\n\n℟. Et clamor meus ad te véniat.\n\n℣. Benedicámus Dómino.\n\n℟. Deo grátias.\n\n℣. Fidélium ánimæ per misericórdiam Dei requiéscant in pace.\n\n℟. Amen.",
+          "english": "Conclusion\n\n℣. O Lord, hear my prayer.\n\n℟. And let my cry come unto thee.\n\n℣. Let us bless the Lord.\n\n℟. Thanks be to God.\n\n℣. May the souls of the faithful, through the mercy of God, rest in peace.\n\n℟. Amen.",
+          "chant": null
+        }
+      ]
+    },
+    {
+      "id": "2026-07-23-prime",
+      "date": {
+        "year": 2026,
+        "month": 7,
+        "day": 23
+      },
+      "hour": "prime",
+      "titleLatin": "Ad Primam",
+      "titleEnglish": "Prime",
+      "contextLabel": "S. Apollinaris Episcopi et Martyris",
+      "sourceVersion": "Rubrics 1960 - 1960 · pinned Divinum Officium development import",
+      "sections": [
+        {
+          "id": "prime-prima1",
+          "kind": "opening",
+          "title": "Incipit",
+          "rubric": null,
+          "latin": "Incipit\n\n℣. Deus ✠ in adiutórium meum inténde.\n\n℟. Dómine, ad adiuvándum me festína.\n\nGlória Patri, et Fílio, * et Spirítui Sancto.\n\nSicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAllelúia.",
+          "english": "Start\n\n℣. O God, ✠ come to my assistance;\n\n℟. O Lord, make haste to help me.\n\nGlory be to the Father, and to the Son, * and to the Holy Ghost.\n\nAs it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAlleluia.",
+          "chant": null
+        },
+        {
+          "id": "prime-prima2",
+          "kind": "hymn",
+          "title": "Hymnus",
+          "rubric": null,
+          "latin": "Hymnus\n\nIam lucis orto sídere,\n\nDeum precémur súpplices,\n\nUt in diúrnis áctibus\n\nNos servet a nocéntibus.\n\nLinguam refrénans témperet,\n\nNe litis horror ínsonet:\n\nVisum fovéndo cóntegat,\n\nNe vanitátes háuriat.\n\nSint pura cordis íntima,\n\nAbsístat et vecórdia;\n\nCarnis terat supérbiam\n\nPotus cibíque párcitas.\n\nUt, cum dies abscésserit,\n\nNoctémque sors redúxerit,\n\nMundi per abstinéntiam\n\nIpsi canámus glóriam.\n\nDeo Patri sit glória,\n\nEiúsque soli Fílio,\n\nCum Spíritu Paráclito,\n\nNunc et per omne sǽculum.\n\nAmen.",
+          "english": "Hymn\n\nNow in the sun's new dawning ray,\n\nLowly of heart, our God we pray\n\nThat he from harm may keep us free\n\nIn all the deeds this day shall see.\n\nMay fear of him our tongues restrain,\n\nLest strife unguarded speech should stain:\n\nHis favouring care our guardian be,\n\nLest our eyes feed on vanity.\n\nMay every heart be pure from sin\n\nAnd folly find no place therein:\n\nScant need of food, excess denied,\n\nWear down in us the body's pride.\n\nThat when the light of day is gone,\n\nAnd night in course shall follow on.\n\nWe, free from cares the world affords,\n\nMay chant the praise that is our Lord's.\n\nAll laud to God the Father be,\n\nAll praise, Eternal Son, to thee:\n\nAll glory, as is ever meet,\n\nTo God the holy Paraclete.\n\nAmen.",
+          "chant": null
+        },
+        {
+          "id": "prime-prima3",
+          "kind": "psalm",
+          "title": "Psalmi",
+          "rubric": "ex Psalterio secundum diem",
+          "latin": "Psalmi {ex Psalterio secundum diem}\n\nAnt. In loco páscuæ * ibi Dóminus me collocávit.\n\nPsalmus 22 [1]\n\n22:1 Dóminus regit me, et nihil mihi déerit: * in loco páscuæ ibi me collocávit.\n\n22:2 Super aquam refectiónis educávit me: * ánimam meam convértit.\n\n22:3 Dedúxit me super sémitas iustítiæ, * propter nomen suum.\n\n22:4 Nam, et si ambulávero in médio umbræ mortis, non timébo mala: * quóniam tu mecum es.\n\n22:4 Virga tua, et báculus tuus: * ipsa me consoláta sunt.\n\n22:5 Parásti in conspéctu meo mensam, * advérsus eos, qui tríbulant me.\n\n22:5 Impinguásti in óleo caput meum: * et calix meus inébrians quam præclárus est!\n\n22:6 Et misericórdia tua subsequétur me * ómnibus diébus vitæ meæ:\n\n22:6 Et ut inhábitem in domo Dómini, * in longitúdinem diérum.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.",
+          "english": "Psalms {from the Psalter for the day of the week}\n\nAnt. The Lord hath set me * in a place of pasture.\n\nPsalm 22 [1]\n\n22:1 The Lord ruleth me: and I shall want nothing. * He hath set me in a place of pasture.\n\n22:2 He hath brought me up, on the water of refreshment: * he hath converted my soul.\n\n22:3 He hath led me on the paths of justice, * for his own name’s sake.\n\n22:4 For though I should walk in the midst of the shadow of death, I will fear no evils, * for thou art with me.\n\n22:4 Thy rod and thy staff, * they have comforted me.\n\n22:5 Thou hast prepared a table before me * against them that afflict me.\n\n22:5 Thou hast anointed my head with oil; * and my chalice which inebriateth me, how goodly is it!\n\n22:6 And thy mercy will follow me * all the days of my life.\n\n22:6 And that I may dwell in the house of the Lord * unto length of days.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.",
+          "chant": null
+        },
+        {
+          "id": "prime-prima4",
+          "kind": "opening",
+          "title": "Section 4",
+          "rubric": "[2]",
+          "latin": "Psalmus 71(2-8) [2]\n\n71:2 Deus, iudícium tuum regi da: * et iustítiam tuam fílio regis:\n\n71:2 Iudicáre pópulum tuum in iustítia, * et páuperes tuos in iudício.\n\n71:3 Suscípiant montes pacem pópulo: * et colles iustítiam.\n\n71:4 Iudicábit páuperes pópuli, et salvos fáciet fílios páuperum: * et humiliábit calumniatórem.\n\n71:5 Et permanébit cum sole, et ante lunam, * in generatióne et generatiónem.\n\n71:6 Descéndet sicut plúvia in vellus: * et sicut stillicídia stillántia super terram.\n\n71:7 Oriétur in diébus eius iustítia, et abundántia pacis: * donec auferátur luna.\n\n71:8 Et dominábitur a mari usque ad mare: * et a flúmine usque ad términos orbis terrárum.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.",
+          "english": "Psalm 71(2-8) [2]\n\n71:2 Give to the king thy judgment, O God: * and to the king’s son thy justice:\n\n71:2 To judge thy people with justice, * and thy poor with judgment.\n\n71:3 Let the mountains receive peace for the people: * and the hills justice.\n\n71:4 He shall judge the poor of the people, and he shall save the children of the poor: * and he shall humble the oppressor.\n\n71:5 And he shall continue with the sun, and before the moon, * throughout all generations.\n\n71:6 He shall come down like rain upon the fleece; * and as showers falling gently upon the earth.\n\n71:7 In his days shall justice spring up, and abundance of peace, * till the moon be taken away.\n\n71:8 And he shall rule from sea to sea, * and from the river unto the ends of the earth.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.",
+          "chant": null
+        },
+        {
+          "id": "prime-prima5",
+          "kind": "opening",
+          "title": "Section 5",
+          "rubric": "[3]",
+          "latin": "Psalmus 71(9-19) [3]\n\n71:9 Coram illo prócident Æthíopes: * et inimíci eius terram lingent.\n\n71:10 Reges Tharsis, et ínsulæ múnera ófferent: * reges Árabum et Saba dona addúcent.\n\n71:11 Et adorábunt eum omnes reges terræ: * omnes gentes sérvient ei:\n\n71:12 Quia liberábit páuperem a poténte: * et páuperem, cui non erat adiútor.\n\n71:13 Parcet páuperi et ínopi: * et ánimas páuperum salvas fáciet.\n\n71:14 Ex usúris et iniquitáte rédimet ánimas eórum: * et honorábile nomen eórum coram illo.\n\n71:15 Et vivet, et dábitur ei de auro Arábiæ, et adorábunt de ipso semper: * tota die benedícent ei.\n\n71:16 Et erit firmaméntum in terra in summis móntium, superextollétur super Líbanum fructus eius: * et florébunt de civitáte sicut fænum terræ.\n\n71:17 Sit nomen eius benedíctum in sǽcula: * ante solem pérmanet nomen eius.\n\n71:17 Et benedicéntur in ipso omnes tribus terræ: * omnes gentes magnificábunt eum.\n\n71:18 Benedíctus Dóminus, Deus Israël, * qui facit mirabília solus:\n\n71:19 Et benedíctum nomen maiestátis eius in ætérnum: * et replébitur maiestáte eius omnis terra: fiat, fiat.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. In loco páscuæ ibi Dóminus me collocávit.",
+          "english": "Psalm 71(9-19) [3]\n\n71:9 Before him the Ethiopians shall fall down: * and his enemies shall lick the ground.\n\n71:10 The kings of Tharsis and the islands shall offer presents: * the kings of the Arabians and of Saba shall bring gifts:\n\n71:11 And all kings of the earth shall adore him: * all nations shall serve him.\n\n71:12 For he shall deliver the poor from the mighty: * and the needy that had no helper.\n\n71:13 He shall spare the poor and needy: * and he shall save the souls of the poor.\n\n71:14 He shall redeem their souls from usuries and iniquity: * and their names shall be honourable in his sight.\n\n71:15 And he shall live, and to him shall be given of the gold of Arabia, for him they shall always adore: * they shall bless him all the day.\n\n71:16 And there shall be a firmament on the earth on the tops of mountains, above Libanus shall the fruit thereof be exalted: * and they of the city shall flourish like the grass of the earth.\n\n71:17 Let his name be blessed for evermore: * his name continueth before the sun.\n\n71:17 And in him shall all the tribes of the earth be blessed: * all nations shall magnify him.\n\n71:18 Blessed be the Lord, the God of Israel, * who alone doth wonderful things.\n\n71:19 And blessed be the name of his majesty for ever: * and the whole earth shall be filled with his majesty. So be it. So be it.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. The Lord hath set me in a place of pasture.",
+          "chant": null
+        },
+        {
+          "id": "prime-prima6",
+          "kind": "chapter",
+          "title": "Capitulum Responsorium Versus",
+          "rubric": "ex Psalterio secundum diem",
+          "latin": "Capitulum Responsorium Versus {ex Psalterio secundum diem}\n\n1 Tim. 1:17\n\nRegi sæculórum immortáli et invisíbili, soli Deo honor et glória in sǽcula sæculórum. Amen.\n\n℟. Deo grátias.\n\n℟.br. Christe, Fili Dei vivi, * Miserére nobis.\n\n℟. Christe, Fili Dei vivi, * Miserére nobis.\n\n℣. Qui sedes ad déxteram Patris.\n\n℟. Miserére nobis.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Christe, Fili Dei vivi, * Miserére nobis.\n\n℣. Exsúrge, Christe, ádiuva nos.\n\n℟. Et líbera nos propter nomen tuum.",
+          "english": "Chapter Responsory Verse {from the Psalter for the day of the week}\n\n1 Tim. 1:17\n\nNow to the king of ages, immortal, invisible, the only God, be honour and glory for ever and ever. Amen.\n\n℟. Thanks be to God.\n\n℟.br. Christ, Son of the living God, * have mercy on us.\n\n℟. Christ, Son of the living God, * have mercy on us.\n\n℣. Thou, who sittest at the right hand of the Father.\n\n℟. Have mercy on us.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. Christ, Son of the living God, * have mercy on us.\n\n℣. Arise, O Christ, and help us.\n\n℟. And deliver us for thy name's sake.",
+          "chant": null
+        },
+        {
+          "id": "prime-prima7",
+          "kind": "collect",
+          "title": "Oratio",
+          "rubric": null,
+          "latin": "Oratio\n\n℣. Dómine, exáudi oratiónem meam.\n\n℟. Et clamor meus ad te véniat.\n\nOrémus.\n\nDómine Deus omnípotens, qui ad princípium huius diéi nos perveníre fecísti: tua nos hódie salva virtúte; ut in hac die ad nullum declinémus peccátum, sed semper ad tuam iustítiam faciéndam nostra procédant elóquia, dirigántur cogitatiónes et ópera.\n\nPer Dóminum nostrum Iesum Christum, Fílium tuum: qui tecum vivit et regnat in unitáte Spíritus Sancti, Deus, per ómnia sǽcula sæculórum.\n\n℟. Amen.\n\n℣. Dómine, exáudi oratiónem meam.\n\n℟. Et clamor meus ad te véniat.\n\n℣. Benedicámus Dómino.\n\n℟. Deo grátias.",
+          "english": "Prayer\n\n℣. O Lord, hear my prayer.\n\n℟. And let my cry come unto thee.\n\nLet us pray.\n\nO Lord, our heavenly Father, Almighty and everlasting God, who has safely brought us to the beginning of this day: defend us by thy mighty power; and grant that this day we fall into no sin, but that all our doings may be ordered by thy governance, to do always what is righteous in thy sight.\n\nThrough Jesus Christ, thy Son our Lord, Who liveth and reigneth with thee, in the unity of the Holy Ghost, God, world without end.\n\n℟. Amen.\n\n℣. O Lord, hear my prayer.\n\n℟. And let my cry come unto thee.\n\n℣. Let us bless the Lord.\n\n℟. Thanks be to God.",
+          "chant": null
+        },
+        {
+          "id": "prime-prima8",
+          "kind": "opening",
+          "title": "Martyrologium",
+          "rubric": "anticipatur",
+          "latin": "Martyrologium {anticipatur}\n\nNono Kaléndas Augústi Luna nona Anno Dómini 2026\n\nTyri, apud lacum Vulsínium, in Túscia, sanctæ Christínæ, Vírginis et Mártyris. Hæc Virgo, cum patris idóla áurea et argéntea, in Christum credens, comminuísset atque illórum frágmina paupéribus erogásset, eiúsdem patris iussu verbéribus dilaniáta est, aliísque supplíciis diríssime cruciáta, et cum magno saxi póndere in lacum proiécta, sed ab Angelo liberáta; deínde, sub alio Iúdice, patris sui successóre, acerbióra torménta constánter pértulit; novíssime, sub Iuliáno Prǽside, post fornácem ardéntem, ubi quinque diébus illǽsa permánsit, post serpéntes virtúte Christi superátos, martýrii sui cursum abscissióne linguæ et sagittárum infixióne complévit.\n\nRomæ, via Tiburtína, sancti Vincéntii Mártyris.\n\nAmitérni, in Vestínis, pássio sanctórum mílitum octogínta trium.\n\nEméritæ, in Hispánia, sancti Victóris, viri militáris, qui, cum frátribus Stercátio et Antinógene, in persecutióne Diocletiáni, per divérsa supplícia martýrium consummávit.\n\nItem sanctórum Mártyrum Menéi et Capitónis.\n\nIn Lýcia sanctárum Mártyrum Nicétæ et Aquilínæ, quæ, beáti Christóphori Mártyris prædicatióne ad Christum convérsæ, martýrii palmam obtruncatióne cápitis sumpsérunt.\n\nApud Sénonas sancti Ursicíni, Epíscopi et Confessóris.\n\n℣. Et álibi aliórum plurimórum sanctórum Mártyrum et Confessórum, atque sanctárum Vírginum.\n\n℟. Deo grátias.",
+          "english": "Martyrology {anticipated}\n\nOn the morrow is the eve of the holy Apostle James. Upon the morrow also we keep the feast of the holy Confessor Alexis, son of the Senator Euphemian. Upon the first night of his marriage he left his bride untouched, and absconded from his home. After a long pilgrimage he returned to the city, where he was received as a beggar out of charity in his own fathers house, and there remained unknown for seventeen years, thus deceiving the world by a new craft. After he was dead, [in the year 404,] in the Supreme Pontificate of Innocent I, he was recognised by a voice which was heard throughout the churches of the city and by his own writing, and his body was carried with the greatest honour to the Church of St Boniface, where he hath been illustrious for many miracles. Mention is made of him upon the 17th day of this present month of July.\n\nJuly 24th 2026, the 9th day of the Moon, was also born into the better life:\n\nAt Tyro, a city which stood formerly on an island, in the lake of Bolsena in Tuscany, in the persecution under the Emperor Diocletian, the holy Virgin and martyr Christina. She brake her father's idols of gold and silver, and gave the morsels to the poor whereupon he commanded her to be torn with stripes and otherwise fearfully tortured after which a great stone was tied about her neck, and she was cast into the lake but an angel delivered her. She then suffered bravely the sharpest torments under another judge, who succeeded her father, and in the end finished the course of her testimony under the President Julian, having endured a burning furnace, wherein she remained shut up unhurt for five days, having by Christ's power overcome serpents, having had her tongue cut out, and being lastly shot to death with arrows.\n\nAt Rome, in the Tiburtine Way, the holy martyr Vincent.\n\nAt San Vitturino, in Samnium, eighty-three holy martyrs, all soldiers.\n\nAt Merida, in Spain, the holy soldier Victor, who, along with his two brothers Stercatius and Antinogenes, in the persecution under the Emperor Diocletian, by diverse torments finished their testimony.\n\nIn Lycia, the holy martyrs Nicetas and Aquilina, who were turned to Christ by the preaching of the blessed martyr Christopher, and received the palm of martyrdom by being beheaded.\n\nAlso the holy martyrs Meneus and Capiton.\n\nAt Sens, [in the fourth century,] the holy Confessor Ursicinus, Bishop [of that see.]\n\n℣. And elsewhere many other holy martyrs, confessors, and holy virgins.\n\n℟. Thanks be to God.",
+          "chant": null
+        },
+        {
+          "id": "prime-prima9",
+          "kind": "opening",
+          "title": "Section 9",
+          "rubric": null,
+          "latin": "℣. Pretiósa in conspéctu Dómini.\n\n℟. Mors Sanctórum eius.\n\nSancta María et omnes Sancti intercédant pro nobis ad Dóminum, ut nos mereámur ab eo adiuvári et salvári, qui vivit et regnat in sǽcula sæculórum.\n\n℟. Amen.",
+          "english": "℣. Precious in the sight of the Lord\n\n℟. Is the death of his saints.\n\nHoly Mary and all the Saints, intercede for us with the Lord, our God, so that we may merit His help and salvation, who lives and reigns for ever and ever.\n\n℟. Amen.",
+          "chant": null
+        },
+        {
+          "id": "prime-prima10",
+          "kind": "opening",
+          "title": "De Officio Capituli",
+          "rubric": null,
+          "latin": "De Officio Capituli\n\n℣. Deus in adiutórium meum inténde.\n\n℟. Dómine, ad adiuvándum me festína.\n\n℣. Deus in adiutórium meum inténde.\n\n℟. Dómine, ad adiuvándum me festína.\n\n℣. Deus in adiutórium meum inténde.\n\n℟. Dómine, ad adiuvándum me festína.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nKýrie, eléison. Christe, eléison. Kýrie, eléison.\n\nPater Noster dicitur secreto usque ad Et ne nos indúcas in tentatiónem:\n\nPater noster, qui es in cælis, sanctificétur nomen tuum: advéniat regnum tuum: fiat volúntas tua, sicut in cælo et in terra. Panem nostrum cotidiánum da nobis hódie: et dimítte nobis débita nostra, sicut et nos dimíttimus debitóribus nostris:\n\n℣. Et ne nos indúcas in tentatiónem:\n\n℟. Sed líbera nos a malo.\n\n℣. Réspice in servos tuos, Dómine, et in ópera tua, et dírige fílios eórum.\n\n℟. Et sit splendor Dómini Dei nostri super nos, et ópera mánuum nostrárum dírige super nos, et opus mánuum nostrárum dírige.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nOrémus.\n\nDirígere et sanctificáre, régere et gubernáre dignáre, Dómine Deus, Rex cæli et terræ, hódie corda et córpora nostra, sensus, sermónes et actus nostros in lege tua, et in opéribus mandatórum tuórum: ut hic et in ætérnum, te auxiliánte, salvi et líberi esse mereámur, Salvátor mundi: Qui vivis et regnas in sǽcula sæculórum.\n\n℟. Amen.",
+          "english": "The Capitular Office\n\n℣. O God, come to my assistance;\n\n℟. O Lord, make haste to help me.\n\n℣. O God, come to my assistance;\n\n℟. O Lord, make haste to help me.\n\n℣. O God, come to my assistance;\n\n℟. O Lord, make haste to help me.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nLord have mercy upon us, Christ have mercy upon us, Lord have mercy upon us.\n\nOur Father is said silently until And lead us not into temptation:.\n\nOur Father, who art in heaven, Hallowed be thy name. Thy kingdom come. Thy will be done on earth as it is in heaven. Give us this day our daily bread. And forgive us our trespasses, as we forgive those who trespass against us.\n\n℣. And lead us not into temptation:\n\n℟. But deliver us from evil.\n\n℣. Look upon thy servants and upon thy works: and direct their children.\n\n℟. And let the brightness of the Lord our God be upon us. Direct thou the works of our hands; yea, the work of our hands do thou direct.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nLet us pray.\n\nO Lord, Almighty God, King of heaven and earth, Saviour of the world, bless, lead, rule and govern our hearts and bodies, our senses, words and deeds today, following thy law and commandments, that here and for eternity with thy help we shall be saved in freedom. Who livest and reignest, world without end.\n\n℟. Amen.",
+          "chant": null
+        },
+        {
+          "id": "prime-prima11",
+          "kind": "reading",
+          "title": "Lectio brevis",
+          "rubric": "Per Annum",
+          "latin": "Lectio brevis {Per Annum}\n\n℣. Iube, Dómine, benedícere.\n\nBenedictio. Dies et actus nostros in sua pace dispónat Dóminus omnípotens.\n\n℟. Amen.\n\n2 Thess 3:5\n\nDóminus autem dírigat corda et córpora nostra in caritáte Dei et patiéntia Christi.\n\n℣. Tu autem, Dómine, miserére nobis.\n\n℟. Deo grátias.",
+          "english": "Short reading {Throughout the Year}\n\n℣. Grant, Lord, a blessing.\n\nBenediction. May Almighty God arrange our deeds and our day in His peace.\n\n℟. Amen.\n\n2 Thess 3:5\n\nAnd the Lord direct your hearts, in the charity of God, and the patience of Christ.\n\n℣. But thou, O Lord, have mercy upon us.\n\n℟. Thanks be to God.",
+          "chant": null
+        },
+        {
+          "id": "prime-prima12",
+          "kind": "conclusion",
+          "title": "Conclusio",
+          "rubric": null,
+          "latin": "Conclusio\n\n℣. Adiutórium nostrum ✠ in nómine Dómini.\n\n℟. Qui fecit cælum et terram.\n\n℣. Benedícite.\n\n℟. Deus.\n\nBenedictio. Dóminus nos benedícat, ✠ et ab omni malo deféndat, et ad vitam perdúcat ætérnam. Et fidélium ánimæ per misericórdiam Dei requiéscant in pace.\n\n℟. Amen.",
+          "english": "Conclusion\n\n℣. Our help is ✠ in the name of the Lord,\n\n℟. Who made heaven and earth.\n\n℣. Let us bless.\n\n℟. God.\n\nBenediction. May the Lord bless us, ✠ protect us from all evil and bring us to everlasting life. And may the souls of the faithful, through the mercy of God, rest in peace.\n\n℟. Amen.",
+          "chant": null
+        }
+      ]
+    },
+    {
+      "id": "2026-07-23-terce",
+      "date": {
+        "year": 2026,
+        "month": 7,
+        "day": 23
+      },
+      "hour": "terce",
+      "titleLatin": "Ad Tertiam",
+      "titleEnglish": "Terce",
+      "contextLabel": "S. Apollinaris Episcopi et Martyris",
+      "sourceVersion": "Rubrics 1960 - 1960 · pinned Divinum Officium development import",
+      "sections": [
+        {
+          "id": "terce-tertia1",
+          "kind": "opening",
+          "title": "Incipit",
+          "rubric": null,
+          "latin": "Incipit\n\n℣. Deus ✠ in adiutórium meum inténde.\n\n℟. Dómine, ad adiuvándum me festína.\n\nGlória Patri, et Fílio, * et Spirítui Sancto.\n\nSicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAllelúia.",
+          "english": "Start\n\n℣. O God, ✠ come to my assistance;\n\n℟. O Lord, make haste to help me.\n\nGlory be to the Father, and to the Son, * and to the Holy Ghost.\n\nAs it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAlleluia.",
+          "chant": null
+        },
+        {
+          "id": "terce-tertia2",
+          "kind": "hymn",
+          "title": "Hymnus",
+          "rubric": null,
+          "latin": "Hymnus\n\nNunc, Sancte, nobis, Spíritus,\n\nUnum Patri cum Fílio,\n\nDignáre promptus íngeri\n\nNostro refúsus péctori.\n\nOs, lingua, mens, sensus, vigor\n\nConfessiónem pérsonent.\n\nFlamméscat igne cáritas,\n\nAccéndat ardor próximos.\n\nPræsta, Pater piíssime,\n\nPatríque compar Únice,\n\nCum Spíritu Paráclito\n\nRegnans per omne sǽculum.\n\nAmen.",
+          "english": "Hymn\n\nCome Holy Ghost who ever One\n\nArt with the Father and the Son,\n\nIt is the hour, our souls possess\n\nWith thy full flood of holiness.\n\nLet flesh and heart and lips and mind\n\nSound forth our witness to mankind;\n\nAnd love light up our mortal frame,\n\nTill others catch the living flame.\n\nAlmighty Father, hear our cry,\n\nThrough Jesus Christ, our Lord most High,\n\nWho, with the Holy Ghost and thee,\n\nDoth live and reign eternally.\n\nAmen.",
+          "chant": null
+        },
+        {
+          "id": "terce-tertia3",
+          "kind": "psalm",
+          "title": "Psalmi",
+          "rubric": "ex Psalterio secundum diem",
+          "latin": "Psalmi {ex Psalterio secundum diem}\n\nAnt. Quam bonus * Israël Deus, his, qui recto sunt corde. ‡\n\nPsalmus 72(1-9) [1]\n\n72:1 Quam bonus Israël Deus, his, qui recto sunt corde!\n\n72:2 ‡ Mei autem pæne moti sunt pedes: * pæne effúsi sunt gressus mei.\n\n72:3 Quia zelávi super iníquos, * pacem peccatórum videns.\n\n72:4 Quia non est respéctus morti eórum: * et firmaméntum in plaga eórum.\n\n72:5 In labóre hóminum non sunt, * et cum homínibus non flagellabúntur:\n\n72:6 Ídeo ténuit eos supérbia, * opérti sunt iniquitáte et impietáte sua.\n\n72:7 Pródiit quasi ex ádipe iníquitas eórum: * transiérunt in afféctum cordis.\n\n72:8 Cogitavérunt, et locúti sunt nequítiam: * iniquitátem in excélso locúti sunt.\n\n72:9 Posuérunt in cælum os suum: * et lingua eórum transívit in terra.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.",
+          "english": "Psalms {from the Psalter for the day of the week}\n\nAnt. How good is God * to Israel, to them that are of a right heart! ‡\n\nPsalm 72(1-9) [1]\n\n72:1 How good is God to Israel, to them that are of a right heart!\n\n72:2 ‡ But my feet were almost moved; * my steps had wellnigh slipped.\n\n72:3 Because I had a zeal on occasion of the wicked, * seeing the prosperity of sinners.\n\n72:4 For there is no regard to their death, * nor is there strength in their stripes.\n\n72:5 They are not in the labour of men: * neither shall they be scourged like other men.\n\n72:6 Therefore pride hath held them fast: * they are covered with their iniquity and their wickedness.\n\n72:7 Their iniquity hath come forth, as it were from fatness: * they have passed into the affection of the heart.\n\n72:8 They have thought and spoken wickedness: * they have spoken iniquity on high.\n\n72:9 They have set their mouth against heaven: * and their tongue hath passed through the earth.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.",
+          "chant": null
+        },
+        {
+          "id": "terce-tertia4",
+          "kind": "opening",
+          "title": "Section 4",
+          "rubric": "[2]",
+          "latin": "Psalmus 72(10-17) [2]\n\n72:10 Ídeo convertétur pópulus meus hic: * et dies pleni inveniéntur in eis.\n\n72:11 Et dixérunt: Quómodo scit Deus, * et si est sciéntia in excélso?\n\n72:12 Ecce, ipsi peccatóres, et abundántes in sǽculo, * obtinuérunt divítias.\n\n72:13 Et dixi: Ergo sine causa iustificávi cor meum, * et lavi inter innocéntes manus meas:\n\n72:14 Et fui flagellátus tota die, * et castigátio mea in matutínis.\n\n72:15 Si dicébam: Narrábo sic: * ecce, natiónem filiórum tuórum reprobávi.\n\n72:16 Existimábam ut cognóscerem hoc, * labor est ante me:\n\n72:17 Donec intrem in Sanctuárium Dei: * et intéllegam in novíssimis eórum.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.",
+          "english": "Psalm 72(10-17) [2]\n\n72:10 Therefore will my people return here * and full days shall be found in them.\n\n72:11 And they said: How doth God know? * and is there knowledge in the most High?\n\n72:12 Behold these are sinners; and yet abounding in the world * they have obtained riches.\n\n72:13 And I said: Then have I in vain justified my heart, * and washed my hands among the innocent.\n\n72:14 And I have been scourged all the day; * and my chastisement hath been in the mornings.\n\n72:15 If I said: I will speak thus; * behold I should condemn the generation of thy children.\n\n72:16 I studied that I might know this thing, * it is a labour in my sight:\n\n72:17 Until I go into the sanctuary of God, * and understand concerning their last ends.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.",
+          "chant": null
+        },
+        {
+          "id": "terce-tertia5",
+          "kind": "opening",
+          "title": "Section 5",
+          "rubric": "[3]",
+          "latin": "Psalmus 72(18-28) [3]\n\n72:18 Verúmtamen propter dolos posuísti eis: * deiecísti eos dum allevaréntur.\n\n72:19 Quómodo facti sunt in desolatiónem, súbito defecérunt: * periérunt propter iniquitátem suam.\n\n72:20 Velut sómnium surgéntium, Dómine, * in civitáte tua imáginem ipsórum ad níhilum rédiges.\n\n72:21 Quia inflammátum est cor meum, et renes mei commutáti sunt: * et ego ad níhilum redáctus sum, et nescívi.\n\n72:23 Ut iuméntum factus sum apud te: * et ego semper tecum.\n\n72:24 Tenuísti manum déxteram meam: et in voluntáte tua deduxísti me, * et cum glória suscepísti me.\n\n72:25 Quid enim mihi est in cælo? * et a te quid vólui super terram?\n\n72:26 Defécit caro mea, et cor meum: * Deus cordis mei, et pars mea Deus in ætérnum.\n\n72:27 Quia ecce, qui elóngant se a te, períbunt: * perdidísti omnes, qui fornicántur abs te.\n\n72:28 Mihi autem adhærére Deo bonum est: * pónere in Dómino Deo spem meam:\n\n72:28 Ut annúntiem omnes prædicatiónes tuas, * in portis fíliæ Sion.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Quam bonus Israël Deus, his, qui recto sunt corde.",
+          "english": "Psalm 72(18-28) [3]\n\n72:18 But indeed for deceits thou hast put it to them: * when they were lifted up, thou hast cast them down.\n\n72:19 How are they brought to desolation? they have suddenly ceased to be: * they have perished by reason of their iniquity.\n\n72:20 As the dream of them that awake, O Lord; * so in thy city thou shalt bring their image to nothing.\n\n72:21 For my heart hath been inflamed, and my reins have been changed: * and I am brought to nothing, and I knew not.\n\n72:23 I am become as a beast before thee: * and I am always with thee.\n\n72:24 Thou hast held me by my right hand; and by thy will thou hast conducted me, * and with thy glory thou hast received me.\n\n72:25 For what have I in heaven? * and besides thee what do I desire upon earth?\n\n72:26 For thee my flesh and my heart hath fainted away: * thou art the God of my heart, and the God that is my portion for ever.\n\n72:27 For behold they that go far from thee shall perish: * thou hast destroyed all them that are disloyal to thee.\n\n72:28 But it is good for me to adhere to my God, * to put my hope in the Lord God:\n\n72:28 That I may declare all thy praises, * in the gates of the daughter of Sion.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. How good is God to Israel, to them that are of a right heart!",
+          "chant": null
+        },
+        {
+          "id": "terce-tertia6",
+          "kind": "chapter",
+          "title": "Capitulum Responsorium Versus",
+          "rubric": "ex Commune aut Festo",
+          "latin": "Capitulum Responsorium Versus {ex Commune aut Festo}\n\nIac 1:12\n\nBeátus vir, qui suffert tentatiónem: quóniam cum probátus fúerit, accípiet corónam vitæ, quam repromísit Deus diligéntibus se.\n\n℟. Deo grátias.\n\n℟.br. Glória et honóre * Coronásti eum, Dómine.\n\n℟. Glória et honóre * Coronásti eum, Dómine.\n\n℣. Et constituísti eum super ópera mánuum tuárum.\n\n℟. Coronásti eum, Dómine.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Glória et honóre * Coronásti eum, Dómine.\n\n℣. Posuísti, Dómine, super caput eius.\n\n℟. Corónam de lápide pretióso.",
+          "english": "Chapter Responsory Verse {from the Common or Feast}\n\nJas 1:12\n\nBlessed is the man that endureth temptation; for when he hath been proved, he shall receive a crown of life, which God hath promised to them that love him.\n\n℟. Thanks be to God.\n\n℟.br. Thou hast crowned him * with glory and honour, O Lord.\n\n℟. Thou hast crowned him * with glory and honour, O Lord.\n\n℣. And madest him to have dominion over the works of thy hands.\n\n℟. Thou hast crowned him.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. Thou hast crowned him * with glory and honour, O Lord.\n\n℣. O Lord, Thou hast set a crown of precious stones.\n\n℟. Upon his head.",
+          "chant": null
+        },
+        {
+          "id": "terce-tertia7",
+          "kind": "collect",
+          "title": "Oratio",
+          "rubric": "ex Proprio Sanctorum",
+          "latin": "Oratio {ex Proprio Sanctorum}\n\n℣. Dómine, exáudi oratiónem meam.\n\n℟. Et clamor meus ad te véniat.\n\nOrémus.\n\nDeus, fidélium remunerátor animárum, qui hunc diem beáti Apollináris Sacerdótis tui martýrio consecrásti: tríbue nobis, quǽsumus, fámulis tuis; ut, cuius venerándam celebrámus festivitátem, précibus eius indulgéntiam consequámur.\n\nPer Dóminum nostrum Iesum Christum, Fílium tuum: qui tecum vivit et regnat in unitáte Spíritus Sancti, Deus, per ómnia sǽcula sæculórum.\n\n℟. Amen.",
+          "english": "Prayer {from the Proper of Saints}\n\n℣. O Lord, hear my prayer.\n\n℟. And let my cry come unto thee.\n\nLet us pray.\n\nO God, Who art thyself the exceeding great Reward of all faithful souls, and in Whose sight this day is holy because thy blessed Priest Apollinaris did hereon lift up his last earthly testimony, we beseech thee to grant unto us thy servants, who do keep his worshipful Feast-day, to obtain by his prayers thy gracious remission for our offences.\n\nThrough Jesus Christ, thy Son our Lord, Who liveth and reigneth with thee, in the unity of the Holy Ghost, God, world without end.\n\n℟. Amen.",
+          "chant": null
+        },
+        {
+          "id": "terce-tertia8",
+          "kind": "conclusion",
+          "title": "Conclusio",
+          "rubric": null,
+          "latin": "Conclusio\n\n℣. Dómine, exáudi oratiónem meam.\n\n℟. Et clamor meus ad te véniat.\n\n℣. Benedicámus Dómino.\n\n℟. Deo grátias.\n\n℣. Fidélium ánimæ per misericórdiam Dei requiéscant in pace.\n\n℟. Amen.",
+          "english": "Conclusion\n\n℣. O Lord, hear my prayer.\n\n℟. And let my cry come unto thee.\n\n℣. Let us bless the Lord.\n\n℟. Thanks be to God.\n\n℣. May the souls of the faithful, through the mercy of God, rest in peace.\n\n℟. Amen.",
+          "chant": null
+        }
+      ]
+    },
+    {
+      "id": "2026-07-23-sext",
+      "date": {
+        "year": 2026,
+        "month": 7,
+        "day": 23
+      },
+      "hour": "sext",
+      "titleLatin": "Ad Sextam",
+      "titleEnglish": "Sext",
+      "contextLabel": "S. Apollinaris Episcopi et Martyris",
+      "sourceVersion": "Rubrics 1960 - 1960 · pinned Divinum Officium development import",
+      "sections": [
+        {
+          "id": "sext-sexta1",
+          "kind": "opening",
+          "title": "Incipit",
+          "rubric": null,
+          "latin": "Incipit\n\n℣. Deus ✠ in adiutórium meum inténde.\n\n℟. Dómine, ad adiuvándum me festína.\n\nGlória Patri, et Fílio, * et Spirítui Sancto.\n\nSicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAllelúia.",
+          "english": "Start\n\n℣. O God, ✠ come to my assistance;\n\n℟. O Lord, make haste to help me.\n\nGlory be to the Father, and to the Son, * and to the Holy Ghost.\n\nAs it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAlleluia.",
+          "chant": null
+        },
+        {
+          "id": "sext-sexta2",
+          "kind": "hymn",
+          "title": "Hymnus",
+          "rubric": null,
+          "latin": "Hymnus\n\nRector potens, verax Deus,\n\nQui témperas rerum vices,\n\nSplendóre mane illúminas,\n\nEt ígnibus merídiem:\n\nExstíngue flammas lítium,\n\nAufer calórem nóxium,\n\nConfer salútem córporum,\n\nVerámque pacem córdium.\n\nPræsta, Pater piíssime,\n\nPatríque compar Únice,\n\nCum Spíritu Paráclito\n\nRegnans per omne sǽculum.\n\nAmen.",
+          "english": "Hymn\n\nO God of truth, O Lord of might,\n\nWho orderest time and change aright,\n\nWho send’st the early morning ray,\n\nAnd light’st the glow of perfect day:\n\nExtinguish thou each sinful fire,\n\nAnd banish every ill desire;\n\nAnd while thou keep’st the body whole,\n\nShed forth thy peace upon the soul.\n\nAlmighty Father, hear our cry,\n\nThrough Jesus Christ, our Lord most High,\n\nWho, with the Holy Ghost and thee,\n\nDoth live and reign eternally.\n\nAmen.",
+          "chant": null
+        },
+        {
+          "id": "sext-sexta3",
+          "kind": "psalm",
+          "title": "Psalmi",
+          "rubric": "ex Psalterio secundum diem",
+          "latin": "Psalmi {ex Psalterio secundum diem}\n\nAnt. Memor esto * congregatiónis tuæ, Dómine, quam possedísti ab inítio.\n\nPsalmus 73(1-9) [1]\n\n73:1 Ut quid, Deus, repulísti in finem: * irátus est furor tuus super oves páscuæ tuæ?\n\n73:2 Memor esto congregatiónis tuæ, * quam possedísti ab inítio.\n\n73:2 Redemísti virgam hereditátis tuæ: * mons Sion, in quo habitásti in eo.\n\n73:3 Leva manus tuas in supérbias eórum in finem: * quanta malignátus est inimícus in sancto!\n\n73:4 Et gloriáti sunt qui odérunt te: * in médio solemnitátis tuæ.\n\n73:5 Posuérunt signa sua, signa: * et non cognovérunt sicut in éxitu super summum.\n\n73:6 Quasi in silva lignórum secúribus excidérunt iánuas eius in idípsum: * in secúri et áscia deiecérunt eam.\n\n73:7 Incendérunt igni Sanctuárium tuum: * in terra polluérunt tabernáculum nóminis tui.\n\n73:8 Dixérunt in corde suo cognátio eórum simul: * Quiéscere faciámus omnes dies festos Dei a terra.\n\n73:9 Signa nostra non vídimus, iam non est prophéta: * et nos non cognóscet ámplius.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.",
+          "english": "Psalms {from the Psalter for the day of the week}\n\nAnt. Remember * thy congregation, which thou hast possessed from the beginning.\n\nPsalm 73(1-9) [1]\n\n73:1 O God, why hast thou cast us off unto the end: * why is thy wrath enkindled against the sheep of thy pasture?\n\n73:2 Remember thy congregation, * which thou hast possessed from the beginning.\n\n73:2 The sceptre of thy inheritance which thou hast redeemed: * mount Sion in which thou hast dwelt.\n\n73:3 Lift up thy hands against their pride unto the end; * see what things the enemy hath done wickedly in the sanctuary.\n\n73:4 And they that hate thee have made their boasts, * in the midst of thy solemnity.\n\n73:5 They have set up their ensigns for signs, * and they knew not both in the going out and on the highest top.\n\n73:6 As with axes in a wood of trees, they have cut down at once the gates thereof, * with axe and hatchet they have brought it down.\n\n73:7 They have set fire to thy sanctuary: * they have defiled the dwelling place of thy name on the earth.\n\n73:8 They said in their heart, the whole kindred of them together: * Let us abolish all the festival days of God from the land.\n\n73:9 Our signs we have not seen, there is now no prophet: * and he will know us no more.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.",
+          "chant": null
+        },
+        {
+          "id": "sext-sexta4",
+          "kind": "opening",
+          "title": "Section 4",
+          "rubric": "[2]",
+          "latin": "Psalmus 73(10-17) [2]\n\n73:10 Úsquequo, Deus, improperábit inimícus: * irrítat adversárius nomen tuum in finem?\n\n73:11 Ut quid avértis manum tuam, et déxteram tuam, * de médio sinu tuo in finem?\n\n73:12 Deus autem Rex noster ante sǽcula: * operátus est salútem in médio terræ.\n\n73:13 Tu confirmásti in virtúte tua mare: * contribulásti cápita dracónum in aquis.\n\n73:14 Tu confregísti cápita dracónis: * dedísti eum escam pópulis Æthíopum.\n\n73:15 Tu dirupísti fontes, et torréntes: * tu siccásti flúvios Ethan.\n\n73:16 Tuus est dies, et tua est nox: * tu fabricátus es auróram et solem.\n\n73:17 Tu fecísti omnes términos terræ: * æstátem et ver tu plasmásti ea.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.",
+          "english": "Psalm 73(10-17) [2]\n\n73:10 How long, O God, shall the enemy reproach: * is the adversary to provoke thy name for ever?\n\n73:11 Why dost thou turn away thy hand: and thy right hand * out of the midst of thy bosom for ever?\n\n73:12 But God is our king before ages: * he hath wrought salvation in the midst of the earth.\n\n73:13 Thou by thy strength didst make the sea firm: * thou didst crush the heads of the dragons in the waters.\n\n73:14 Thou hast broken the heads of the dragon: * thou hast given him to be meat for the people of the Ethiopians.\n\n73:15 Thou hast broken up the fountains and the torrents: * thou hast dried up the Ethan rivers.\n\n73:16 Thine is the day, and thine is the night: * thou hast made the morning light and the sun.\n\n73:17 Thou hast made all the borders of the earth: * the summer and the spring were formed by thee.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.",
+          "chant": null
+        },
+        {
+          "id": "sext-sexta5",
+          "kind": "opening",
+          "title": "Section 5",
+          "rubric": "[3]",
+          "latin": "Psalmus 73(18-23) [3]\n\n73:18 Memor esto huius, inimícus improperávit Dómino: * et pópulus insípiens incitávit nomen tuum.\n\n73:19 Ne tradas béstiis ánimas confiténtes tibi, * et ánimas páuperum tuórum ne obliviscáris in finem.\n\n73:20 Réspice in testaméntum tuum: * quia repléti sunt, qui obscuráti sunt terræ dómibus iniquitátum.\n\n73:21 Ne avertátur húmilis factus confúsus: * pauper et inops laudábunt nomen tuum.\n\n73:22 Exsúrge, Deus, iúdica causam tuam: * memor esto improperiórum tuórum, eórum quæ ab insipiénte sunt tota die.\n\n73:23 Ne obliviscáris voces inimicórum tuórum: * supérbia eórum, qui te odérunt, ascéndit semper.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Memor esto congregatiónis tuæ, Dómine, quam possedísti ab inítio.",
+          "english": "Psalm 73(18-23) [3]\n\n73:18 Remember this, the enemy hath reproached the Lord: * and a foolish people hath provoked thy name.\n\n73:19 Deliver not up to beasts the souls that confess to thee: * and forget not to the end the souls of thy poor.\n\n73:20 Have regard to thy covenant: * for they that are the obscure of the earth have been filled with dwellings of iniquity.\n\n73:21 Let not the humble be turned away with confusion: * the poor and needy shall praise thy name.\n\n73:22 Arise, O God, judge thy own cause: * remember thy reproaches with which the foolish man hath reproached thee all the day.\n\n73:23 Forget not the voices of thy enemies: * the pride of them that hate thee ascendeth continually.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. Remember thy congregation, which thou hast possessed from the beginning.",
+          "chant": null
+        },
+        {
+          "id": "sext-sexta6",
+          "kind": "chapter",
+          "title": "Capitulum Responsorium Versus",
+          "rubric": "ex Commune aut Festo",
+          "latin": "Capitulum Responsorium Versus {ex Commune aut Festo}\n\nSir 15:3\n\nCibávit illum pane vitæ et intelléctus, et aqua sapiéntiæ salutáris potávit illum Dóminus Deus noster.\n\n℟. Deo grátias.\n\n℟.br. Posuísti, Dómine, * Super caput eius.\n\n℟. Posuísti, Dómine, * Super caput eius.\n\n℣. Corónam de lápide pretióso.\n\n℟. Super caput eius.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Posuísti, Dómine, * Super caput eius.\n\n℣. Magna est glória eius in salutári tuo.\n\n℟. Glóriam et magnum decórem impónes super eum.",
+          "english": "Chapter Responsory Verse {from the Common or Feast}\n\nSir 15:3\n\nWith the bread of life and understanding, she shall feed him, and give him the water of wholesome wisdom to drink: and she shall be made strong in him, and he shall not be moved.\n\n℟. Thanks be to God.\n\n℟.br. O Lord, Thou hast set * Upon his head.\n\n℟. O Lord, Thou hast set * Upon his head.\n\n℣. A Crown of precious stones.\n\n℟. Upon his head.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. O Lord, Thou hast set * Upon his head.\n\n℣. His glory is great in thy salvation.\n\n℟. Honour and great majesty shalt Thou lay upon him.",
+          "chant": null
+        },
+        {
+          "id": "sext-sexta7",
+          "kind": "collect",
+          "title": "Oratio",
+          "rubric": "ex Proprio Sanctorum",
+          "latin": "Oratio {ex Proprio Sanctorum}\n\n℣. Dómine, exáudi oratiónem meam.\n\n℟. Et clamor meus ad te véniat.\n\nOrémus.\n\nDeus, fidélium remunerátor animárum, qui hunc diem beáti Apollináris Sacerdótis tui martýrio consecrásti: tríbue nobis, quǽsumus, fámulis tuis; ut, cuius venerándam celebrámus festivitátem, précibus eius indulgéntiam consequámur.\n\nPer Dóminum nostrum Iesum Christum, Fílium tuum: qui tecum vivit et regnat in unitáte Spíritus Sancti, Deus, per ómnia sǽcula sæculórum.\n\n℟. Amen.",
+          "english": "Prayer {from the Proper of Saints}\n\n℣. O Lord, hear my prayer.\n\n℟. And let my cry come unto thee.\n\nLet us pray.\n\nO God, Who art thyself the exceeding great Reward of all faithful souls, and in Whose sight this day is holy because thy blessed Priest Apollinaris did hereon lift up his last earthly testimony, we beseech thee to grant unto us thy servants, who do keep his worshipful Feast-day, to obtain by his prayers thy gracious remission for our offences.\n\nThrough Jesus Christ, thy Son our Lord, Who liveth and reigneth with thee, in the unity of the Holy Ghost, God, world without end.\n\n℟. Amen.",
+          "chant": null
+        },
+        {
+          "id": "sext-sexta8",
+          "kind": "conclusion",
+          "title": "Conclusio",
+          "rubric": null,
+          "latin": "Conclusio\n\n℣. Dómine, exáudi oratiónem meam.\n\n℟. Et clamor meus ad te véniat.\n\n℣. Benedicámus Dómino.\n\n℟. Deo grátias.\n\n℣. Fidélium ánimæ per misericórdiam Dei requiéscant in pace.\n\n℟. Amen.",
+          "english": "Conclusion\n\n℣. O Lord, hear my prayer.\n\n℟. And let my cry come unto thee.\n\n℣. Let us bless the Lord.\n\n℟. Thanks be to God.\n\n℣. May the souls of the faithful, through the mercy of God, rest in peace.\n\n℟. Amen.",
+          "chant": null
+        }
+      ]
+    },
+    {
+      "id": "2026-07-23-none",
+      "date": {
+        "year": 2026,
+        "month": 7,
+        "day": 23
+      },
+      "hour": "none",
+      "titleLatin": "Ad Nonam",
+      "titleEnglish": "None",
+      "contextLabel": "S. Apollinaris Episcopi et Martyris",
+      "sourceVersion": "Rubrics 1960 - 1960 · pinned Divinum Officium development import",
+      "sections": [
+        {
+          "id": "none-nona1",
+          "kind": "opening",
+          "title": "Incipit",
+          "rubric": null,
+          "latin": "Incipit\n\n℣. Deus ✠ in adiutórium meum inténde.\n\n℟. Dómine, ad adiuvándum me festína.\n\nGlória Patri, et Fílio, * et Spirítui Sancto.\n\nSicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAllelúia.",
+          "english": "Start\n\n℣. O God, ✠ come to my assistance;\n\n℟. O Lord, make haste to help me.\n\nGlory be to the Father, and to the Son, * and to the Holy Ghost.\n\nAs it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAlleluia.",
+          "chant": null
+        },
+        {
+          "id": "none-nona2",
+          "kind": "hymn",
+          "title": "Hymnus",
+          "rubric": null,
+          "latin": "Hymnus\n\nRerum, Deus, tenax vigor,\n\nImmótus in te pérmanens,\n\nLucis diúrnæ témpora\n\nSuccéssibus detérminans:\n\nLargíre lumen véspere,\n\nQuo vita nusquam décidat,\n\nSed prǽmium mortis sacræ\n\nPerénnis instet glória.\n\nPræsta, Pater piíssime,\n\nPatríque compar Únice,\n\nCum Spíritu Paráclito\n\nRegnans per omne sǽculum.\n\nAmen.",
+          "english": "Hymn\n\nO strength and stay upholding all creation,\n\nWho ever dost thyself unmoved abide,\n\nYet day by day the light in due gradation\n\nFrom hour to hour through all its changes guide:\n\nGrant to life’s day a calm unclouded ending,\n\nAn eve untouched by shadows of decay,\n\nThe brightness of a holy death-bed blending\n\nWith dawning glories of th’ eternal day.\n\nHear us, O Father, gracious and forgiving,\n\nAnd thou, O Christ, the co-eternal Word,\n\nWho, with the Holy Ghost, by all things living\n\nNow and to endless ages art adored.\n\nAmen.",
+          "chant": null
+        },
+        {
+          "id": "none-nona3",
+          "kind": "psalm",
+          "title": "Psalmi",
+          "rubric": "ex Psalterio secundum diem",
+          "latin": "Psalmi {ex Psalterio secundum diem}\n\nAnt. Invocábimus * nomen tuum, Dómine: narrábimus mirabília tua.\n\nPsalmus 74 [1]\n\n74:2 Confitébimur tibi, Deus: * confitébimur, et invocábimus nomen tuum.\n\n74:3 Narrábimus mirabília tua: * cum accépero tempus, ego iustítias iudicábo.\n\n74:4 Liquefácta est terra, et omnes qui hábitant in ea: * ego confirmávi colúmnas eius.\n\n74:5 Dixi iníquis: Nolíte iníque ágere: * et delinquéntibus: Nolíte exaltáre cornu:\n\n74:6 Nolíte extóllere in altum cornu vestrum: * nolíte loqui advérsus Deum iniquitátem.\n\n74:7 Quia neque ab Oriénte, neque ab Occidénte, neque a desértis móntibus: * quóniam Deus iudex est.\n\n74:8 Hunc humíliat, et hunc exáltat: * quia calix in manu Dómini vini meri plenus misto.\n\n74:9 Et inclinávit ex hoc in hoc: verúmtamen fæx eius non est exinaníta: * bibent omnes peccatóres terræ.\n\n74:10 Ego autem annuntiábo in sǽculum: * cantábo Deo Iacob.\n\n74:11 Et ómnia córnua peccatórum confríngam: * et exaltabúntur córnua iusti.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.",
+          "english": "Psalms {from the Psalter for the day of the week}\n\nAnt. We will call * upon thy name O Lord. We will relate thy wondrous works.\n\nPsalm 74 [1]\n\n74:2 We will praise thee, O God: * we will praise, and we will call upon thy name.\n\n74:3 We will relate thy wondrous works: * when I shall take a time, I will judge justices.\n\n74:4 The earth is melted, and all that dwell therein: * I have established the pillars thereof.\n\n74:5 I said to the wicked: Do not act wickedly: * and to the sinners: Lift not up the horn.\n\n74:6 Lift not up your horn on high: * speak not iniquity against God.\n\n74:7 For neither from the east, nor from the west, nor from the desert hills: * for God is the judge.\n\n74:8 One he putteth down, and another he lifteth up: * for in the hand of the Lord there is a cup of strong wine full of mixture.\n\n74:9 And he hath poured it out from this to that: but the dregs thereof are not emptied: * all the sinners of the earth shall drink.\n\n74:10 But I will declare for ever: * I will sing to the God of Jacob.\n\n74:11 And I will break all the horns of sinners: * but the horns of the just shall be exalted.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.",
+          "chant": null
+        },
+        {
+          "id": "none-nona4",
+          "kind": "opening",
+          "title": "Section 4",
+          "rubric": "[2]",
+          "latin": "Psalmus 75(2-7) [2]\n\n75:2 Notus in Iudǽa Deus: * in Israël magnum nomen eius.\n\n75:3 Et factus est in pace locus eius: * et habitátio eius in Sion.\n\n75:4 Ibi confrégit poténtias árcuum, * scutum, gládium, et bellum.\n\n75:5 Illúminans tu mirabíliter a móntibus ætérnis: * turbáti sunt omnes insipiéntes corde.\n\n75:6 Dormiérunt somnum suum: * et nihil invenérunt omnes viri divitiárum in mánibus suis.\n\n75:7 Ab increpatióne tua, Deus Iacob, * dormitavérunt qui ascendérunt equos.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.",
+          "english": "Psalm 75(2-7) [2]\n\n75:2 In Judea God is known: * his name is great in Israel.\n\n75:3 And his place is in peace: * and his abode in Sion:\n\n75:4 There hath he broken the powers of bows, * the shield, the sword, and the battle.\n\n75:5 Thou enlightenest wonderfully from the everlasting hills. * All the foolish of heart were troubled.\n\n75:6 They have slept their sleep; * and all the men of riches have found nothing in their hands.\n\n75:7 At thy rebuke, O God of Jacob, * they have all slumbered that mounted on horseback.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.",
+          "chant": null
+        },
+        {
+          "id": "none-nona5",
+          "kind": "opening",
+          "title": "Section 5",
+          "rubric": "[3]",
+          "latin": "Psalmus 75(8-13) [3]\n\n75:8 Tu terríbilis es, et quis resístet tibi? * ex tunc ira tua.\n\n75:9 De cælo audítum fecísti iudícium: * terra trémuit et quiévit,\n\n75:10 Cum exsúrgeret in iudícium Deus, * ut salvos fáceret omnes mansuétos terræ.\n\n75:11 Quóniam cogitátio hóminis confitébitur tibi: * et relíquiæ cogitatiónis diem festum agent tibi.\n\n75:12 Vovéte, et réddite Dómino, Deo vestro: * omnes, qui in circúitu eius affértis múnera.\n\n75:13 Terríbili et ei qui aufert spíritum príncipum, * terríbili apud reges terræ.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Sicut erat in princípio, et nunc, et semper, * et in sǽcula sæculórum. Amen.\n\nAnt. Invocábimus nomen tuum, Dómine: narrábimus mirabília tua.",
+          "english": "Psalm 75(8-13) [3]\n\n75:8 Thou art terrible, and who shall resist thee? * from that time thy wrath.\n\n75:9 Thou hast caused judgment to be heard from heaven: * the earth trembled and was still,\n\n75:10 When God arose in judgment, * to save all the meek of the earth.\n\n75:11 For the thought of man shall give praise to thee: * and the remainders of the thought shall keep holiday to thee.\n\n75:12 Vow ye, and pay to the Lord your God: * all you that are round about him bring presents.\n\n75:13 To him that is terrible, even to him who taketh away the spirit of princes: * to the terrible with the kings of the earth.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. As it was in the beginning, is now, * and ever shall be, world without end. Amen.\n\nAnt. We will call upon thy name O Lord. We will relate thy wondrous works.",
+          "chant": null
+        },
+        {
+          "id": "none-nona6",
+          "kind": "chapter",
+          "title": "Capitulum Responsorium Versus",
+          "rubric": "ex Commune aut Festo",
+          "latin": "Capitulum Responsorium Versus {ex Commune aut Festo}\n\nSir 39:6\n\nIustus cor suum trádidit ad vigilándum dilúculo ad Dóminum, qui fecit illum, et in conspéctu Altíssimi deprecábitur.\n\n℟. Deo grátias.\n\n℟.br. Magna est glória eius * In salutári tuo.\n\n℟. Magna est glória eius * In salutári tuo.\n\n℣. Glóriam et magnum decórem impónes super eum.\n\n℟. In salutári tuo.\n\n℣. Glória Patri, et Fílio, * et Spirítui Sancto.\n\n℟. Magna est glória eius * In salutári tuo.\n\n℣. Iustus ut palma florébit.\n\n℟. Sicut cedrus Líbani multiplicábitur.",
+          "english": "Chapter Responsory Verse {from the Common or Feast}\n\nSir 39:6\n\nHe will give his heart to resort early to the Lord that made him, and he will pray in the sight of the most High.\n\n℟. Thanks be to God.\n\n℟.br. His glory is great * in thy salvation.\n\n℟. His glory is great * in thy salvation.\n\n℣. Honour and great majesty shalt Thou lay upon him.\n\n℟. In thy salvation.\n\n℣. Glory be to the Father, and to the Son, * and to the Holy Ghost.\n\n℟. His glory is great * in thy salvation.\n\n℣. The righteous shall flourish like the palm-tree.\n\n℟. He shall grow like a cedar in Lebanon.",
+          "chant": null
+        },
+        {
+          "id": "none-nona7",
+          "kind": "collect",
+          "title": "Oratio",
+          "rubric": "ex Proprio Sanctorum",
+          "latin": "Oratio {ex Proprio Sanctorum}\n\n℣. Dómine, exáudi oratiónem meam.\n\n℟. Et clamor meus ad te véniat.\n\nOrémus.\n\nDeus, fidélium remunerátor animárum, qui hunc diem beáti Apollináris Sacerdótis tui martýrio consecrásti: tríbue nobis, quǽsumus, fámulis tuis; ut, cuius venerándam celebrámus festivitátem, précibus eius indulgéntiam consequámur.\n\nPer Dóminum nostrum Iesum Christum, Fílium tuum: qui tecum vivit et regnat in unitáte Spíritus Sancti, Deus, per ómnia sǽcula sæculórum.\n\n℟. Amen.",
+          "english": "Prayer {from the Proper of Saints}\n\n℣. O Lord, hear my prayer.\n\n℟. And let my cry come unto thee.\n\nLet us pray.\n\nO God, Who art thyself the exceeding great Reward of all faithful souls, and in Whose sight this day is holy because thy blessed Priest Apollinaris did hereon lift up his last earthly testimony, we beseech thee to grant unto us thy servants, who do keep his worshipful Feast-day, to obtain by his prayers thy gracious remission for our offences.\n\nThrough Jesus Christ, thy Son our Lord, Who liveth and reigneth with thee, in the unity of the Holy Ghost, God, world without end.\n\n℟. Amen.",
+          "chant": null
+        },
+        {
+          "id": "none-nona8",
+          "kind": "conclusion",
+          "title": "Conclusio",
+          "rubric": null,
+          "latin": "Conclusio\n\n℣. Dómine, exáudi oratiónem meam.\n\n℟. Et clamor meus ad te véniat.\n\n℣. Benedicámus Dómino.\n\n℟. Deo grátias.\n\n℣. Fidélium ánimæ per misericórdiam Dei requiéscant in pace.\n\n℟. Amen.",
+          "english": "Conclusion\n\n℣. O Lord, hear my prayer.\n\n℟. And let my cry come unto thee.\n\n℣. Let us bless the Lord.\n\n℟. Thanks be to God.\n\n℣. May the souls of the faithful, through the mercy of God, rest in peace.\n\n℟. Amen.",
+          "chant": null
+        }
+      ]
+    },
+    {
+      "id": "2026-07-23-vespers",
+      "date": {
+        "year": 2026,
+        "month": 7,
+        "day": 23
+      },
+      "hour": "vespers",
+      "titleLatin": "Ad Vesperas",
+      "titleEnglish": "Vespers",
+      "contextLabel": "Vespers of St Apollinaris",
+      "sourceVersion": "Rubrics 1960 - 1960 · development fixture",
+      "sections": [
+        {
+          "id": "vespers-opening",
+          "kind": "opening",
+          "title": "Apertura",
+          "rubric": "Signum crucis fit.",
+          "latin": "℣. Deus, in adiutorium meum intende. ℟. Domine, ad adiuvandum me festina. Gloria Patri, et Filio, et Spiritui Sancto. Sicut erat in principio, et nunc, et semper, et in saecula saeculorum. Amen. Alleluia.",
+          "english": "℣. O God, come to my assistance. ℟. O Lord, make haste to help me. Glory be to the Father, and to the Son, and to the Holy Spirit. As it was in the beginning, is now, and ever shall be, world without end. Amen. Alleluia.",
+          "chant": {
+            "id": "opening-deus-in-adjutorium",
+            "incipit": "Deus, in adiutorium",
+            "gabc": "name: Deus in adiutorium; mode: 6; %% (c4) De(f)us(g) in(g) ad(g)ju(h)tó(g)ri(f)um(g) me(h)um(g) in(f)tén(g)de.(f.) (::)",
+            "mode": "VI",
+            "reviewStatus": "humanReviewed",
+            "provenance": {
+              "collection": "Hours development fixture",
+              "sourceBook": "Editorial transcription for renderer testing",
+              "sourceURL": null,
+              "license": "CC0-1.0",
+              "snapshot": "fixture-2026-07-23"
+            },
+            "timeline": {
+              "events": []
+            }
+          }
+        },
+        {
+          "id": "vespers-psalm-132",
+          "kind": "psalm",
+          "title": "Psalmus 132",
+          "rubric": "Antiphona ante et post psalmum.",
+          "latin": "Ecce quam bonum et quam iucundum, habitare fratres in unum: sicut unguentum in capite, quod descendit in barbam, barbam Aaron; quod descendit in oram vestimenti eius. Sicut ros Hermon, qui descendit in montem Sion. Quoniam illic mandavit Dominus benedictionem, et vitam usque in saeculum.",
+          "english": "Behold how good and how pleasant it is for brethren to dwell together in unity: like the precious ointment on the head, that ran down upon the beard, the beard of Aaron; which ran down to the skirt of his garment. As the dew of Hermon, which descendeth upon mount Sion. For there the Lord hath commanded blessing, and life for evermore.",
+          "chant": {
+            "id": "psalm-tone-viii-g-132",
+            "incipit": "Ecce quam bonum",
+            "gabc": "name: Psalm 132; mode: 8; %% (c4) Ec(g)ce(h) quam(h) bo(h)num(h) et(h) quam(h) iu(h)cún(h)dum,(g_) (;) ha(h)bi(h)tá(h)re(h) fra(h)tres(h) in(g) u(f)num.(g.) (::)",
+            "mode": "VIII G",
+            "reviewStatus": "generatedFormula",
+            "provenance": {
+              "collection": "Hours reviewed psalm-tone formula",
+              "sourceBook": "Psalm tone VIII G development definition",
+              "sourceURL": null,
+              "license": "CC0-1.0",
+              "snapshot": "fixture-2026-07-23"
+            },
+            "timeline": {
+              "events": []
+            }
+          }
+        },
+        {
+          "id": "vespers-chapter",
+          "kind": "chapter",
+          "title": "Capitulum",
+          "latin": "Beatus vir qui inventus est sine macula, et qui post aurum non abiit, nec speravit in pecunia et thesauris.",
+          "english": "Blessed is the man that is found without blemish, and that hath not gone after gold, nor put his trust in money nor in treasures."
+        },
+        {
+          "id": "vespers-hymn",
+          "kind": "hymn",
+          "title": "Hymnus · Deus, tuorum militum",
+          "latin": "Deus, tuorum militum sors et corona, praemium, laudes canentes Martyris, absolve nexu criminis. Hic nempe mundi gaudia, et blanda fraudum pabula, imbuta felle deputans, pervenit ad caelestia.",
+          "english": "O God, the lot, the crown, the prize of thine own soldiers, as we sing the praises of thy martyr, free us from the bonds of sin. Reckoning the joys of the world and the flattering food of its deceit as steeped in gall, he attained to heavenly things.",
+          "chant": {
+            "id": "hymn-deus-tuorum-militum",
+            "incipit": "Deus, tuorum militum",
+            "gabc": "name: Deus tuorum militum; mode: 1; %% (c4) De(d)us(f) tu(g)ó(h)rum(g) mí(f)li(g)tum,(f.) (:) sors(g) et(h) co(j)ró(i)na,(h) prǽ(g)mi(f)um;(g.) (::)",
+            "mode": "I",
+            "reviewStatus": "humanReviewed",
+            "provenance": {
+              "collection": "Hours development fixture",
+              "sourceBook": "Editorial transcription for renderer testing",
+              "sourceURL": null,
+              "license": "CC0-1.0",
+              "snapshot": "fixture-2026-07-23"
+            },
+            "timeline": {
+              "events": []
+            }
+          }
+        },
+        {
+          "id": "vespers-magnificat",
+          "kind": "canticle",
+          "title": "Canticum B. Mariae Virginis · Magnificat",
+          "rubric": "Antiphona: Qui vult venire post me.",
+          "latin": "Magnificat anima mea Dominum. Et exsultavit spiritus meus in Deo salutari meo. Quia respexit humilitatem ancillae suae: ecce enim ex hoc beatam me dicent omnes generationes.",
+          "english": "My soul doth magnify the Lord. And my spirit hath rejoiced in God my Saviour. Because he hath regarded the humility of his handmaid: for behold from henceforth all generations shall call me blessed.",
+          "chant": {
+            "id": "magnificat-antiphon-qui-vult-venire",
+            "incipit": "Qui vult venire post me",
+            "gabc": "name: Qui vult venire post me; mode: 1; %% (c4) Qui(f) vult(g) ve(h)ní(g)re(f) post(g) me,(f.) (;) áb(h)ne(g)get(f) se(g)met(h)íp(g)sum,(f.) (::)",
+            "mode": "I",
+            "reviewStatus": "humanReviewed",
+            "provenance": {
+              "collection": "Hours development fixture",
+              "sourceBook": "Editorial transcription for renderer testing",
+              "sourceURL": null,
+              "license": "CC0-1.0",
+              "snapshot": "fixture-2026-07-23"
+            },
+            "timeline": {
+              "events": []
+            }
+          }
+        },
+        {
+          "id": "vespers-collect",
+          "kind": "collect",
+          "title": "Oratio",
+          "latin": "Deus, fidelium remunerator animarum, qui hunc diem beati Apollinaris Martyris tui atque Pontificis consecrasti: tribue nobis, quaesumus; qui eius venerandam solemnitatem celebramus, ut precibus ipsius indulgentiam consequamur. Per Dominum nostrum Iesum Christum, Filium tuum.",
+          "english": "O God, the rewarder of faithful souls, who hast consecrated this day by the martyrdom of blessed Apollinaris, thy bishop: grant, we beseech thee, that we who celebrate his venerable solemnity may obtain pardon through his prayers. Through our Lord Jesus Christ, thy Son."
+        },
+        {
+          "id": "vespers-conclusion",
+          "kind": "conclusion",
+          "title": "Conclusio",
+          "latin": "℣. Benedicamus Domino. ℟. Deo gratias. ℣. Fidelium animae per misericordiam Dei requiescant in pace. ℟. Amen.",
+          "english": "℣. Let us bless the Lord. ℟. Thanks be to God. ℣. May the souls of the faithful departed, through the mercy of God, rest in peace. ℟. Amen."
+        }
+      ]
+    },
+    {
+      "id": "2026-07-23-compline",
+      "date": {
+        "year": 2026,
+        "month": 7,
+        "day": 23
+      },
+      "hour": "compline",
+      "titleLatin": "Ad Completorium",
+      "titleEnglish": "Compline",
+      "contextLabel": "Thursday Compline",
+      "sourceVersion": "Rubrics 1960 - 1960 · development fixture",
+      "sections": [
+        {
+          "id": "compline-opening",
+          "kind": "opening",
+          "title": "Lectio brevis",
+          "latin": "℣. Iube, domne, benedicere. Benedictio: Noctem quietam et finem perfectum concedat nobis Dominus omnipotens. ℟. Amen. Fratres: Sobrii estote, et vigilate: quia adversarius vester diabolus tamquam leo rugiens circuit, quaerens quem devoret: cui resistite fortes in fide.",
+          "english": "℣. Pray, lord, a blessing. May the almighty Lord grant us a quiet night and a perfect end. ℟. Amen. Brethren: Be sober and watch, because your adversary the devil, as a roaring lion, goeth about seeking whom he may devour: whom resist ye, strong in faith."
+        },
+        {
+          "id": "compline-confiteor",
+          "kind": "responsory",
+          "title": "Confiteor",
+          "rubric": "Examen conscientiae fit, deinde Confiteor.",
+          "latin": "Confiteor Deo omnipotenti, beatae Mariae semper Virgini, beato Michaeli Archangelo, beato Ioanni Baptistae, sanctis Apostolis Petro et Paulo, omnibus Sanctis, et vobis, fratres, quia peccavi nimis cogitatione, verbo et opere.",
+          "english": "I confess to almighty God, to blessed Mary ever Virgin, to blessed Michael the Archangel, to blessed John the Baptist, to the holy Apostles Peter and Paul, to all the Saints, and to you, brethren, that I have sinned exceedingly in thought, word, and deed."
+        },
+        {
+          "id": "compline-psalm-4",
+          "kind": "psalm",
+          "title": "Psalmus 4",
+          "latin": "Cum invocarem exaudivit me Deus iustitiae meae: in tribulatione dilatasti mihi. Miserere mei, et exaudi orationem meam. Filii hominum, usquequo gravi corde? ut quid diligitis vanitatem et quaeritis mendacium? Et scitote quoniam mirificavit Dominus sanctum suum: Dominus exaudiet me cum clamavero ad eum.",
+          "english": "When I called upon him, the God of my justice heard me: when I was in distress, thou hast enlarged me. Have mercy on me, and hear my prayer. O ye sons of men, how long will you be dull of heart? Why do you love vanity and seek after lying? Know ye also that the Lord hath made his holy one wonderful: the Lord will hear me when I shall cry unto him.",
+          "chant": {
+            "id": "compline-psalm-tone-viii-4",
+            "incipit": "Cum invocarem",
+            "gabc": "name: Psalm 4; mode: 8; %% (c4) Cum(g) in(h)vo(h)cá(h)rem(h) ex(h)au(h)dí(h)vit(h) me(g_) De(f)us,(g.) (;) iu(h)stí(h)ti(h)ae(h) me(g)ae.(f.) (::)",
+            "mode": "VIII",
+            "reviewStatus": "generatedFormula",
+            "provenance": {
+              "collection": "Hours reviewed psalm-tone formula",
+              "sourceBook": "Compline psalm tone development definition",
+              "sourceURL": null,
+              "license": "CC0-1.0",
+              "snapshot": "fixture-2026-07-23"
+            },
+            "timeline": {
+              "events": []
+            }
+          }
+        },
+        {
+          "id": "compline-hymn",
+          "kind": "hymn",
+          "title": "Hymnus · Te lucis ante terminum",
+          "latin": "Te lucis ante terminum, rerum Creator, poscimus, ut pro tua clementia sis praesul et custodia. Procul recedant somnia et noctium phantasmata; hostemque nostrum comprime, ne polluantur corpora.",
+          "english": "Before the ending of the day, Creator of the world, we pray that by thy mercy thou wouldst be our guardian and keeper. Let dreams and phantoms of the night depart far from us; and restrain our enemy, lest our bodies be defiled.",
+          "chant": {
+            "id": "hymn-te-lucis",
+            "incipit": "Te lucis ante terminum",
+            "gabc": "name: Te lucis ante terminum; mode: 8; %% (c4) Te(g) lu(h)cis(g) an(f)te(g) tér(h)mi(g)num,(g.) (:) re(g)rum(h) Cre(j)á(j)tor,(i) pós(h)ci(g)mus;(g.) (::)",
+            "mode": "VIII",
+            "reviewStatus": "humanReviewed",
+            "provenance": {
+              "collection": "Hours development fixture",
+              "sourceBook": "Editorial transcription for renderer testing",
+              "sourceURL": null,
+              "license": "CC0-1.0",
+              "snapshot": "fixture-2026-07-23"
+            },
+            "timeline": {
+              "events": []
+            }
+          }
+        },
+        {
+          "id": "compline-canticle",
+          "kind": "canticle",
+          "title": "Canticum Simeonis · Nunc dimittis",
+          "rubric": "Antiphona: Salva nos, Domine, vigilantes.",
+          "latin": "Nunc dimittis servum tuum, Domine, secundum verbum tuum in pace: quia viderunt oculi mei salutare tuum, quod parasti ante faciem omnium populorum: lumen ad revelationem gentium, et gloriam plebis tuae Israel.",
+          "english": "Now thou dost dismiss thy servant, O Lord, according to thy word in peace: because my eyes have seen thy salvation, which thou hast prepared before the face of all peoples: a light to the revelation of the Gentiles, and the glory of thy people Israel.",
+          "chant": {
+            "id": "antiphon-salva-nos",
+            "incipit": "Salva nos, Domine",
+            "gabc": "name: Salva nos; mode: 8; %% (c4) Sal(g)va(h) nos,(g.) Dó(f)mi(g)ne,(h) vi(j)gi(i)lán(h)tes,(g.) (;) cus(h)tó(j)di(k) nos(j) dor(i)mi(h)én(g)tes.(g.) (::)",
+            "mode": "VIII",
+            "reviewStatus": "humanReviewed",
+            "provenance": {
+              "collection": "Hours development fixture",
+              "sourceBook": "Editorial transcription for renderer testing",
+              "sourceURL": null,
+              "license": "CC0-1.0",
+              "snapshot": "fixture-2026-07-23"
+            },
+            "timeline": {
+              "events": []
+            }
+          }
+        },
+        {
+          "id": "compline-collect",
+          "kind": "collect",
+          "title": "Oratio",
+          "latin": "Visita, quaesumus, Domine, habitationem istam, et omnes insidias inimici ab ea longe repelle: Angeli tui sancti habitent in ea, qui nos in pace custodiant; et benedictio tua sit super nos semper.",
+          "english": "Visit, we beseech thee, O Lord, this dwelling, and drive far from it all snares of the enemy: let thy holy Angels dwell herein, to preserve us in peace; and let thy blessing be always upon us."
+        },
+        {
+          "id": "compline-marian-antiphon",
+          "kind": "marianAntiphon",
+          "title": "Antiphona finalis · Salve Regina",
+          "latin": "Salve, Regina, mater misericordiae; vita, dulcedo et spes nostra, salve. Ad te clamamus, exsules filii Evae. Ad te suspiramus, gementes et flentes in hac lacrimarum valle.",
+          "english": "Hail, holy Queen, Mother of mercy; our life, our sweetness, and our hope, hail. To thee do we cry, poor banished children of Eve. To thee do we send up our sighs, mourning and weeping in this vale of tears.",
+          "chant": {
+            "id": "marian-antiphon-salve-regina",
+            "incipit": "Salve, Regina",
+            "gabc": "name: Salve Regina; mode: 1; %% (c4) Sal(f)ve,(g.) Re(h)gí(g)na,(f.) (:) ma(h)ter(j) mi(i)se(h)ri(g)cór(f)di(g)ae;(f.) (;) vi(h)ta,(g) dul(f)cé(g)do(h) et(g) spes(f) no(g)stra,(f.) sal(g)ve.(f.) (::)",
+            "mode": "I",
+            "reviewStatus": "humanReviewed",
+            "provenance": {
+              "collection": "Hours development fixture",
+              "sourceBook": "Editorial transcription for renderer testing",
+              "sourceURL": null,
+              "license": "CC0-1.0",
+              "snapshot": "fixture-2026-07-23"
+            },
+            "timeline": {
+              "events": []
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

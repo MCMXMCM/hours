@@ -1,0 +1,340 @@
+[
+  {
+    "date": "2026-01-01",
+    "hour": "matins",
+    "available": true,
+    "titleLatin": "Die Octavæ Nativitatis Domini",
+    "titleEnglish": "the Octave Day of the Nativity of the Lord",
+    "rank": "firstClass",
+    "eveningContext": null,
+    "commemorations": []
+  },
+  {
+    "date": "2026-03-29",
+    "hour": "lauds",
+    "available": true,
+    "titleLatin": "Dominica II Passionis seu in Palmis",
+    "titleEnglish": "Palm Sunday",
+    "rank": "firstClass",
+    "eveningContext": null,
+    "commemorations": []
+  },
+  {
+    "date": "2026-04-01",
+    "hour": "lauds",
+    "available": true,
+    "titleLatin": "Feria Quarta Hebdomadæ Sanctæ",
+    "titleEnglish": "Spy Wednesday",
+    "rank": "firstClass",
+    "eveningContext": null,
+    "commemorations": []
+  },
+  {
+    "date": "2026-04-02",
+    "hour": "lauds",
+    "available": true,
+    "titleLatin": "Feria Quinta in Cena Domini",
+    "titleEnglish": "Maundy Thursday",
+    "rank": "firstClass",
+    "eveningContext": null,
+    "commemorations": []
+  },
+  {
+    "date": "2026-04-03",
+    "hour": "lauds",
+    "available": true,
+    "titleLatin": "Feria Sexta in Passione et Morte Domini",
+    "titleEnglish": "Good Friday",
+    "rank": "firstClass",
+    "eveningContext": null,
+    "commemorations": []
+  },
+  {
+    "date": "2026-04-04",
+    "hour": "lauds",
+    "available": true,
+    "titleLatin": "Sabbato Sancto",
+    "titleEnglish": "Holy Saturday",
+    "rank": "firstClass",
+    "eveningContext": null,
+    "commemorations": []
+  },
+  {
+    "date": "2026-04-05",
+    "hour": "lauds",
+    "available": true,
+    "titleLatin": "Dominica Resurrectionis",
+    "titleEnglish": "Easter Sunday",
+    "rank": "firstClass",
+    "eveningContext": null,
+    "commemorations": []
+  },
+  {
+    "date": "2026-04-05",
+    "hour": "vespers",
+    "available": true,
+    "titleLatin": "Dominica Resurrectionis",
+    "titleEnglish": "Easter Sunday",
+    "rank": "firstClass",
+    "eveningContext": null,
+    "commemorations": []
+  },
+  {
+    "date": "2026-05-23",
+    "hour": "vespers",
+    "available": true,
+    "titleLatin": "Dominica Pentecostes",
+    "titleEnglish": "Pentecost Sunday",
+    "rank": "firstClass",
+    "eveningContext": "firstVespers",
+    "commemorations": []
+  },
+  {
+    "date": "2026-05-24",
+    "hour": "lauds",
+    "available": true,
+    "titleLatin": "Dominica Pentecostes",
+    "titleEnglish": "Pentecost Sunday",
+    "rank": "firstClass",
+    "eveningContext": null,
+    "commemorations": []
+  },
+  {
+    "date": "2026-06-28",
+    "hour": "vespers",
+    "available": true,
+    "titleLatin": "SS. Apostolorum Petri et Pauli",
+    "titleEnglish": "Saints Peter and Paul Apostles",
+    "rank": "firstClass",
+    "eveningContext": "firstVespers",
+    "commemorations": ["Dominica V Post Pentecosten"]
+  },
+  {
+    "date": "2026-12-07",
+    "hour": "vespers",
+    "available": true,
+    "titleLatin": "In Conceptione Immaculata Beatæ Mariæ Virginis",
+    "titleEnglish": "the Immaculate Conception of the Blessed Virgin Mary",
+    "rank": "firstClass",
+    "eveningContext": "firstVespers",
+    "commemorations": ["Feria II infra Hebdomadam II Adventus"]
+  },
+  {
+    "date": "2026-12-08",
+    "hour": "lauds",
+    "available": true,
+    "titleLatin": "In Conceptione Immaculata Beatæ Mariæ Virginis",
+    "titleEnglish": "the Immaculate Conception of the Blessed Virgin Mary",
+    "rank": "firstClass",
+    "eveningContext": null,
+    "commemorations": ["Feria III infra Hebdomadam II Adventus"]
+  },
+  {
+    "date": "2026-12-24",
+    "hour": "vespers",
+    "available": true,
+    "titleLatin": "In Nativitate Domini",
+    "titleEnglish": "the Nativity of the Lord",
+    "rank": "firstClass",
+    "eveningContext": "firstVespers",
+    "commemorations": []
+  },
+  {
+    "date": "2026-12-25",
+    "hour": "lauds",
+    "available": true,
+    "titleLatin": "In Nativitate Domini",
+    "titleEnglish": "the Nativity of the Lord",
+    "rank": "firstClass",
+    "eveningContext": null,
+    "commemorations": []
+  },
+  {
+    "date": "2026-12-31",
+    "hour": "lauds",
+    "available": true,
+    "titleLatin": "Diei VII infra Octavam Nativitatis",
+    "titleEnglish": "the Seventh Day within the Octave of the Nativity",
+    "rank": "secondClass",
+    "eveningContext": null,
+    "commemorations": ["S. Silvestri Papæ et Confessoris"]
+  },
+  {
+    "date": "2026-12-31",
+    "hour": "vespers",
+    "available": true,
+    "titleLatin": "Die Octavæ Nativitatis Domini",
+    "titleEnglish": "the Octave Day of the Nativity of the Lord",
+    "rank": "firstClass",
+    "eveningContext": "firstVespers",
+    "commemorations": []
+  },
+  {
+    "date": "2026-02-22",
+    "hour": "prime",
+    "available": false,
+    "reason": "The reference page omits the required generated Martyrology text.",
+    "independentSource": {
+      "observanceLatin": "Dominica I in Quadragesima",
+      "visibleContentDigest": "10fd74c8f13015eac3d2cc3a4772ff87dc22e6ae7aca90b51a4a9b1c5b067a5e",
+      "requiredLatinIncipits": [
+        "Séptimo Kaléndas Mártii Luna sexta Anno Dómini 2026",
+        "Sancti Petri Damiáni"
+      ]
+    }
+  },
+  {
+    "date": "2026-04-06",
+    "hour": "lauds",
+    "available": false,
+    "reason": "The reference server returns HTTP 500 for the Easter Octave proper.",
+    "independentSource": {
+      "observanceLatin": "Die II infra octavam Paschæ",
+      "visibleContentDigest": "fc0e46eb696365b932b070813bb5c094c14ea5fc1ddb7c3ef8ab7d2cc9ea6a43",
+      "requiredLatinIncipits": [
+        "Iesus iunxit se",
+        "Deus, qui solemnitáte pascháli"
+      ]
+    }
+  },
+  {
+    "date": "2026-04-06",
+    "hour": "vespers",
+    "available": false,
+    "reason": "The reference server returns HTTP 500 for the Easter Octave proper.",
+    "independentSource": {
+      "observanceLatin": "Die II infra octavam Paschæ",
+      "visibleContentDigest": "a9e88247dd9b9475110803d5346fcb54713e68a1795af89405327972b9236c7b",
+      "requiredLatinIncipits": [
+        "Qui sunt hi sermónes",
+        "Deus, qui solemnitáte pascháli"
+      ]
+    }
+  },
+  {
+    "date": "2026-04-07",
+    "hour": "lauds",
+    "available": false,
+    "reason": "The reference server returns HTTP 500 for the Easter Octave proper.",
+    "independentSource": {
+      "observanceLatin": "Die III infra octavam Paschæ",
+      "visibleContentDigest": "904b35591b4fe444e556fab102c3541df9dd7836abd4c9a946b959796d8db7c9",
+      "requiredLatinIncipits": [
+        "Stetit Iesus",
+        "Deus, qui Ecclésiam tuam novo semper fœtu"
+      ]
+    }
+  },
+  {
+    "date": "2026-04-07",
+    "hour": "vespers",
+    "available": false,
+    "reason": "The reference server returns HTTP 500 for the Easter Octave proper.",
+    "independentSource": {
+      "observanceLatin": "Die III infra octavam Paschæ",
+      "visibleContentDigest": "66b36fc4fa3fa3582b3a444a2d423e6e312fdd3b93ac4fb7dde9d4a4b62188ef",
+      "requiredLatinIncipits": [
+        "Vidéte manus meas",
+        "Deus, qui Ecclésiam tuam novo semper fœtu"
+      ]
+    }
+  },
+  {
+    "date": "2026-04-08",
+    "hour": "lauds",
+    "available": false,
+    "reason": "The reference server returns HTTP 500 for the Easter Octave proper.",
+    "independentSource": {
+      "observanceLatin": "Die IV infra octavam Paschæ",
+      "visibleContentDigest": "e120689b1b40ce006004a0d6c402b2100ba896ea700da16b2fa0b19e0d5701b0",
+      "requiredLatinIncipits": [
+        "Míttite in déxteram",
+        "Deus, qui nos resurrectiónis Domínicæ ánnua solemnitáte"
+      ]
+    }
+  },
+  {
+    "date": "2026-04-08",
+    "hour": "vespers",
+    "available": false,
+    "reason": "The reference server returns HTTP 500 for the Easter Octave proper.",
+    "independentSource": {
+      "observanceLatin": "Die IV infra octavam Paschæ",
+      "visibleContentDigest": "4cc942b6d6a5dfec67c3ed212f06591f7dbbfe984d0e49583d7337d1a6e7a08c",
+      "requiredLatinIncipits": [
+        "Dixit Iesus",
+        "Deus, qui nos resurrectiónis Domínicæ ánnua solemnitáte"
+      ]
+    }
+  },
+  {
+    "date": "2026-04-09",
+    "hour": "lauds",
+    "available": false,
+    "reason": "The reference server returns HTTP 500 for the Easter Octave proper.",
+    "independentSource": {
+      "observanceLatin": "Die V infra octavam Paschæ",
+      "visibleContentDigest": "a0c95061956837800e1e2c16c429ee7c512eb0c260791f1642ee3351336694ed",
+      "requiredLatinIncipits": [
+        "María stabat",
+        "Deus, qui diversitátem géntium"
+      ]
+    }
+  },
+  {
+    "date": "2026-04-09",
+    "hour": "vespers",
+    "available": false,
+    "reason": "The reference server returns HTTP 500 for the Easter Octave proper.",
+    "independentSource": {
+      "observanceLatin": "Die V infra octavam Paschæ",
+      "visibleContentDigest": "2a0955a89341070128f3a47d316fbbbf0c1805a20173660c37e23076c2489b41",
+      "requiredLatinIncipits": [
+        "Tulérunt Dóminum meum",
+        "Deus, qui diversitátem géntium"
+      ]
+    }
+  },
+  {
+    "date": "2026-04-10",
+    "hour": "lauds",
+    "available": false,
+    "reason": "The reference server returns HTTP 500 for the Easter Octave proper.",
+    "independentSource": {
+      "observanceLatin": "Die VI infra octavam Paschæ",
+      "visibleContentDigest": "201d4b18df5ecf8822faa4b834538a64323db90a27e8abb76c91706e19872066",
+      "requiredLatinIncipits": [
+        "Undecim discípuli",
+        "Omnípotens sempitérne Deus, qui paschále sacraméntum"
+      ]
+    }
+  },
+  {
+    "date": "2026-04-10",
+    "hour": "vespers",
+    "available": false,
+    "reason": "The reference server returns HTTP 500 for the Easter Octave proper.",
+    "independentSource": {
+      "observanceLatin": "Die VI infra octavam Paschæ",
+      "visibleContentDigest": "202bfb3550388bd9b2063126ee98f44159059f6aa96a3fd830a81fe341ff9260",
+      "requiredLatinIncipits": [
+        "Data est mihi",
+        "Omnípotens sempitérne Deus, qui paschále sacraméntum"
+      ]
+    }
+  },
+  {
+    "date": "2026-12-24",
+    "hour": "prime",
+    "available": false,
+    "reason": "The reference page omits the required generated Martyrology text.",
+    "independentSource": {
+      "observanceLatin": "In Vigilia Nativitatis Domini",
+      "visibleContentDigest": "0ad257e6c214dddf9c72d0a86c0b6cf76b281c121679599a29a3d9bda16feafd",
+      "requiredLatinIncipits": [
+        "Octavo Kalendas Ianuarii Luna sexta décima Anno Dómini 2026",
+        "Anno a creatióne mundi"
+      ]
+    }
+  }
+]
