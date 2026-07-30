@@ -4,15 +4,23 @@ import HoursCore
 import Observation
 
 nonisolated enum ScholaPitch: Int, CaseIterable, Identifiable, Sendable, Hashable {
+    case g = 0
+    case aFlat = 1
     case a = 2
     case bFlat = 3
+    case b = 4
+    case c = 5
 
     var id: Int { rawValue }
 
     var displayName: String {
         switch self {
+        case .g: "G"
+        case .aFlat: "A♭"
         case .a: "A"
         case .bFlat: "B♭"
+        case .b: "B"
+        case .c: "C"
         }
     }
 
@@ -41,6 +49,7 @@ nonisolated enum ChantRegister: Int, CaseIterable, Identifiable, Sendable, Hasha
 }
 
 nonisolated enum CantorGuideSound: String, CaseIterable, Identifiable, Sendable, Hashable {
+    case harp
     case organ
     case simpleTone
 
@@ -48,8 +57,9 @@ nonisolated enum CantorGuideSound: String, CaseIterable, Identifiable, Sendable,
 
     var displayName: String {
         switch self {
+        case .harp: "Harp"
         case .organ: "Organ"
-        case .simpleTone: "Simple Tone"
+        case .simpleTone: "Tone"
         }
     }
 }
@@ -57,7 +67,7 @@ nonisolated enum CantorGuideSound: String, CaseIterable, Identifiable, Sendable,
 @MainActor
 @Observable
 final class ChantPlaybackController {
-    static let defaultTempo = 0.85
+    static let defaultTempo = 1.0
 
     private(set) var isPlaying = false
     private(set) var currentEventID: String?
@@ -439,16 +449,21 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
     )
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
+    private let guideReverb = AVAudioUnitReverb()
     private var format = AVAudioFormat(
         standardFormatWithSampleRate: 44_100,
         channels: 1
     )!
     private var isEngineConfigured = false
-    private var organRenderer: SampledOrganRenderer?
+    private var harpRenderer: SampledHarpRenderer?
+    private var organRenderer: ModeledOrganRenderer?
     private var pitchPipeRenderer: PitchPipeRenderer?
 
     init() {
         engine.attach(player)
+        engine.attach(guideReverb)
+        guideReverb.loadFactoryPreset(.mediumRoom)
+        guideReverb.wetDryMix = 0
     }
 
     func start(
@@ -468,18 +483,26 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
                     if !engine.isRunning {
                         try engine.start()
                     }
+                    harpRenderer = nil
                     organRenderer = nil
                     pitchPipeRenderer = nil
+                    guideReverb.reset()
                     switch sound {
-                    case .organ:
-                        guard let soundBankURL = OrganSoundBank.bundledURL else {
+                    case .harp:
+                        guard let soundBankURL = HarpSoundBank.bundledURL else {
                             throw CantorGuideAudioError.soundBankUnavailable
                         }
-                        organRenderer = try SampledOrganRenderer(
+                        guideReverb.wetDryMix = HarpSoundBank.reverbWetDryMix
+                        harpRenderer = try SampledHarpRenderer(
                             soundBankURL: soundBankURL,
                             format: format
                         )
+                    case .organ:
+                        guideReverb.wetDryMix =
+                            ModeledOrgan.reverbWetDryMix
+                        organRenderer = ModeledOrganRenderer(format: format)
                     case .simpleTone:
+                        guideReverb.wetDryMix = 0
                         pitchPipeRenderer = PitchPipeRenderer(format: format)
                     }
                     for (position, event) in events.enumerated() {
@@ -488,7 +511,10 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
                             tempo: tempo,
                             transposition: transposition,
                             clef: clef,
-                            register: register
+                            register: register,
+                            options: position == events.startIndex
+                                ? .interrupts
+                                : []
                         ) {
                             completion(position)
                         }
@@ -527,8 +553,12 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
     }
 
     func stop() {
-        queue.sync {
-            player.stop()
+        queue.async(qos: .default, flags: .enforceQoS) { [self] in
+            // AVAudioPlayerNode.stop() synchronously unschedules buffers and
+            // can invert priority with its user-interactive render thread.
+            // The next start interrupts this paused buffer queue instead.
+            player.pause()
+            harpRenderer = nil
             organRenderer = nil
             pitchPipeRenderer = nil
         }
@@ -536,12 +566,14 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
 
     func invalidate() {
         queue.async(qos: .default, flags: .enforceQoS) { [self] in
-            player.stop()
+            player.pause()
+            harpRenderer = nil
             organRenderer = nil
             pitchPipeRenderer = nil
             engine.stop()
             if isEngineConfigured {
                 engine.disconnectNodeOutput(player)
+                engine.disconnectNodeOutput(guideReverb)
             }
             engine.reset()
             isEngineConfigured = false
@@ -554,10 +586,19 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
         transposition: Int,
         clef: GABCClef,
         register: ChantRegister,
+        options: AVAudioPlayerNodeBufferOptions = [],
         completion: @escaping @Sendable () -> Void
     ) throws {
         let buffer: AVAudioPCMBuffer
-        if let organRenderer {
+        if let harpRenderer {
+            buffer = try harpRenderer.render(
+                performanceEvent: event,
+                tempo: tempo,
+                transposition: transposition,
+                clef: clef,
+                register: register
+            )
+        } else if let organRenderer {
             buffer = try organRenderer.render(
                 performanceEvent: event,
                 tempo: tempo,
@@ -579,7 +620,7 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
         player.scheduleBuffer(
             buffer,
             at: nil,
-            options: [],
+            options: options,
             completionCallbackType: .dataPlayedBack
         ) { _ in
             completion()
@@ -600,7 +641,8 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
         }
 
         format = deviceFormat
-        engine.connect(player, to: engine.mainMixerNode, format: format)
+        engine.connect(player, to: guideReverb, format: format)
+        engine.connect(guideReverb, to: engine.mainMixerNode, format: format)
         engine.prepare()
         isEngineConfigured = true
     }
@@ -621,7 +663,7 @@ private nonisolated enum CantorGuideAudioError: LocalizedError {
         case .outputUnavailable:
             "No audio output is currently available."
         case .soundBankUnavailable:
-            "The organ sound bank could not be loaded."
+            "The harp sound bank could not be loaded."
         }
     }
 }
@@ -644,24 +686,40 @@ nonisolated struct CantorGuidePerformanceEvent: Sendable {
     let endsSyllable: Bool
 }
 
-nonisolated enum OrganSoundBank {
-    static let resourceName = "ChurchOrgan"
+nonisolated enum HarpSoundBank {
+    static let resourceName = "ConcertHarp"
     static let program: UInt8 = 0
-    static let tuningCorrection: Float = 2
+    static let tuningCorrection: Float = 7
+    static let reverbWetDryMix: Float = 10
     static let sha256 =
-        "5e30e974376a6693ebfd604d49cafd29825e272c73f7bec87392f33906f8f1d6"
+        "ac8aeee47a423c3cfaa3ccc17cca2eef1ca0dc86a7c3a1cfd4334f1afe4c4c37"
 
     static var bundledURL: URL? {
         Bundle.main.url(forResource: resourceName, withExtension: "sf2")
     }
 }
 
-nonisolated final class SampledOrganRenderer: @unchecked Sendable {
+nonisolated enum ModeledOrgan {
+    static let reverbWetDryMix: Float = 4
+    static let harmonicAmplitudes = [
+        1.0,
+        0.62,
+        0.20,
+        0.077,
+        0.019,
+        0.016,
+        0.024,
+        0.006,
+        0.001
+    ]
+}
+
+nonisolated final class SampledHarpRenderer: @unchecked Sendable {
     private static let secondsPerBeat = 0.38
     private static let transitionSeconds = 0.018
-    private static let phraseAttackSeconds = 0.045
+    private static let phraseAttackSeconds = 0.006
     private static let phraseReleaseSeconds = 0.08
-    private static let syllablePulseSeconds = 0.018
+    private static let syllablePulseSeconds = 0.006
     private static let outputGain = 2.4
     private static let peakLimit: Float = 0.9
 
@@ -671,7 +729,6 @@ nonisolated final class SampledOrganRenderer: @unchecked Sendable {
     private let format: AVAudioFormat
     private let scratchBuffer: AVAudioPCMBuffer
     private var currentVoiceIndex: Int?
-    private var currentMIDINote: UInt8?
 
     init(soundBankURL: URL, format: AVAudioFormat) throws {
         self.format = format
@@ -686,11 +743,11 @@ nonisolated final class SampledOrganRenderer: @unchecked Sendable {
             engine.connect(mixer, to: engine.mainMixerNode, format: nil)
             try sampler.loadSoundBankInstrument(
                 at: soundBankURL,
-                program: OrganSoundBank.program,
+                program: HarpSoundBank.program,
                 bankMSB: UInt8(kAUSampler_DefaultMelodicBankMSB),
                 bankLSB: UInt8(kAUSampler_DefaultBankLSB)
             )
-            sampler.globalTuning = OrganSoundBank.tuningCorrection
+            sampler.globalTuning = HarpSoundBank.tuningCorrection
             mixer.outputVolume = 0
         }
         try engine.enableManualRenderingMode(
@@ -702,7 +759,7 @@ nonisolated final class SampledOrganRenderer: @unchecked Sendable {
             pcmFormat: engine.manualRenderingFormat,
             frameCapacity: engine.manualRenderingMaximumFrameCount
         ) else {
-            throw SampledOrganRenderingError.bufferUnavailable
+            throw SampledHarpRenderingError.bufferUnavailable
         }
         self.scratchBuffer = scratchBuffer
         try engine.start()
@@ -737,7 +794,7 @@ nonisolated final class SampledOrganRenderer: @unchecked Sendable {
             pcmFormat: format,
             frameCapacity: AVAudioFrameCount(totalFrames)
         ) else {
-            throw SampledOrganRenderingError.bufferUnavailable
+            throw SampledHarpRenderingError.bufferUnavailable
         }
         output.frameLength = AVAudioFrameCount(totalFrames)
         clear(output)
@@ -754,32 +811,27 @@ nonisolated final class SampledOrganRenderer: @unchecked Sendable {
         let midiNote = UInt8(midiValue)
         var writeOffset = 0
 
-        if currentMIDINote != midiNote {
-            let oldVoiceIndex = currentVoiceIndex
-            let newVoiceIndex = oldVoiceIndex.map { 1 - $0 } ?? 0
-            prepareVoice(newVoiceIndex, for: midiNote)
-            currentVoiceIndex = newVoiceIndex
-            currentMIDINote = midiNote
+        let oldVoiceIndex = currentVoiceIndex
+        let newVoiceIndex = oldVoiceIndex.map { 1 - $0 } ?? 0
+        prepareVoice(newVoiceIndex, for: midiNote)
+        currentVoiceIndex = newVoiceIndex
 
-            if let oldVoiceIndex {
-                let transitionFrames = min(
-                    noteFrames,
-                    max(1, Int(Self.transitionSeconds * sampleRate))
-                )
-                try renderCrossfade(
-                    transitionFrames,
-                    from: oldVoiceIndex,
-                    to: newVoiceIndex,
-                    into: output
-                )
-                silenceVoice(oldVoiceIndex)
-                voiceMixers[newVoiceIndex].outputVolume = 1
-                writeOffset = transitionFrames
-            } else {
-                voiceMixers[newVoiceIndex].outputVolume = 1
-            }
-        } else if let currentVoiceIndex {
-            voiceMixers[currentVoiceIndex].outputVolume = 1
+        if let oldVoiceIndex {
+            let transitionFrames = min(
+                noteFrames,
+                max(1, Int(Self.transitionSeconds * sampleRate))
+            )
+            try renderCrossfade(
+                transitionFrames,
+                from: oldVoiceIndex,
+                to: newVoiceIndex,
+                into: output
+            )
+            silenceVoice(oldVoiceIndex)
+            voiceMixers[newVoiceIndex].outputVolume = 1
+            writeOffset = transitionFrames
+        } else {
+            voiceMixers[newVoiceIndex].outputVolume = 1
         }
 
         try renderFrames(
@@ -793,7 +845,6 @@ nonisolated final class SampledOrganRenderer: @unchecked Sendable {
         if shouldRelease, let currentVoiceIndex {
             silenceVoice(currentVoiceIndex)
             self.currentVoiceIndex = nil
-            currentMIDINote = nil
         }
         try renderFrames(
             totalFrames - writeOffset,
@@ -814,7 +865,7 @@ nonisolated final class SampledOrganRenderer: @unchecked Sendable {
         silenceVoice(index)
         samplers[index].startNote(
             midiNote,
-            withVelocity: 72,
+            withVelocity: 58,
             onChannel: 0
         )
     }
@@ -829,7 +880,6 @@ nonisolated final class SampledOrganRenderer: @unchecked Sendable {
             silenceVoice(index)
         }
         currentVoiceIndex = nil
-        currentMIDINote = nil
     }
 
     private func renderCrossfade(
@@ -900,7 +950,7 @@ nonisolated final class SampledOrganRenderer: @unchecked Sendable {
             switch status {
             case .success:
                 guard let scratchChannels = scratchBuffer.floatChannelData else {
-                    throw SampledOrganRenderingError.bufferUnavailable
+                    throw SampledHarpRenderingError.bufferUnavailable
                 }
                 let renderedFrames = Int(scratchBuffer.frameLength)
                 for channel in 0..<Int(format.channelCount) {
@@ -915,12 +965,12 @@ nonisolated final class SampledOrganRenderer: @unchecked Sendable {
             case .insufficientDataFromInputNode, .cannotDoInCurrentContext:
                 retryCount += 1
                 if retryCount > 16 {
-                    throw SampledOrganRenderingError.renderStalled
+                    throw SampledHarpRenderingError.renderStalled
                 }
             case .error:
-                throw SampledOrganRenderingError.renderFailed
+                throw SampledHarpRenderingError.renderFailed
             @unknown default:
-                throw SampledOrganRenderingError.renderFailed
+                throw SampledHarpRenderingError.renderFailed
             }
         }
     }
@@ -1012,6 +1062,110 @@ nonisolated final class SampledOrganRenderer: @unchecked Sendable {
         let clamped = min(1, max(0, progress))
         let eased = 0.5 - 0.5 * cos(.pi * clamped)
         return start + (end - start) * eased
+    }
+}
+
+nonisolated final class ModeledOrganRenderer: @unchecked Sendable {
+    private static let secondsPerBeat = 0.38
+    private static let attackSeconds = 0.022
+    private static let releaseSeconds = 0.085
+    private static let harmonicPhaseOffset = 0.417
+    private static let outputGain = 0.575_8
+
+    private let format: AVAudioFormat
+
+    init(format: AVAudioFormat) {
+        self.format = format
+    }
+
+    func render(
+        performanceEvent: CantorGuidePerformanceEvent,
+        tempo: Double,
+        transposition: Int,
+        clef: GABCClef,
+        register _: ChantRegister
+    ) throws -> AVAudioPCMBuffer {
+        let sampleRate = format.sampleRate
+        let safeTempo = max(0.1, tempo)
+        let noteSeconds = max(
+            0.09,
+            Self.secondsPerBeat * performanceEvent.durationWeight / safeTempo
+        )
+        let silenceSeconds =
+            Self.secondsPerBeat
+            * performanceEvent.followingSilenceWeight
+            / safeTempo
+        let noteFrames = max(1, Int(noteSeconds * sampleRate))
+        let silenceFrames = max(0, Int(silenceSeconds * sampleRate))
+        let totalFrames = max(1, noteFrames + silenceFrames)
+        guard let output = AVAudioPCMBuffer(
+            pcmFormat: format,
+            frameCapacity: AVAudioFrameCount(totalFrames)
+        ) else {
+            throw ModeledOrganRenderingError.bufferUnavailable
+        }
+        output.frameLength = AVAudioFrameCount(totalFrames)
+        guard let channels = output.floatChannelData else {
+            throw ModeledOrganRenderingError.bufferUnavailable
+        }
+
+        let frequency = CantorGuideSynthesizer.frequency(
+            for: performanceEvent.event,
+            transposition: transposition,
+            clef: clef
+        )
+        let attackFrames = max(
+            1,
+            min(noteFrames, Int(Self.attackSeconds * sampleRate))
+        )
+        let releaseFrames = max(
+            1,
+            min(noteFrames, Int(Self.releaseSeconds * sampleRate))
+        )
+
+        for frame in 0..<noteFrames {
+            let time = Double(frame) / sampleRate
+            var tone = 0.0
+            for (index, amplitude) in ModeledOrgan
+                .harmonicAmplitudes.enumerated() {
+                let harmonic = index + 1
+                let harmonicFrequency = Double(harmonic) * frequency
+                guard harmonicFrequency < sampleRate * 0.45 else {
+                    continue
+                }
+                let phase =
+                    2 * Double.pi * harmonicFrequency * time
+                    + Double(harmonic) * Self.harmonicPhaseOffset
+                tone += amplitude * sin(phase)
+            }
+
+            let attackProgress = min(
+                1.0,
+                Double(frame) / Double(attackFrames)
+            )
+            let releaseProgress = min(
+                1.0,
+                Double(noteFrames - frame - 1) / Double(releaseFrames)
+            )
+            let attack = 0.5 - 0.5 * cos(.pi * attackProgress)
+            let release = 0.5 - 0.5 * cos(.pi * releaseProgress)
+            let sample = Float(
+                tone * min(attack, release) * Self.outputGain
+            )
+            for channel in 0..<Int(output.format.channelCount) {
+                let perspective: Float =
+                    output.format.channelCount > 1 && channel == 0
+                    ? 0.995
+                    : 1
+                channels[channel][frame] = sample * perspective
+            }
+        }
+        for frame in noteFrames..<totalFrames {
+            for channel in 0..<Int(output.format.channelCount) {
+                channels[channel][frame] = 0
+            }
+        }
+        return output
     }
 }
 
@@ -1172,10 +1326,14 @@ nonisolated final class PitchPipeRenderer: @unchecked Sendable {
     }
 }
 
-private nonisolated enum SampledOrganRenderingError: Error {
+private nonisolated enum SampledHarpRenderingError: Error {
     case bufferUnavailable
     case renderFailed
     case renderStalled
+}
+
+private nonisolated enum ModeledOrganRenderingError: Error {
+    case bufferUnavailable
 }
 
 private nonisolated enum PitchPipeRenderingError: Error {
@@ -1461,10 +1619,10 @@ nonisolated enum CantorGuideSynthesizer {
                     || events[index + 1].syllableID != event.syllableID
             )
         }
-        guard let soundBankURL = OrganSoundBank.bundledURL else {
+        guard let soundBankURL = HarpSoundBank.bundledURL else {
             throw CantorGuideAudioError.soundBankUnavailable
         }
-        let renderer = try SampledOrganRenderer(
+        let renderer = try SampledHarpRenderer(
             soundBankURL: soundBankURL,
             format: format
         )

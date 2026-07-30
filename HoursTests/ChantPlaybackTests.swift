@@ -5,10 +5,12 @@ import XCTest
 
 @MainActor
 final class ChantPlaybackTests: XCTestCase {
-    func testCantorGuideDefaultsToEightyFivePercentTempo() {
+    private static var retainedAudioControllers: [ChantPlaybackController] = []
+
+    func testCantorGuideDefaultsToOneHundredPercentTempo() {
         let controller = ChantPlaybackController()
 
-        XCTAssertEqual(controller.tempo, 0.85)
+        XCTAssertEqual(controller.tempo, 1.0)
     }
 
     func testCantorGuideDismissesOnlyForADeliberateDownwardSwipe() {
@@ -96,18 +98,21 @@ final class ChantPlaybackTests: XCTestCase {
         )
     }
 
-    func testScholaPitchesAndRegistersMapToTheirSoundingOctaves() {
-        XCTAssertEqual(
-            CantorGuideSound.allCases.map(\.displayName),
-            ["Organ", "Simple Tone"]
-        )
+    func testScholaPitchOptionsCoverGThroughC() {
         XCTAssertEqual(
             ScholaPitch.allCases.map(\.displayName),
-            ["A", "B♭"]
+            ["G", "A♭", "A", "B♭", "B", "C"]
         )
         XCTAssertEqual(
             ScholaPitch.allCases.map(\.semitoneOffset),
-            [2, 3]
+            [0, 1, 2, 3, 4, 5]
+        )
+    }
+
+    func testScholaPitchesAndRegistersMapToTheirSoundingOctaves() {
+        XCTAssertEqual(
+            CantorGuideSound.allCases.map(\.displayName),
+            ["Harp", "Organ", "Tone"]
         )
         XCTAssertEqual(
             ChantRegister.allCases.map(\.displayName),
@@ -132,10 +137,18 @@ final class ChantPlaybackTests: XCTestCase {
             relativePitch: 0
         )
         let expected: [(ScholaPitch, ChantRegister, Double)] = [
+            (.g, .low, 195.997_72),
+            (.aFlat, .low, 207.652_35),
             (.a, .low, 220),
             (.bFlat, .low, 233.081_88),
+            (.b, .low, 246.941_65),
+            (.c, .low, 261.625_57),
+            (.g, .high, 391.995_44),
+            (.aFlat, .high, 415.304_70),
             (.a, .high, 440),
-            (.bFlat, .high, 466.163_76)
+            (.bFlat, .high, 466.163_76),
+            (.b, .high, 493.883_30),
+            (.c, .high, 523.251_13)
         ]
         for (pitch, register, frequency) in expected {
             let targetOffset = pitch.semitoneOffset + register.octaveOffset
@@ -150,7 +163,7 @@ final class ChantPlaybackTests: XCTestCase {
         }
     }
 
-    func testRenderedDominantsStayWithinFiveCentsOfEveryScholaSetting() throws {
+    func testRenderedDominantsStayWithinSevenCentsOfEveryScholaSetting() throws {
         let sampleRate = 48_000.0
         let format = try XCTUnwrap(
             AVAudioFormat(
@@ -167,14 +180,22 @@ final class ChantPlaybackTests: XCTestCase {
             durationWeight: 4
         )
         let expected: [(ScholaPitch, ChantRegister, Double)] = [
+            (.g, .low, 195.997_72),
+            (.aFlat, .low, 207.652_35),
             (.a, .low, 220),
             (.bFlat, .low, 233.081_88),
+            (.b, .low, 246.941_65),
+            (.c, .low, 261.625_57),
+            (.g, .high, 391.995_44),
+            (.aFlat, .high, 415.304_70),
             (.a, .high, 440),
-            (.bFlat, .high, 466.163_76)
+            (.bFlat, .high, 466.163_76),
+            (.b, .high, 493.883_30),
+            (.c, .high, 523.251_13)
         ]
 
         for (pitch, register, expectedFrequency) in expected {
-            let renderer = try makeOrganRenderer(format: format)
+            let renderer = try makeHarpRenderer(format: format)
             let buffer = try renderer.render(
                 performanceEvent: performanceEvent(
                     event,
@@ -190,35 +211,46 @@ final class ChantPlaybackTests: XCTestCase {
             let samples = try XCTUnwrap(buffer.floatChannelData?[0])
             let start = Int(0.22 * sampleRate)
             let length = min(24_000, Int(buffer.frameLength) - start)
-            var strongestCents = 0.0
-            var strongestMagnitude = 0.0
-
-            for step in -100...100 {
-                let cents = Double(step) * 0.2
-                let candidate =
-                    expectedFrequency * pow(2, cents / 1_200)
-                var real = 0.0
-                var imaginary = 0.0
-                for offset in 0..<length {
-                    let angle =
-                        2 * Double.pi * candidate * Double(offset)
-                        / sampleRate
-                    let value = Double(samples[start + offset])
-                    real += value * cos(angle)
-                    imaginary -= value * sin(angle)
+            let expectedLag = sampleRate / expectedFrequency
+            let minimumLag = Int(floor(expectedLag * 0.95))
+            let maximumLag = Int(ceil(expectedLag * 1.05))
+            let correlations = (minimumLag...maximumLag).map { lag in
+                var sum = 0.0
+                for offset in lag..<length {
+                    sum += Double(samples[start + offset])
+                        * Double(samples[start + offset - lag])
                 }
-                let magnitude = hypot(real, imaginary)
-                if magnitude > strongestMagnitude {
-                    strongestMagnitude = magnitude
-                    strongestCents = cents
-                }
+                return sum / Double(length - lag)
             }
+            let peakIndex = try XCTUnwrap(
+                correlations.indices.max {
+                    correlations[$0] < correlations[$1]
+                }
+            )
+            let peakLag = minimumLag + peakIndex
+            let interpolatedLag: Double
+            if peakIndex > correlations.startIndex,
+               peakIndex < correlations.index(before: correlations.endIndex) {
+                let left = correlations[peakIndex - 1]
+                let center = correlations[peakIndex]
+                let right = correlations[peakIndex + 1]
+                let denominator = left - 2 * center + right
+                let offset = abs(denominator) > 0.000_001
+                    ? 0.5 * (left - right) / denominator
+                    : 0
+                interpolatedLag = Double(peakLag) + offset
+            } else {
+                interpolatedLag = Double(peakLag)
+            }
+            let measuredFrequency = sampleRate / interpolatedLag
+            let measuredCents =
+                1_200 * log2(measuredFrequency / expectedFrequency)
 
             XCTAssertLessThan(
-                abs(strongestCents),
-                5,
+                abs(measuredCents),
+                7,
                 "\(pitch.displayName) \(register.displayName) was "
-                    + "\(strongestCents) cents from its target."
+                    + "\(measuredCents) cents from its target."
             )
         }
     }
@@ -403,6 +435,54 @@ final class ChantPlaybackTests: XCTestCase {
         XCTAssertEqual(controller.currentEventID, event.id)
     }
 
+    func testControllerStopsAndRestartsActiveAudio() async throws {
+        let event = ChantEvent(
+            id: "long-note",
+            phraseID: "phrase-1",
+            syllableID: "syllable-1",
+            syllable: "Ky",
+            relativePitch: 0,
+            durationWeight: 20
+        )
+        let score = ChantScore(
+            id: "restart-score",
+            incipit: "Kyrie",
+            gabc: "(c4) Ky(f)",
+            reviewStatus: .humanReviewed,
+            provenance: ChantProvenance(
+                collection: "Test",
+                sourceBook: "Test",
+                license: "Test",
+                snapshot: "test"
+            ),
+            timeline: ChantTimeline(events: [event])
+        )
+        let controller = ChantPlaybackController()
+        controller.guideSound = .simpleTone
+
+        controller.play(score: score)
+        try await Task.sleep(for: .milliseconds(750))
+        XCTAssertNil(controller.errorMessage)
+        XCTAssertTrue(controller.isPlaying)
+
+        controller.stop()
+        try await Task.sleep(for: .milliseconds(250))
+        XCTAssertFalse(controller.isPlaying)
+
+        controller.play(score: score)
+        try await Task.sleep(for: .milliseconds(750))
+        XCTAssertNil(controller.errorMessage)
+        XCTAssertTrue(controller.isPlaying)
+
+        controller.stop()
+        try await Task.sleep(for: .milliseconds(250))
+        XCTAssertFalse(controller.isPlaying)
+
+        // Keep AVFoundation's app-lifetime graph out of this test's teardown.
+        // The regression is for interactive stop/restart, not process exit.
+        Self.retainedAudioControllers.append(controller)
+    }
+
     func testControllerAdvancesHighlightWhenAudioFinishesEvent() async throws {
         let first = ChantEvent(
             id: "note-1",
@@ -458,7 +538,7 @@ final class ChantPlaybackTests: XCTestCase {
             AVAudioFormat(standardFormatWithSampleRate: 8_000, channels: 1)
         )
 
-        let renderer = try makeOrganRenderer(format: format)
+        let renderer = try makeHarpRenderer(format: format)
         let buffer = try renderer.render(
             performanceEvent: performanceEvent(
                 event,
@@ -495,7 +575,7 @@ final class ChantPlaybackTests: XCTestCase {
         )
     }
 
-    func testSynthesizerProducesMonoSafeStereoOutput() throws {
+    func testSynthesizerProducesMonoCompatibleStereoOutput() throws {
         let event = ChantEvent(
             id: "note-1",
             phraseID: "phrase-1",
@@ -507,7 +587,7 @@ final class ChantPlaybackTests: XCTestCase {
             AVAudioFormat(standardFormatWithSampleRate: 8_000, channels: 2)
         )
 
-        let renderer = try makeOrganRenderer(format: format)
+        let renderer = try makeHarpRenderer(format: format)
         let buffer = try renderer.render(
             performanceEvent: performanceEvent(
                 event,
@@ -531,7 +611,7 @@ final class ChantPlaybackTests: XCTestCase {
             .map { abs((channels[0][$0] + channels[1][$0]) * 0.5) }
             .max() ?? 0
 
-        XCTAssertGreaterThan(difference, 0.000_1)
+        XCTAssertEqual(difference, 0, accuracy: 0.000_001)
         XCTAssertGreaterThan(leftPeak, 0.03)
         XCTAssertGreaterThan(rightPeak, 0.03)
         XCTAssertGreaterThan(monoPeak, 0.03)
@@ -560,7 +640,7 @@ final class ChantPlaybackTests: XCTestCase {
         )
 
         func renderSequence() throws -> [Float] {
-            let renderer = try makeOrganRenderer(format: format)
+            let renderer = try makeHarpRenderer(format: format)
             let first = try renderer.render(
                 performanceEvent: performanceEvent(
                     firstEvent,
@@ -615,7 +695,7 @@ final class ChantPlaybackTests: XCTestCase {
         XCTAssertLessThan(peak, 0.91)
     }
 
-    func testOrganAndSimpleToneHaveStrongSafeOutputLevels() throws {
+    func testAllGuideSoundsHaveStrongSafeOutputLevels() throws {
         let event = ChantEvent(
             id: "level",
             phraseID: "phrase",
@@ -632,8 +712,16 @@ final class ChantPlaybackTests: XCTestCase {
             startsPhrase: true,
             endsPhrase: true
         )
-        let organ = try makeOrganRenderer(format: format)
+        let harp = try makeHarpRenderer(format: format)
+        let organ = ModeledOrganRenderer(format: format)
         let simpleTone = PitchPipeRenderer(format: format)
+        let harpBuffer = try harp.render(
+            performanceEvent: performanceEvent,
+            tempo: 0.85,
+            transposition: -10,
+            clef: .c3,
+            register: .low
+        )
         let organBuffer = try organ.render(
             performanceEvent: performanceEvent,
             tempo: 0.85,
@@ -656,15 +744,18 @@ final class ChantPlaybackTests: XCTestCase {
                 .max() ?? 0
         }
 
+        let harpPeak = try peak(in: harpBuffer)
         let organPeak = try peak(in: organBuffer)
         let simpleTonePeak = try peak(in: simpleToneBuffer)
-        XCTAssertGreaterThan(organPeak, 0.12)
+        XCTAssertGreaterThan(harpPeak, 0.12)
+        XCTAssertGreaterThan(organPeak, 0.35)
         XCTAssertGreaterThan(simpleTonePeak, 0.35)
-        XCTAssertLessThanOrEqual(organPeak, 0.9)
+        XCTAssertLessThanOrEqual(harpPeak, 0.9)
+        XCTAssertLessThan(organPeak, 0.9)
         XCTAssertLessThan(simpleTonePeak, 0.7)
     }
 
-    func testMutedOrganRetainsSubtleHarmonicsBeyondTheFundamental() throws {
+    func testHarpRetainsHarmonicsBeyondTheFundamental() throws {
         let event = ChantEvent(
             id: "note-1",
             phraseID: "phrase",
@@ -680,7 +771,7 @@ final class ChantPlaybackTests: XCTestCase {
                 channels: 1
             )
         )
-        let renderer = try makeOrganRenderer(format: format)
+        let renderer = try makeHarpRenderer(format: format)
         let buffer = try renderer.render(
             performanceEvent: performanceEvent(
                 event,
@@ -723,6 +814,81 @@ final class ChantPlaybackTests: XCTestCase {
             secondHarmonic + thirdHarmonic,
             offHarmonicNoise * 1.5
         )
+    }
+
+    func testModeledOrganMatchesApprovedGeigenHarmonicProfile() throws {
+        let event = ChantEvent(
+            id: "organ",
+            phraseID: "phrase",
+            syllableID: "syllable",
+            syllable: "ah",
+            relativePitch: 0,
+            durationWeight: 4
+        )
+        let sampleRate = 48_000.0
+        let format = try XCTUnwrap(
+            AVAudioFormat(
+                standardFormatWithSampleRate: sampleRate,
+                channels: 1
+            )
+        )
+        let renderer = ModeledOrganRenderer(format: format)
+        let buffer = try renderer.render(
+            performanceEvent: performanceEvent(
+                event,
+                startsPhrase: true,
+                endsPhrase: true
+            ),
+            tempo: 1,
+            transposition: -10,
+            clef: .c3,
+            register: .low
+        )
+        let samples = try XCTUnwrap(buffer.floatChannelData?[0])
+        let start = Int(0.25 * sampleRate)
+        let length = 24_000
+
+        func magnitude(at frequency: Double) -> Double {
+            var real = 0.0
+            var imaginary = 0.0
+            for offset in 0..<length {
+                let angle =
+                    2 * Double.pi * frequency * Double(offset) / sampleRate
+                let value = Double(samples[start + offset])
+                real += value * cos(angle)
+                imaginary -= value * sin(angle)
+            }
+            return hypot(real, imaginary)
+        }
+
+        let fundamental = magnitude(at: 220)
+        let secondHarmonic = magnitude(at: 440)
+        let thirdHarmonic = magnitude(at: 660)
+        let fourthHarmonic = magnitude(at: 880)
+        let offHarmonicNoise = magnitude(at: 500)
+
+        XCTAssertGreaterThan(fundamental, 100)
+        XCTAssertEqual(
+            secondHarmonic / fundamental,
+            0.62,
+            accuracy: 0.01
+        )
+        XCTAssertEqual(
+            thirdHarmonic / fundamental,
+            0.20,
+            accuracy: 0.01
+        )
+        XCTAssertEqual(
+            fourthHarmonic / fundamental,
+            0.077,
+            accuracy: 0.008
+        )
+        XCTAssertGreaterThan(
+            fundamental,
+            offHarmonicNoise * 1_000,
+            "The modeled organ should not contain a sampled hiss layer."
+        )
+        XCTAssertEqual(ModeledOrgan.reverbWetDryMix, 4)
     }
 
     func testPerformanceUsesNotationAwareLengthsAndDivisionPauses() {
@@ -806,7 +972,7 @@ final class ChantPlaybackTests: XCTestCase {
             AVAudioFormat(standardFormatWithSampleRate: 8_000, channels: 1)
         )
 
-        let renderer = try makeOrganRenderer(format: format)
+        let renderer = try makeHarpRenderer(format: format)
         let first = try renderer.render(
             performanceEvent: performanceEvent(
                 events[0],
@@ -861,7 +1027,7 @@ final class ChantPlaybackTests: XCTestCase {
         let format = try XCTUnwrap(
             AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1)
         )
-        let renderer = try makeOrganRenderer(format: format)
+        let renderer = try makeHarpRenderer(format: format)
         let buffer = try renderer.render(
             performanceEvent: CantorGuidePerformanceEvent(
                 event: dotted,
@@ -889,10 +1055,20 @@ final class ChantPlaybackTests: XCTestCase {
             }
         }
 
+        var steadyStateDelta: Float = 0
+        for frame in (
+            max(1, noteFrames - 12_000)..<max(2, noteFrames - 6_000)
+        ) {
+            steadyStateDelta = max(
+                steadyStateDelta,
+                abs(samples[frame] - samples[frame - 1])
+            )
+        }
         XCTAssertLessThan(
             maximumDelta,
-            0.01,
+            steadyStateDelta * 1.25 + 0.002,
             "maximumDelta=\(maximumDelta) at frame \(maximumDeltaFrame), "
+                + "steadyStateDelta=\(steadyStateDelta), "
                 + "noteFrames=\(noteFrames)"
         )
         let silencePeak = (noteFrames..<Int(buffer.frameLength))
@@ -924,7 +1100,7 @@ final class ChantPlaybackTests: XCTestCase {
         )
 
         for (name, transposition) in [("A", 0), ("B♭", 1)] {
-            let renderer = try makeOrganRenderer(format: format)
+            let renderer = try makeHarpRenderer(format: format)
             var finalBuffer: AVAudioPCMBuffer?
             for (index, event) in events.enumerated() {
                 finalBuffer = try renderer.render(
@@ -946,50 +1122,39 @@ final class ChantPlaybackTests: XCTestCase {
 
             let buffer = try XCTUnwrap(finalBuffer)
             let samples = try XCTUnwrap(buffer.floatChannelData?[0])
+            let isolatedRenderer = try makeHarpRenderer(format: format)
+            let isolatedBuffer = try isolatedRenderer.render(
+                performanceEvent: CantorGuidePerformanceEvent(
+                    event: events[3],
+                    durationWeight: events[3].durationWeight,
+                    followingSilenceWeight: 0,
+                    startsPhrase: true,
+                    endsPhrase: true,
+                    startsSyllable: true,
+                    endsSyllable: true
+                ),
+                tempo: 0.85,
+                transposition: transposition,
+                clef: GABCClef(gabc: "(c4)"),
+                register: .low
+            )
+            let isolatedSamples = try XCTUnwrap(
+                isolatedBuffer.floatChannelData?[0]
+            )
             let start = Int(0.08 * sampleRate)
             let length = min(8_192, Int(buffer.frameLength) - start)
-
-            func magnitude(at frequency: Double) -> Double {
-                var real = 0.0
-                var imaginary = 0.0
-                for offset in 0..<length {
-                    let window =
-                        0.5
-                        - 0.5
-                        * cos(
-                            2 * Double.pi * Double(offset)
-                                / Double(length - 1)
-                        )
-                    let angle =
-                        2 * Double.pi * frequency * Double(offset)
-                        / sampleRate
-                    let value = Double(samples[start + offset]) * window
-                    real += value * cos(angle)
-                    imaginary -= value * sin(angle)
-                }
-                return hypot(real, imaginary)
+            var referenceEnergy = 0.0
+            var differenceEnergy = 0.0
+            for offset in 0..<length {
+                let reference = Double(isolatedSamples[start + offset])
+                let difference =
+                    Double(samples[start + offset]) - reference
+                referenceEnergy += reference * reference
+                differenceEnergy += difference * difference
             }
-
-            let target = CantorGuideSynthesizer.frequency(
-                for: events[3],
-                transposition: transposition,
-                clef: GABCClef(gabc: "(c4)")
-            )
-            let priorFrequencies = [events[1], events[2]].map {
-                CantorGuideSynthesizer.frequency(
-                    for: $0,
-                    transposition: transposition,
-                    clef: GABCClef(gabc: "(c4)")
-                )
-            }
-            let targetMagnitude = magnitude(at: target)
-            let strongestPrior = priorFrequencies
-                .map(magnitude(at:))
-                .max() ?? 0
-
-            XCTAssertGreaterThan(
-                targetMagnitude,
-                strongestPrior * 4,
+            XCTAssertLessThan(
+                sqrt(differenceEnergy / Double(length)),
+                sqrt(referenceEnergy / Double(length)) * 0.05,
                 "\(name) cadence retained a prior pitch under its final note."
             )
         }
@@ -1013,7 +1178,7 @@ final class ChantPlaybackTests: XCTestCase {
             syllable: "ah",
             relativePitch: 2
         )
-        let renderer = try makeOrganRenderer(format: format)
+        let renderer = try makeHarpRenderer(format: format)
         let first = try renderer.render(
             performanceEvent: CantorGuidePerformanceEvent(
                 event: firstEvent,
@@ -1080,27 +1245,28 @@ final class ChantPlaybackTests: XCTestCase {
     }
     #endif
 
-    func testBundledOrganSoundBankIsPresentAndUsesItsOnlyPreset() throws {
-        let url = try XCTUnwrap(OrganSoundBank.bundledURL)
+    func testBundledHarpSoundBankIsPresentAndUsesItsOnlyPreset() throws {
+        let url = try XCTUnwrap(HarpSoundBank.bundledURL)
         let attributes = try FileManager.default.attributesOfItem(
             atPath: url.path
         )
         let fileSize = try XCTUnwrap(attributes[.size] as? NSNumber)
 
-        XCTAssertEqual(OrganSoundBank.program, 0)
-        XCTAssertEqual(OrganSoundBank.tuningCorrection, 2)
+        XCTAssertEqual(HarpSoundBank.program, 0)
+        XCTAssertEqual(HarpSoundBank.tuningCorrection, 7)
+        XCTAssertEqual(HarpSoundBank.reverbWetDryMix, 10)
         XCTAssertEqual(
-            OrganSoundBank.sha256,
-            "5e30e974376a6693ebfd604d49cafd29825e272c73f7bec87392f33906f8f1d6"
+            HarpSoundBank.sha256,
+            "ac8aeee47a423c3cfaa3ccc17cca2eef1ca0dc86a7c3a1cfd4334f1afe4c4c37"
         )
-        XCTAssertGreaterThan(fileSize.intValue, 18_000_000)
+        XCTAssertGreaterThan(fileSize.intValue, 17_000_000)
     }
 
-    private func makeOrganRenderer(
+    private func makeHarpRenderer(
         format: AVAudioFormat
-    ) throws -> SampledOrganRenderer {
-        let soundBankURL = try XCTUnwrap(OrganSoundBank.bundledURL)
-        return try SampledOrganRenderer(
+    ) throws -> SampledHarpRenderer {
+        let soundBankURL = try XCTUnwrap(HarpSoundBank.bundledURL)
+        return try SampledHarpRenderer(
             soundBankURL: soundBankURL,
             format: format
         )

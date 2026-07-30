@@ -4,7 +4,29 @@ import XCTest
 
 @MainActor
 final class HourDialMathTests: XCTestCase {
+    func testWheelDragOnlyClaimsHorizontalMovement() {
+        XCTAssertTrue(
+            HourDialDragIntent.shouldRotateWheel(
+                translation: CGSize(width: 80, height: 12)
+            )
+        )
+        XCTAssertFalse(
+            HourDialDragIntent.shouldRotateWheel(
+                translation: CGSize(width: 12, height: -80)
+            )
+        )
+        XCTAssertFalse(
+            HourDialDragIntent.shouldRotateWheel(
+                translation: CGSize(width: 40, height: 40)
+            )
+        )
+    }
+
     func testRefreshPolicyOnlyUsesDisplayLinkWhileActivelySpinning() {
+        XCTAssertEqual(
+            HourDialRefreshPolicy.animationMinimumInterval,
+            1.0 / 120.0
+        )
         XCTAssertEqual(
             HourDialRefreshPolicy.resolve(
                 isSpinning: true,

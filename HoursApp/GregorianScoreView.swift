@@ -53,48 +53,50 @@ struct GregorianScoreView: View {
         let accent = colorScheme == .dark
             ? Color(red: 0.68, green: 0.12, blue: 0.09)
             : Color(red: 0.54, green: 0.16, blue: 0.15)
-        let highlight = Color.red
-        let activePlacement = highlightedEventID.flatMap {
-            layout.neume(containing: $0)
+        let highlightColor = colorScheme == .dark
+            ? Color(red: 0.78, green: 0.20, blue: 0.16)
+            : Color(red: 0.48, green: 0.05, blue: 0.04)
+        let cantorHighlight = highlightedEventID.flatMap {
+            GregorianCantorHighlight(
+                eventID: $0,
+                timeline: score.timeline,
+                layout: layout
+            )
         }
+        let activePlacement = cantorHighlight?.neume
 
         return ZStack(alignment: .topLeading) {
             ForEach(Array(drawing.tiles.enumerated()), id: \.offset) { _, tile in
                 scoreTile(tile, ink: ink, accent: accent)
             }
 
-            if let highlightedEventID {
-                Canvas { context, _ in
-                    for stroke in layout.strokes
-                        where stroke.eventID == highlightedEventID {
-                        var path = Path()
-                        path.move(to: stroke.start)
-                        path.addLine(to: stroke.end)
-                        context.stroke(
-                            path,
-                            with: .color(highlight),
-                            lineWidth: stroke.lineWidth
+            ZStack(alignment: .topLeading) {
+                if let cantorHighlight {
+                    cantorHighlightLayer(
+                        cantorHighlight,
+                        layout: layout,
+                        color: highlightColor
+                    )
+                    .id(cantorHighlight.neume.id)
+                    .transition(
+                        .asymmetric(
+                            insertion: .identity,
+                            removal: .opacity
                         )
-                    }
-
-                    for glyph in layout.glyphs
-                        where glyph.eventID == highlightedEventID {
-                        let path = GregorianGlyphLibrary.path(for: glyph)
-                        context.fill(
-                            path,
-                            with: .color(highlight),
-                            style: FillStyle(eoFill: true)
-                        )
-                        context.stroke(
-                            path,
-                            with: .color(highlight),
-                            lineWidth: 1.1
-                        )
-                    }
+                    )
                 }
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
             }
+            .frame(
+                width: layout.size.width,
+                height: layout.size.height,
+                alignment: .topLeading
+            )
+            .animation(
+                .easeOut(duration: 0.4),
+                value: cantorHighlight?.neume.id
+            )
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
 
             Color.clear
                 .contentShape(Rectangle())
@@ -158,6 +160,70 @@ struct GregorianScoreView: View {
                 .accessibilitySortPriority(Double(layout.neumes.count - index))
             }
         }
+    }
+
+    private func cantorHighlightLayer(
+        _ highlight: GregorianCantorHighlight,
+        layout: GregorianLayout,
+        color: Color
+    ) -> some View {
+        Canvas { context, _ in
+            for stroke in layout.strokes {
+                guard let eventID = stroke.eventID,
+                      highlight.eventIDs.contains(eventID) else {
+                    continue
+                }
+                var path = Path()
+                path.move(to: stroke.start)
+                path.addLine(to: stroke.end)
+                context.stroke(
+                    path,
+                    with: .color(color),
+                    lineWidth: stroke.lineWidth
+                )
+            }
+
+            for glyph in layout.glyphs {
+                guard let eventID = glyph.eventID,
+                      highlight.eventIDs.contains(eventID) else {
+                    continue
+                }
+                let path = GregorianGlyphLibrary.path(for: glyph)
+                context.fill(
+                    path,
+                    with: .color(color),
+                    style: FillStyle(eoFill: true)
+                )
+                context.stroke(
+                    path,
+                    with: .color(color),
+                    lineWidth: 1.1
+                )
+            }
+
+            for lyric in layout.lyrics
+                where highlight.syllableNeumeIDs.contains(lyric.neumeID) {
+                context.draw(
+                    lyricText(lyric).foregroundStyle(color),
+                    at: lyric.origin,
+                    anchor: .topLeading
+                )
+            }
+
+            for initial in layout.initials
+                where highlight.syllableNeumeIDs.contains(initial.neumeID) {
+                context.draw(
+                    initialText(initial).foregroundStyle(color),
+                    at: initial.origin,
+                    anchor: .topLeading
+                )
+            }
+        }
+        .frame(
+            width: layout.size.width,
+            height: layout.size.height,
+            alignment: .topLeading
+        )
     }
 
     private func scoreTile(
@@ -425,6 +491,38 @@ enum GregorianScorePreparation: Sendable {
         case .failed:
             112
         }
+    }
+}
+
+struct GregorianCantorHighlight: Equatable {
+    let neume: GregorianNeumePlacement
+    let eventIDs: Set<String>
+    let syllableNeumeIDs: Set<String>
+
+    init?(
+        eventID: String,
+        timeline: ChantTimeline,
+        layout: GregorianLayout
+    ) {
+        guard let event = timeline.events.first(where: { $0.id == eventID }),
+              let neume = layout.neume(containing: eventID) else {
+            return nil
+        }
+
+        let syllableEventIDs = Set(
+            timeline.events.lazy
+                .filter { $0.syllableID == event.syllableID }
+                .map(\.id)
+        )
+        self.neume = neume
+        eventIDs = Set(neume.eventIDs)
+        syllableNeumeIDs = Set(
+            layout.neumes.lazy
+                .filter { placement in
+                    !syllableEventIDs.isDisjoint(with: placement.eventIDs)
+                }
+                .map(\.id)
+        )
     }
 }
 

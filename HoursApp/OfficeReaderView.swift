@@ -1452,7 +1452,8 @@ private struct PrayerOptionsView: View {
                     Text("Cantor guide")
                 } footer: {
                     Text(
-                        "Choose the sampled organ or simple pitch-pipe tone. "
+                        "Choose the sampled harp, modeled organ, or simple "
+                            + "pitch-pipe tone. "
                             + "The reciting tone is placed at the selected "
                             + "schola pitch and register."
                     )

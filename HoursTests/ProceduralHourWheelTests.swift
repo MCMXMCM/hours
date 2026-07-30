@@ -66,6 +66,15 @@ final class ProceduralHourWheelTests: XCTestCase {
             HourWheelPalette.interpolatedTimeRingFill(at: 1),
             dark.timeRingFill
         )
+        let midpoint = HourWheelPalette.interpolated(at: 0.5)
+        XCTAssertEqual(midpoint.foreground.x, 0.49, accuracy: 0.000_1)
+        XCTAssertEqual(midpoint.mutedBorder.x, 0.5, accuracy: 0.000_1)
+        XCTAssertEqual(midpoint.timeRingFill.x, 0.05, accuracy: 0.000_1)
+        XCTAssertEqual(
+            midpoint.timeRingNumeral,
+            light.timeRingNumeral
+        )
+        XCTAssertEqual(midpoint.selectedLabel, light.selectedLabel)
         XCTAssertEqual(HourWheelAppearanceTransition.duration, 0.72)
     }
 

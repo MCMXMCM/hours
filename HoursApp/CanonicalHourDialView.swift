@@ -4,6 +4,7 @@ import SwiftUI
 struct CanonicalHourDialView: View {
     @Binding var selection: OfficeHour
     @Binding var followsLocalTime: Bool
+    var onDisplayedHourChanged: (OfficeHour) -> Void = { _ in }
     var onSelectionSettled: (OfficeHour) -> Void = { _ in }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -35,7 +36,8 @@ struct CanonicalHourDialView: View {
 
         TimelineView(
             .animation(
-                minimumInterval: 1.0 / 60.0,
+                minimumInterval:
+                    HourDialRefreshPolicy.animationMinimumInterval,
                 paused: !refreshPolicy.usesDisplayLink
             )
         ) { context in
@@ -118,9 +120,14 @@ struct CanonicalHourDialView: View {
                     guard mode.isLive else { return }
                     commitSelection(newHour)
                 }
-                .onChange(of: displayedHour) { _, newHour in
-                    guard mode.isSpinning else { return }
-                    previewHour = newHour
+                .onChange(
+                    of: displayedHour,
+                    initial: true
+                ) { _, newHour in
+                    if mode.isSpinning {
+                        previewHour = newHour
+                    }
+                    onDisplayedHourChanged(newHour)
                 }
                 .onChange(of: spinHasFinished) { _, hasFinished in
                     guard hasFinished else { return }
@@ -273,10 +280,15 @@ struct CanonicalHourDialView: View {
     ) -> some Gesture {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
+                guard HourDialDragIntent.shouldRotateWheel(
+                    translation: value.translation
+                ) else {
+                    return
+                }
+
                 if dragOrigin == nil {
                     let origin = displayedRotation
                     settlementGeneration &+= 1
-                    followsLocalTime = false
                     mode = .manual
                     manualRotation = origin
                     dragOrigin = origin
@@ -305,6 +317,10 @@ struct CanonicalHourDialView: View {
                 )
 
                 self.dragOrigin = nil
+                // A system gesture can cancel after `onChanged`, such as the
+                // swipe used to leave the app. Only a completed wheel drag is
+                // an intentional switch from automatic to manual selection.
+                followsLocalTime = false
                 manualRotation = releasedRotation
 
                 if reduceMotion
@@ -517,11 +533,18 @@ struct CanonicalHourDialView: View {
     }
 }
 
+nonisolated enum HourDialDragIntent {
+    static func shouldRotateWheel(translation: CGSize) -> Bool {
+        abs(translation.width) > abs(translation.height)
+    }
+}
+
 nonisolated enum HourDialRefreshPolicy: Hashable {
     case displayLink
     case periodic(TimeInterval)
     case stationary
 
+    static let animationMinimumInterval = 1.0 / 120.0
     static let liveInterval: TimeInterval = 15
 
     static func resolve(

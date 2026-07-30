@@ -5,7 +5,7 @@ import Observation
 @MainActor
 @Observable
 final class AppModel {
-    static let defaultNotationScale = 0.8
+    static let defaultNotationScale = 1.0
     static let automaticOfficeSelectionKey =
         "automaticOfficeSelectionEnabled"
     static let manuallySelectedHourKey = "manuallySelectedOfficeHour"

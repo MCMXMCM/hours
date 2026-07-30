@@ -29,7 +29,6 @@ struct ProceduralHourWheelView: View, Animatable {
         HourWheelDrawingView(
             rotationDegrees: rotationDegrees,
             selectedHour: selectedHour,
-            appearance: appearance,
             fillBlend: appearance.fillBlend
         )
         .animation(
@@ -42,7 +41,6 @@ struct ProceduralHourWheelView: View, Animatable {
 private struct HourWheelDrawingView: View, Animatable {
     var rotationDegrees: Double
     var selectedHour: OfficeHour
-    var appearance: HourWheelAppearance
     var fillBlend: Double
 
     var animatableData: AnimatablePair<Double, Double> {
@@ -58,7 +56,6 @@ private struct HourWheelDrawingView: View, Animatable {
             if HourWheelGeometry.canRender(size: geometry.size) {
                 HourWheelUIKitView(
                     selectedHour: selectedHour,
-                    appearance: appearance,
                     fillBlend: fillBlend
                 )
                 .frame(
@@ -75,7 +72,6 @@ private struct HourWheelDrawingView: View, Animatable {
 
 private struct HourWheelUIKitView: UIViewRepresentable {
     let selectedHour: OfficeHour
-    let appearance: HourWheelAppearance
     let fillBlend: Double
 
     func makeUIView(context: Context) -> HourWheelUIView {
@@ -88,7 +84,6 @@ private struct HourWheelUIKitView: UIViewRepresentable {
     ) {
         uiView.update(
             selectedHour: selectedHour,
-            appearance: appearance,
             fillBlend: fillBlend
         )
     }
@@ -96,14 +91,25 @@ private struct HourWheelUIKitView: UIViewRepresentable {
 
 private final class HourWheelUIView: UIView {
     private var selectedHour = OfficeHour.matins
-    private var appearance = HourWheelAppearance.light
     private var fillBlend = 0.0
+    private var renderedTextureSize = CGSize.zero
+    private var renderedTextureScale: CGFloat = 0
+
+    private let annularRingLayer = CAShapeLayer()
+    private let textureLayer = CALayer()
+    private let dividerLayer = CAShapeLayer()
+    private let centerBorderLayer = CAShapeLayer()
+    private let centerDiscLayer = CAShapeLayer()
+    private let crossLayer = CAShapeLayer()
+    private let numeralLayer = CAShapeLayer()
+    private var labelLayers: [OfficeHour: CAShapeLayer] = [:]
 
     init() {
         super.init(frame: .zero)
         backgroundColor = .clear
-        contentMode = .redraw
         isOpaque = false
+        isUserInteractionEnabled = false
+        configureLayers()
     }
 
     @available(*, unavailable)
@@ -113,34 +119,169 @@ private final class HourWheelUIView: UIView {
 
     func update(
         selectedHour: OfficeHour,
-        appearance: HourWheelAppearance,
         fillBlend: Double
     ) {
         guard self.selectedHour != selectedHour
-                || self.appearance != appearance
                 || self.fillBlend != fillBlend else {
             return
         }
 
         self.selectedHour = selectedHour
-        self.appearance = appearance
         self.fillBlend = fillBlend
-        setNeedsDisplay()
+        updateLayerColors()
     }
 
-    override func draw(_ rect: CGRect) {
-        guard HourWheelGeometry.canRender(size: bounds.size),
-              let context = UIGraphicsGetCurrentContext() else {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+
+        guard HourWheelGeometry.canRender(size: bounds.size) else {
             return
         }
 
-        HourWheelCoreGraphicsRenderer.draw(
-            in: context,
-            size: bounds.size,
-            selectedHour: selectedHour,
-            appearance: appearance,
-            fillBlend: fillBlend
+        let displayScale = window?.screen.scale
+            ?? traitCollection.displayScale
+        let textureNeedsRendering =
+            renderedTextureSize != bounds.size
+                || renderedTextureScale != displayScale
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        updateLayerGeometry()
+        if textureNeedsRendering {
+            textureLayer.contents = HourWheelTextureRenderer.image(
+                size: bounds.size,
+                scale: displayScale
+            )?.cgImage
+            textureLayer.contentsScale = displayScale
+            renderedTextureSize = bounds.size
+            renderedTextureScale = displayScale
+        }
+        CATransaction.commit()
+    }
+
+    private func configureLayers() {
+        annularRingLayer.fillRule = .evenOdd
+        centerBorderLayer.fillRule = .evenOdd
+        dividerLayer.fillColor = nil
+        textureLayer.contentsGravity = .resize
+        textureLayer.magnificationFilter = .linear
+        textureLayer.minificationFilter = .trilinear
+
+        [
+            annularRingLayer,
+            textureLayer,
+            dividerLayer,
+            centerBorderLayer,
+            centerDiscLayer,
+            crossLayer,
+            numeralLayer,
+        ].forEach(layer.addSublayer)
+
+        for hour in OfficeHour.allCases {
+            let labelLayer = CAShapeLayer()
+            labelLayers[hour] = labelLayer
+            layer.addSublayer(labelLayer)
+        }
+
+        updateLayerColors()
+    }
+
+    private func updateLayerGeometry() {
+        let drawingTransform = HourWheelDrawingTransform(
+            size: bounds.size
         )
+        let layerFrame = CGRect(origin: .zero, size: bounds.size)
+
+        [
+            annularRingLayer,
+            textureLayer,
+            dividerLayer,
+            centerBorderLayer,
+            centerDiscLayer,
+            crossLayer,
+            numeralLayer,
+        ].forEach { $0.frame = layerFrame }
+        labelLayers.values.forEach { $0.frame = layerFrame }
+
+        annularRingLayer.path = drawingTransform.path(
+            HourWheelCanvasArtwork.annularRingPath
+        ).cgPath
+        centerBorderLayer.path = drawingTransform.path(
+            HourWheelCanvasArtwork.centerBorderPath
+        ).cgPath
+        centerDiscLayer.path = drawingTransform.path(
+            HourWheelCanvasArtwork.centerDiscPath
+        ).cgPath
+        crossLayer.path = drawingTransform.path(
+            HourWheelCanvasArtwork.jerusalemCrossPath
+        ).cgPath
+        numeralLayer.path = drawingTransform.path(
+            HourWheelCanvasArtwork.numeralPath
+        ).cgPath
+
+        let dividerPath = CGMutablePath()
+        for angle in HourWheelGeometry.textureDividerAngles {
+            dividerPath.move(
+                to: drawingTransform.point(
+                    radius: HourWheelGeometry.centerBorderRadius,
+                    angle: angle
+                )
+            )
+            dividerPath.addLine(
+                to: drawingTransform.point(
+                    radius: HourWheelGeometry.texturedSectorOuterRadius,
+                    angle: angle
+                )
+            )
+        }
+        dividerLayer.path = dividerPath
+        dividerLayer.lineWidth = drawingTransform.length(
+            HourWheelGeometry.textureDividerWidth
+        )
+
+        for (hour, labelLayer) in labelLayers {
+            labelLayer.path = drawingTransform.path(
+                HourWheelCanvasArtwork.labelPaths[hour] ?? Path()
+            ).cgPath
+        }
+
+        let displayScale = window?.screen.scale
+            ?? traitCollection.displayScale
+        [
+            annularRingLayer,
+            dividerLayer,
+            centerBorderLayer,
+            centerDiscLayer,
+            crossLayer,
+            numeralLayer,
+        ].forEach { $0.contentsScale = displayScale }
+        labelLayers.values.forEach {
+            $0.contentsScale = displayScale
+        }
+    }
+
+    private func updateLayerColors() {
+        let palette = HourWheelPalette.interpolated(at: fillBlend)
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        annularRingLayer.fillColor = palette.timeRingFill.uiColor.cgColor
+        dividerLayer.strokeColor = palette.timeRingFill.uiColor.cgColor
+        centerBorderLayer.fillColor = palette.mutedBorder.uiColor.cgColor
+        centerDiscLayer.fillColor = palette.timeRingFill.uiColor.cgColor
+        crossLayer.fillColor =
+            palette.jerusalemCrossForeground.uiColor.cgColor
+        numeralLayer.fillColor =
+            palette.timeRingNumeral.uiColor.cgColor
+
+        for (hour, labelLayer) in labelLayers {
+            labelLayer.fillColor = (
+                hour == selectedHour
+                    ? palette.selectedLabel
+                    : palette.foreground
+            ).uiColor.cgColor
+        }
+        CATransaction.commit()
     }
 }
 
@@ -196,10 +337,39 @@ struct HourWheelPalette: Equatable {
     static func interpolatedTimeRingFill(
         at blend: Double
     ) -> SIMD3<Float> {
+        interpolated(at: blend).timeRingFill
+    }
+
+    static func interpolated(
+        at blend: Double
+    ) -> Self {
         let progress = Float(min(max(blend, 0), 1))
-        let light = colors(for: .light).timeRingFill
-        let dark = colors(for: .dark).timeRingFill
-        return light + (dark - light) * progress
+        let light = colors(for: .light)
+        let dark = colors(for: .dark)
+
+        func channel(
+            _ start: SIMD3<Float>,
+            _ end: SIMD3<Float>
+        ) -> SIMD3<Float> {
+            start + (end - start) * progress
+        }
+
+        return Self(
+            foreground: channel(light.foreground, dark.foreground),
+            mutedBorder: channel(light.mutedBorder, dark.mutedBorder),
+            timeRingFill: channel(
+                light.timeRingFill,
+                dark.timeRingFill
+            ),
+            timeRingNumeral: channel(
+                light.timeRingNumeral,
+                dark.timeRingNumeral
+            ),
+            selectedLabel: channel(
+                light.selectedLabel,
+                dark.selectedLabel
+            )
+        )
     }
 }
 
@@ -845,106 +1015,32 @@ enum HourWheelCanvasArtwork {
 }
 
 @MainActor
-private enum HourWheelCoreGraphicsRenderer {
-    static func draw(
-        in context: CGContext,
+private enum HourWheelTextureRenderer {
+    static func image(
         size: CGSize,
-        selectedHour: OfficeHour,
-        appearance: HourWheelAppearance,
-        fillBlend: Double
-    ) {
-        let transform = HourWheelDrawingTransform(size: size)
-        let palette = HourWheelPalette.colors(for: appearance)
-        let fill = HourWheelPalette.interpolatedTimeRingFill(
-            at: fillBlend
-        )
-
-        fillPath(
-            transform.path(HourWheelCanvasArtwork.annularRingPath),
-            color: fill,
-            mode: .eoFill,
-            in: context
-        )
-
-        for sector in HourDialMath.sectors {
-            drawTexture(
-                for: sector,
-                in: context,
-                transform: transform
-            )
+        scale: CGFloat
+    ) -> UIImage? {
+        guard HourWheelGeometry.canRender(size: size),
+              scale > 0 else {
+            return nil
         }
 
-        context.saveGState()
-        context.beginPath()
-        for angle in HourWheelGeometry.textureDividerAngles {
-            context.move(
-                to: transform.point(
-                    radius: HourWheelGeometry.centerBorderRadius,
-                    angle: angle
+        let format = UIGraphicsImageRendererFormat()
+        format.opaque = false
+        format.scale = scale
+        return UIGraphicsImageRenderer(
+            size: size,
+            format: format
+        ).image { rendererContext in
+            let transform = HourWheelDrawingTransform(size: size)
+            for sector in HourDialMath.sectors {
+                drawTexture(
+                    for: sector,
+                    in: rendererContext.cgContext,
+                    transform: transform
                 )
-            )
-            context.addLine(
-                to: transform.point(
-                    radius: HourWheelGeometry.texturedSectorOuterRadius,
-                    angle: angle
-                )
-            )
-        }
-        context.setStrokeColor(fill.uiColor.cgColor)
-        context.setLineWidth(
-            transform.length(HourWheelGeometry.textureDividerWidth)
-        )
-        context.strokePath()
-        context.restoreGState()
-
-        fillPath(
-            transform.path(HourWheelCanvasArtwork.centerBorderPath),
-            color: palette.mutedBorder,
-            mode: .eoFill,
-            in: context
-        )
-        fillPath(
-            transform.path(HourWheelCanvasArtwork.centerDiscPath),
-            color: fill,
-            in: context
-        )
-        fillPath(
-            transform.path(HourWheelCanvasArtwork.jerusalemCrossPath),
-            color: palette.jerusalemCrossForeground,
-            in: context
-        )
-        fillPath(
-            transform.path(HourWheelCanvasArtwork.numeralPath),
-            color: palette.timeRingNumeral,
-            in: context
-        )
-
-        for hour in OfficeHour.allCases {
-            guard let labelPath =
-                HourWheelCanvasArtwork.labelPaths[hour] else {
-                    continue
             }
-            fillPath(
-                transform.path(labelPath),
-                color: hour == selectedHour
-                    ? palette.selectedLabel
-                    : palette.foreground,
-                in: context
-            )
         }
-    }
-
-    private static func fillPath(
-        _ path: Path,
-        color: SIMD3<Float>,
-        mode: CGPathDrawingMode = .fill,
-        in context: CGContext
-    ) {
-        context.saveGState()
-        context.addPath(path.cgPath)
-        context.setFillColor(color.uiColor.cgColor)
-        context.drawPath(using: mode)
-        context.restoreGState()
     }
 
     private static func drawTexture(

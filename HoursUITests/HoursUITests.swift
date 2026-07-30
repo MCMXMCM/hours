@@ -187,7 +187,7 @@ final class HoursUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars["Prayer options"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.sliders["neume-size-slider"].exists)
-        XCTAssertTrue(app.staticTexts["80%"].exists)
+        XCTAssertTrue(app.staticTexts["100%"].exists)
 
         let translationToggle = app.switches["translation-toggle"]
         XCTAssertTrue(translationToggle.exists)
@@ -208,9 +208,13 @@ final class HoursUITests: XCTestCase {
         XCTAssertTrue(cantorSound.exists)
         XCTAssertEqual(cantorSound.value as? String, "Organ")
         cantorSound.tap()
-        XCTAssertTrue(app.buttons["Simple Tone"].waitForExistence(timeout: 3))
-        app.buttons["Simple Tone"].tap()
-        XCTAssertEqual(cantorSound.value as? String, "Simple Tone")
+        XCTAssertTrue(app.buttons["Harp"].waitForExistence(timeout: 3))
+        app.buttons["Harp"].tap()
+        XCTAssertEqual(cantorSound.value as? String, "Harp")
+        cantorSound.tap()
+        XCTAssertTrue(app.buttons["Tone"].waitForExistence(timeout: 3))
+        app.buttons["Tone"].tap()
+        XCTAssertEqual(cantorSound.value as? String, "Tone")
 
         let scholaPitch = app.buttons["prayer-schola-pitch"]
         XCTAssertTrue(scholaPitch.exists)
@@ -238,7 +242,7 @@ final class HoursUITests: XCTestCase {
 
         let cantorPitch = app.buttons["cantor-schola-pitch"]
         XCTAssertTrue(cantorPitch.waitForExistence(timeout: 3))
-        XCTAssertEqual(app.buttons["cantor-sound"].value as? String, "Simple Tone")
+        XCTAssertEqual(app.buttons["cantor-sound"].value as? String, "Tone")
         XCTAssertEqual(cantorPitch.value as? String, "B♭")
         XCTAssertEqual(app.buttons["cantor-register"].value as? String, "High")
         XCTAssertFalse(app.steppers.matching(NSPredicate(
@@ -769,6 +773,9 @@ final class HoursUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["about-email"].exists
         )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["about-source-code"].exists
+        )
         let aboutScreenshot = XCTAttachment(
             screenshot: app.screenshot()
         )
@@ -909,6 +916,50 @@ final class HoursUITests: XCTestCase {
             in: app
         )
         app.buttons["Done"].tap()
+    }
+
+    func testDepartureSwipeAndForegroundKeepWheelAutomatic() {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.buttons["home-settings"].tap()
+        choosePickerOption(
+            "Wheel",
+            pickerIdentifier: "hour-select-view-picker",
+            in: app
+        )
+        let synchronizationPicker =
+            app.segmentedControls["synchronization-mode-picker"]
+        let automaticHourSelection =
+            synchronizationPicker.buttons["Automatic"]
+        XCTAssertTrue(
+            automaticHourSelection.waitForExistence(timeout: 3)
+        )
+        if !automaticHourSelection.isSelected {
+            automaticHourSelection.tap()
+        }
+        app.buttons["Done"].tap()
+
+        let dial = app.descendants(matching: .any)[
+            "canonical-hour-dial"
+        ]
+        XCTAssertTrue(dial.waitForExistence(timeout: 3))
+        dial.swipeUp()
+
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        XCTAssertTrue(dial.waitForExistence(timeout: 3))
+
+        app.buttons["home-settings"].tap()
+        let foregroundSynchronizationPicker =
+            app.segmentedControls["synchronization-mode-picker"]
+        XCTAssertTrue(
+            foregroundSynchronizationPicker.buttons["Automatic"]
+                .waitForExistence(timeout: 3)
+        )
+        XCTAssertTrue(
+            foregroundSynchronizationPicker.buttons["Automatic"].isSelected
+        )
     }
 
     func testSundialTapSwipeAndReset() {

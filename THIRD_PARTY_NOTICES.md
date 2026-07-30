@@ -20,11 +20,11 @@ license solely because a project or edition was consulted.
   `HoursApp/Resources/Exsurge-LICENSE.txt`.
 - **EB Garamond** — SIL Open Font License 1.1. Hours distributes the variable
   font and its license under `HoursApp/Resources`.
-- **Bureå Funeral Chapel Organ, Gedackt 8′ stop** — Creative Commons
-  Attribution-ShareAlike 2.5. Hours distributes an SF2 adaptation of Lars
-  Palo's chromatically sampled stereo pipe-organ stop. Its attribution,
-  adaptation details, checksum, source, and license link are bundled at
-  `HoursApp/Resources/ChurchOrgan-LICENSE.txt`.
+- **FreePats Concert Harp** — Creative Commons CC0 1.0. Hours distributes the
+  FreePats SF2 made from Versilian Community Sample Library stereo recordings.
+  Its provenance, recording details, checksum, source, and public-domain
+  dedication are bundled at
+  `HoursApp/Resources/ConcertHarp-LICENSE.txt`.
 - **Chant transcriptions** — Each score records its own collection, source URL,
   source identifier, license, and checksum. GregoBase transcriptions are CC0.
   The bundled development corpus contains 1,547 Nocturnale Romanum

@@ -208,4 +208,89 @@ final class GregorianScorePreparationTests: XCTestCase {
             )
         )
     }
+
+    func testCantorHighlightIncludesWholeNeumeAndCorrespondingSyllable() throws {
+        let firstSyllableNeume = GregorianNeumePlacement(
+            id: "event-1",
+            eventIDs: ["event-1"],
+            lyric: "Ky",
+            inkFrame: CGRect(x: 10, y: 10, width: 10, height: 10),
+            hitFrame: CGRect(x: 5, y: 5, width: 20, height: 20),
+            lineIndex: 0
+        )
+        let activeNeume = GregorianNeumePlacement(
+            id: "event-2",
+            eventIDs: ["event-2", "event-3"],
+            lyric: "",
+            inkFrame: CGRect(x: 30, y: 10, width: 16, height: 10),
+            hitFrame: CGRect(x: 25, y: 5, width: 26, height: 20),
+            lineIndex: 0
+        )
+        let nextSyllableNeume = GregorianNeumePlacement(
+            id: "event-4",
+            eventIDs: ["event-4"],
+            lyric: "ri",
+            inkFrame: CGRect(x: 60, y: 10, width: 10, height: 10),
+            hitFrame: CGRect(x: 55, y: 5, width: 20, height: 20),
+            lineIndex: 0
+        )
+        let layout = GregorianLayout(
+            size: CGSize(width: 100, height: 40),
+            staffs: [],
+            glyphs: [],
+            strokes: [],
+            lyrics: [],
+            events: [],
+            neumes: [
+                firstSyllableNeume,
+                activeNeume,
+                nextSyllableNeume
+            ]
+        )
+        let events = [
+            ChantEvent(
+                id: "event-1",
+                phraseID: "phrase",
+                syllableID: "kyrie-ky",
+                syllable: "Ky",
+                relativePitch: 0
+            ),
+            ChantEvent(
+                id: "event-2",
+                phraseID: "phrase",
+                syllableID: "kyrie-ky",
+                syllable: "Ky",
+                relativePitch: 1
+            ),
+            ChantEvent(
+                id: "event-3",
+                phraseID: "phrase",
+                syllableID: "kyrie-ky",
+                syllable: "Ky",
+                relativePitch: 2
+            ),
+            ChantEvent(
+                id: "event-4",
+                phraseID: "phrase",
+                syllableID: "kyrie-ri",
+                syllable: "ri",
+                relativePitch: 1
+            )
+        ]
+
+        let highlight = try XCTUnwrap(
+            GregorianCantorHighlight(
+                eventID: "event-2",
+                timeline: ChantTimeline(events: events),
+                layout: layout
+            )
+        )
+
+        XCTAssertEqual(highlight.neume.id, activeNeume.id)
+        XCTAssertEqual(highlight.eventIDs, ["event-2", "event-3"])
+        XCTAssertEqual(
+            highlight.syllableNeumeIDs,
+            ["event-1", "event-2"]
+        )
+    }
 }

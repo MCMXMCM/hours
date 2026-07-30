@@ -319,6 +319,16 @@ private struct AboutSettingsView: View {
                     )!,
                     identifier: "about-email"
                 )
+
+                AboutLinkRow(
+                    title: "Source Code",
+                    value: "MCMXMCM/hours",
+                    systemImage: "chevron.left.forwardslash.chevron.right",
+                    destination: URL(
+                        string: "https://github.com/MCMXMCM/hours"
+                    )!,
+                    identifier: "about-source-code"
+                )
             }
         }
     }

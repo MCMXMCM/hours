@@ -4,10 +4,10 @@ import XCTest
 
 @MainActor
 final class AppModelTests: XCTestCase {
-    func testNeumeSizeDefaultsToEightyPercent() {
+    func testNeumeSizeDefaultsToOneHundredPercent() {
         let model = AppModel()
 
-        XCTAssertEqual(model.notationScale, 0.8)
+        XCTAssertEqual(model.notationScale, 1.0)
     }
 
     func testCurrentOfficeSelectionKeepsMatinsOnThePriorDate() async throws {

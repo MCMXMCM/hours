@@ -2,6 +2,64 @@ import XCTest
 
 @MainActor
 final class CantorGuideScrollingUITests: XCTestCase {
+    func testCantorGuideStartsAndStopsRealPlayback() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-automaticOfficeSelectionEnabled",
+            "NO",
+            "-manuallySelectedOfficeHour",
+            "compline",
+            "-hourSelectionView",
+            "sunDial",
+            "--ui-test-reader-section",
+            "compline-ordered-42",
+        ]
+        app.launch()
+
+        let selectedHour = app.buttons["hour-compline"]
+        XCTAssertTrue(selectedHour.waitForExistence(timeout: 10))
+        selectedHour.tap()
+
+        let firstSalveReginaNeume = app.buttons[
+            "reference-cccbdc9d2a0c189f-note-0"
+        ]
+        XCTAssertTrue(
+            firstSalveReginaNeume.waitForExistence(timeout: 10)
+                && firstSalveReginaNeume.isHittable
+        )
+        firstSalveReginaNeume.tap()
+
+        let playbackButton = app.buttons["cantor-play"]
+        if !playbackButton.waitForExistence(timeout: 5) {
+            firstSalveReginaNeume.tap()
+        }
+        XCTAssertTrue(playbackButton.waitForExistence(timeout: 15))
+
+        let sound = app.buttons["cantor-sound"]
+        XCTAssertTrue(sound.waitForExistence(timeout: 5))
+        sound.tap()
+        let organ = app.buttons["Organ"]
+        XCTAssertTrue(organ.waitForExistence(timeout: 3))
+        organ.tap()
+        XCTAssertEqual(sound.value as? String, "Organ")
+
+        XCTAssertEqual(playbackButton.label, "Pause cantor guide")
+        playbackButton.tap()
+
+        let isStopped = NSPredicate(format: "label == %@", "Play cantor guide")
+        expectation(for: isStopped, evaluatedWith: playbackButton)
+        waitForExpectations(timeout: 5)
+
+        playbackButton.tap()
+        let isRestarted = NSPredicate(format: "label == %@", "Pause cantor guide")
+        expectation(for: isRestarted, evaluatedWith: playbackButton)
+        waitForExpectations(timeout: 5)
+
+        playbackButton.tap()
+        expectation(for: isStopped, evaluatedWith: playbackButton)
+        waitForExpectations(timeout: 5)
+    }
+
     func testCantorGuideKeepsSalveReginaPlaybackVisible() {
         let app = XCUIApplication()
         app.launchArguments += [

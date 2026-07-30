@@ -13,12 +13,14 @@ struct RootView: View {
     @AppStorage("hourSelectionView")
     private var hourSelectionView = HourSelectionViewMode.sunDial
     @State private var showsReader = false
+    @State private var displayedHour = OfficeHour.current()
 
     var body: some View {
         NavigationStack {
             TodaySidebarView(
                 displayMode: $displayMode,
-                hourSelectionView: $hourSelectionView
+                hourSelectionView: $hourSelectionView,
+                displayedHour: $displayedHour
             ) { hour in
                 open(hour)
             }
@@ -29,13 +31,13 @@ struct RootView: View {
         .tint(Color.hoursPrimaryText)
         .preferredColorScheme(
             displayMode.preferredColorScheme(
-                for: model.selectedHour
+                for: appearanceHour
             )
         )
         .animation(
             .easeInOut(duration: 0.72),
             value: displayMode.preferredColorScheme(
-                for: model.selectedHour
+                for: appearanceHour
             )
         )
         .onChange(of: model.office?.id) {
@@ -44,6 +46,25 @@ struct RootView: View {
         .onChange(of: displayMode) {
             WidgetCenter.shared.reloadAllTimelines()
         }
+        .onChange(
+            of: model.selectedHour,
+            initial: true
+        ) { _, hour in
+            if hourSelectionView != .wheel {
+                displayedHour = hour
+            }
+        }
+        .onChange(of: hourSelectionView) { _, mode in
+            if mode != .wheel {
+                displayedHour = model.selectedHour
+            }
+        }
+    }
+
+    private var appearanceHour: OfficeHour {
+        hourSelectionView == .wheel
+            ? displayedHour
+            : model.selectedHour
     }
 
     @ViewBuilder

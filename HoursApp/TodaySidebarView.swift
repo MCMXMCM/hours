@@ -4,6 +4,7 @@ import SwiftUI
 struct TodaySidebarView: View {
     @Binding var displayMode: AppDisplayMode
     @Binding var hourSelectionView: HourSelectionViewMode
+    @Binding var displayedHour: OfficeHour
     let onOpenOffice: (OfficeHour) -> Void
 
     @Environment(AppModel.self) private var model
@@ -25,7 +26,7 @@ struct TodaySidebarView: View {
 
             if displayMode.showsAmbientSky {
                 AmbientSkyView(
-                    selection: selectedHour
+                    selection: displayedHour
                 )
                 .ignoresSafeArea()
             }
@@ -233,6 +234,9 @@ struct TodaySidebarView: View {
             CanonicalHourDialView(
                 selection: immediateHourBinding,
                 followsLocalTime: followsLocalTimeBinding,
+                onDisplayedHourChanged: { hour in
+                    displayedHour = hour
+                },
                 onSelectionSettled: { hour in
                     withAnimation(.easeInOut(duration: 0.3)) {
                         wheelSettledHour = hour
