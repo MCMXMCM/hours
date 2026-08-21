@@ -15,7 +15,7 @@ This repository contains:
 - Native Gregorian notation and chant-playback code
 - Tests and content-validation tools
 - The TypeScript content compiler
-- The bundled 2026 development corpus
+- The bundled 2025–2036 reviewed release corpus
 - Source and provenance for included third-party chant transcriptions
 
 The Xcode project, targets, and Swift modules use the **Hours** name
@@ -23,8 +23,10 @@ throughout.
 
 ## Project status
 
-The bundled corpus is a development corpus covering 2026. It is intended for
-development and testing and is not yet the complete release corpus.
+The bundled corpus contains all eight canonical hours for every civil date
+from 2025-01-01 through 2036-12-31. It is the reviewed rolling release window
+for the 2026 release year; the larger 1962–2100 schedule remains a local
+non-shipping parity fixture for the native rules engine.
 
 ## Building
 

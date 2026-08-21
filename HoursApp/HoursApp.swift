@@ -1,5 +1,6 @@
 import HoursCore
 import SwiftUI
+import WidgetKit
 
 extension Color {
     static let hoursBackground = Color(
@@ -36,23 +37,55 @@ extension Color {
 
 @main
 struct HoursApp: App {
-    @State private var model = AppModel()
-    @State private var playback = ChantPlaybackController()
+    @State private var model: AppModel
+    @State private var playback: ChantPlaybackController
+    @State private var tour: AppTourCoordinator
+    private let didMigrateAppearanceMode: Bool
 
     init() {
-        HoursSharedPreferences
+        let recoveredSnapshot =
+            AppTourPersistence.recoverInterruptedSnapshot()
+        _model = State(initialValue: AppModel())
+        _playback = State(
+            initialValue: ChantPlaybackController()
+        )
+        _tour = State(
+            initialValue: AppTourCoordinator(
+                recoveredSnapshot: recoveredSnapshot
+            )
+        )
+        didMigrateAppearanceMode = HoursSharedPreferences
             .migrateAppearanceModeFromStandardDefaults()
     }
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            AppLaunchView()
                 .foregroundStyle(Color.hoursPrimaryText)
                 .environment(model)
                 .environment(playback)
+                .environment(tour)
                 .task {
-                    await model.start()
+                    let didUpdateCalendarSnapshot = await model.start()
+                    await tour.recoverAfterModelStart(model: model)
+                    if HoursWidgetReloadPolicy.shouldReload(
+                        calendarSnapshotChanged:
+                            didUpdateCalendarSnapshot,
+                        appearancePreferenceMigrated:
+                            didMigrateAppearanceMode
+                    ) {
+                        WidgetCenter.shared.reloadAllTimelines()
+                    }
                 }
         }
+    }
+}
+
+enum HoursWidgetReloadPolicy {
+    nonisolated static func shouldReload(
+        calendarSnapshotChanged: Bool,
+        appearancePreferenceMigrated: Bool
+    ) -> Bool {
+        calendarSnapshotChanged || appearancePreferenceMigrated
     }
 }

@@ -1,22 +1,36 @@
 import HoursCore
+import OSLog
 import SwiftUI
 import WidgetKit
 
 private struct HoursEntry: TimelineEntry {
     let date: Date
     let appearanceMode: String
+    let liturgicalDay: HoursLiturgicalDaySummary?
 
     var hour: OfficeHour {
         OfficeHour.current(at: date)
     }
+
+    static let previewLiturgicalDay = HoursLiturgicalDaySummary(
+        date: LocalDay(year: 2026, month: 8, day: 6),
+        titleLatin: "In Transfiguratione Domini Nostri Jesu Christi",
+        rank: .secondClass
+    )
 }
 
 private struct HoursTimelineProvider: TimelineProvider {
+    private static let logger = Logger(
+        subsystem: "com.matthewmccarty.hours.widgets",
+        category: "CalendarSnapshot"
+    )
+
     func placeholder(in context: Context) -> HoursEntry {
         HoursEntry(
             date: Date(),
             appearanceMode:
-                HoursSharedPreferences.defaultAppearanceMode
+                HoursSharedPreferences.defaultAppearanceMode,
+            liturgicalDay: HoursEntry.previewLiturgicalDay
         )
     }
 
@@ -29,7 +43,8 @@ private struct HoursTimelineProvider: TimelineProvider {
                 HoursEntry(
                     date: Date(),
                     appearanceMode:
-                        HoursSharedPreferences.defaultAppearanceMode
+                        HoursSharedPreferences.defaultAppearanceMode,
+                    liturgicalDay: HoursEntry.previewLiturgicalDay
                 )
             )
             return
@@ -43,19 +58,57 @@ private struct HoursTimelineProvider: TimelineProvider {
         completion: @escaping (Timeline<HoursEntry>) -> Void
     ) {
         let now = Date()
+        let calendarSnapshot = Self.loadCalendarSnapshot()
         let transitionDates = Self.transitionDates(
             after: now,
             calendar: .autoupdatingCurrent
         )
-        let entries = ([now] + transitionDates).map(entry(at:))
-        completion(Timeline(entries: entries, policy: .atEnd))
+        let entries = ([now] + transitionDates).map {
+            entry(at: $0, calendarSnapshot: calendarSnapshot)
+        }
+        let officeDay = LocalDay.currentOfficeDay(at: now)
+        let retryDate =
+            HoursLiturgicalCalendarRefreshSchedule.retryDate(
+                for: calendarSnapshot,
+                officeDay: officeDay,
+                now: now
+            )
+        let policy: TimelineReloadPolicy = retryDate.map {
+            .after($0)
+        } ?? .atEnd
+        completion(Timeline(entries: entries, policy: policy))
     }
 
     private func entry(at date: Date) -> HoursEntry {
-        HoursEntry(
+        entry(
+            at: date,
+            calendarSnapshot: Self.loadCalendarSnapshot()
+        )
+    }
+
+    private static func loadCalendarSnapshot()
+        -> HoursLiturgicalCalendarSnapshot? {
+        do {
+            return try HoursLiturgicalCalendarSnapshotStore.shared.load()
+        } catch {
+            let message = error.localizedDescription
+            logger.error(
+                "Unable to load calendar snapshot: \(message, privacy: .public)"
+            )
+            return nil
+        }
+    }
+
+    private func entry(
+        at date: Date,
+        calendarSnapshot: HoursLiturgicalCalendarSnapshot?
+    ) -> HoursEntry {
+        let officeDay = LocalDay.currentOfficeDay(at: date)
+        return HoursEntry(
             date: date,
             appearanceMode:
-                HoursSharedPreferences.appearanceModeRawValue
+                HoursSharedPreferences.appearanceModeRawValue,
+            liturgicalDay: calendarSnapshot?.day(on: officeDay)
         )
     }
 
@@ -106,7 +159,7 @@ private struct HoursWidgetView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "Current canonical hour, \(entry.hour.englishTitle)"
+            accessibilityLabel
         )
         .accessibilityValue(entry.hour.customaryTimeRange)
         .unredacted()
@@ -115,6 +168,7 @@ private struct HoursWidgetView: View {
     private var smallLayout: some View {
         GeometryReader { proxy in
             let diameter = proxy.size.width * 1.37
+            let wheelTop = proxy.size.height + 10 - diameter / 2
 
             ZStack {
                 CanonicalHourWidgetWheel(
@@ -125,8 +179,16 @@ private struct HoursWidgetView: View {
                 .frame(width: diameter, height: diameter)
                 .position(
                     x: proxy.size.width / 2,
-                    y: proxy.size.height
+                    y: proxy.size.height + 10
                 )
+
+                liturgicalHeader(
+                    titleSize: 13,
+                    rankSize: 10,
+                    availableHeight: wheelTop,
+                    horizontalPadding: 8
+                )
+                .frame(maxHeight: .infinity, alignment: .top)
             }
         }
     }
@@ -137,6 +199,9 @@ private struct HoursWidgetView: View {
                 proxy.size.width * 1.02,
                 proxy.size.height * 2
             )
+            let wheelCenter =
+                proxy.size.height / 2 + diameter * 0.46
+            let wheelTop = wheelCenter - diameter / 2
 
             ZStack {
                 CanonicalHourWidgetWheel(
@@ -147,12 +212,56 @@ private struct HoursWidgetView: View {
                 .frame(width: diameter, height: diameter)
                 .position(
                     x: proxy.size.width / 2,
-                    y:
-                        proxy.size.height / 2
-                        + diameter * 0.3808
+                    y: wheelCenter
                 )
+
+                liturgicalHeader(
+                    titleSize: 16,
+                    rankSize: 11,
+                    availableHeight: wheelTop,
+                    horizontalPadding: 18
+                )
+                .frame(maxHeight: .infinity, alignment: .top)
             }
         }
+    }
+
+    private func liturgicalHeader(
+        titleSize: CGFloat,
+        rankSize: CGFloat,
+        availableHeight: CGFloat,
+        horizontalPadding: CGFloat
+    ) -> some View {
+        VStack(spacing: 1) {
+            if let rank = entry.liturgicalDay?.rank {
+                Text(rank.displayName)
+                    .font(.system(size: rankSize, design: .serif))
+                    .foregroundStyle(palette.accent)
+                    .lineLimit(1)
+            }
+
+            if let title = entry.liturgicalDay?.titleLatin {
+                Text(title)
+                    .font(.system(size: titleSize, design: .serif))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(-1)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.72)
+            }
+        }
+        .padding(.horizontal, horizontalPadding)
+        .frame(maxWidth: .infinity)
+        .frame(height: max(0, availableHeight), alignment: .center)
+    }
+
+    private var accessibilityLabel: String {
+        [
+            entry.liturgicalDay?.rank?.displayName,
+            entry.liturgicalDay?.titleLatin,
+            "Current canonical hour, \(entry.hour.englishTitle)",
+        ]
+        .compactMap { $0 }
+        .joined(separator: ", ")
     }
 
     private var effectiveColorScheme: ColorScheme {
@@ -223,6 +332,7 @@ private struct CanonicalHourWidgetWheel: View {
             .resizable()
             .interpolation(.high)
             .antialiased(true)
+            .widgetAccentedRenderingMode(.desaturated)
             .scaledToFit()
             .accessibilityHidden(true)
     }
@@ -570,7 +680,7 @@ struct HoursWidget: Widget {
         }
         .configurationDisplayName("Current Hour")
         .description(
-            "Shows the current canonical hour on the Hours wheel."
+            "Shows the current feast or feria and canonical hour."
         )
         .supportedFamilies([.systemSmall, .systemMedium])
         .contentMarginsDisabled()
@@ -594,7 +704,8 @@ struct HoursWidgetsBundle: WidgetBundle {
         date: Date(
             timeIntervalSince1970: 1_785_290_400
         ),
-        appearanceMode: "dynamic"
+        appearanceMode: "dynamic",
+        liturgicalDay: HoursEntry.previewLiturgicalDay
     )
 }
 
@@ -608,6 +719,7 @@ struct HoursWidgetsBundle: WidgetBundle {
         date: Date(
             timeIntervalSince1970: 1_785_254_400
         ),
-        appearanceMode: "dynamic"
+        appearanceMode: "dynamic",
+        liturgicalDay: HoursEntry.previewLiturgicalDay
     )
 }

@@ -4,6 +4,28 @@ import HoursCore
 
 @MainActor
 final class OfficeCalendarMathTests: XCTestCase {
+    func testLiturgicalYearRunsFromAdventToAdvent() {
+        let beforeAdvent = LocalDay(year: 2026, month: 11, day: 28)
+        XCTAssertEqual(
+            beforeAdvent.liturgicalYearRange,
+            LocalDay(year: 2025, month: 11, day: 30)...LocalDay(
+                year: 2026,
+                month: 11,
+                day: 28
+            )
+        )
+
+        let adventSunday = LocalDay(year: 2026, month: 11, day: 29)
+        XCTAssertEqual(
+            adventSunday.liturgicalYearRange,
+            LocalDay(year: 2026, month: 11, day: 29)...LocalDay(
+                year: 2027,
+                month: 11,
+                day: 27
+            )
+        )
+    }
+
     func testDaySlotsUseTheCalendarsFirstWeekday() throws {
         let calendar = testCalendar
         let july = try date(

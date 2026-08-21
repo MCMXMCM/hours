@@ -25,6 +25,46 @@ final class ContentRepositoryIntegrityTests: XCTestCase {
         XCTAssertTrue(office.playableScores.isEmpty)
     }
 
+    func testEveningContextIsAvailableThroughCompline() async throws {
+        let database = try ContentDatabaseTestFixture.makeDatabase()
+        let repository = try SQLiteContentRepository(databaseURL: database)
+
+        let vespers = try await repository.office(
+            on: ContentDatabaseTestFixture.date,
+            hour: .vespers
+        )
+        let compline = try await repository.office(
+            on: ContentDatabaseTestFixture.date,
+            hour: .compline
+        )
+
+        XCTAssertEqual(vespers.observance?.eveningContext, .secondVespers)
+        XCTAssertEqual(compline.observance?.eveningContext, .secondVespers)
+    }
+
+    func testValidatorRejectsUnresolvedVespersContext() throws {
+        let database = try ContentDatabaseTestFixture.makeDatabase()
+        try ContentDatabaseTestFixture.mutate(
+            database,
+            sql: """
+            UPDATE documents
+            SET payload = replace(
+                CAST(payload AS TEXT),
+                '"eveningContext":"secondVespers"',
+                '"eveningContext":null'
+            )
+            WHERE id = 'doc-vespers';
+            """
+        )
+
+        XCTAssertThrowsError(
+            try ContentDatabaseValidator.validate(
+                databaseURL: database,
+                validatesNotation: false
+            )
+        )
+    }
+
     func testMalformedScoreRowDoesNotReturnPartialOffice() async throws {
         let database = try ContentDatabaseTestFixture.makeDatabase()
         try ContentDatabaseTestFixture.mutate(

@@ -104,10 +104,11 @@ function englishObservanceTitle(documentTitle: string): string | null {
   const title = documentTitle
     .replace(/\s*-\s*Breviarium Gregorianum\s*$/i, "")
     .trim();
-  const match = title.match(
-    /^(?:Matins|Lauds|Prime|Terce|Sext|None|Vespers|Compline)\s+(?:of|for)\s+(.+)$/i
-  );
-  return match?.[1]?.trim() || null;
+  const withoutHour = title.replace(
+    /^(?:Matins|Lauds|Prime|Terce|Sext|None|Vespers|Compline)(?:\s+(?:of|for))?\s*/i,
+    ""
+  ).trim();
+  return withoutHour || null;
 }
 
 export function parseReferenceObservance(
@@ -138,7 +139,7 @@ export function parseReferenceObservance(
   if (hour === "vespers") {
     if (/Vespera\s+de\s+sequenti/i.test(subtitle)) {
       eveningContext = "firstVespers";
-    } else if (/Vespera\s+de\s+praecedenti/i.test(subtitle)) {
+    } else if (/Vespera\s+de\s+pr(?:ae|æ)cedenti/i.test(subtitle)) {
       eveningContext = "secondVespers";
     }
   }
@@ -185,12 +186,16 @@ function contentSections(document: ParentNode): Element[] {
 
 function headingKind(heading: string): string {
   const value = heading.toLowerCase();
+  if (/invitator/.test(value)) return "invitatory";
+  if (/absolut/.test(value)) return "absolution";
+  if (/benedict|blessing/.test(value)) return "blessing";
   if (/psalm/.test(value)) return "psalm";
   if (/hymn/.test(value)) return "hymn";
   if (/cant/.test(value)) return "canticle";
   if (/responsor/.test(value)) return "responsory";
-  if (/antiphon|invitator/.test(value)) return "antiphon";
-  if (/capit|lectio|lesson/.test(value)) return "reading";
+  if (/antiphon/.test(value)) return "antiphon";
+  if (/capit|chapter/.test(value)) return "chapter";
+  if (/lectio|reading|lesson|homil/.test(value)) return "reading";
   if (/orat|collect/.test(value)) return "collect";
   return "prayer";
 }

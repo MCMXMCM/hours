@@ -4,13 +4,50 @@ import XCTest
 
 @MainActor
 final class AppModelTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: AppModel.showsEnglishKey)
+        defaults.removeObject(forKey: AppModel.notationScaleKey)
+        defaults.removeObject(
+            forKey: AppModel.priestOrDeaconPresentKey
+        )
+    }
+
     func testNeumeSizeDefaultsToOneHundredPercent() {
         let model = AppModel()
 
         XCTAssertEqual(model.notationScale, 1.0)
     }
 
+    func testPrayerOptionsSurviveRelaunch() throws {
+        let suiteName = "AppModelTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(
+            UserDefaults(suiteName: suiteName)
+        )
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        let model = AppModel(userDefaults: defaults)
+
+        model.showsEnglish = true
+        model.notationScale = 1.4
+        model.isPriestOrDeaconPresent = true
+
+        let relaunchedModel = AppModel(userDefaults: defaults)
+        XCTAssertTrue(relaunchedModel.showsEnglish)
+        XCTAssertEqual(relaunchedModel.notationScale, 1.4)
+        XCTAssertTrue(relaunchedModel.isPriestOrDeaconPresent)
+    }
+
     func testCurrentOfficeSelectionKeepsMatinsOnThePriorDate() async throws {
+        let suiteName = "AppModelTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(
+            UserDefaults(suiteName: suiteName)
+        )
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try XCTUnwrap(
             TimeZone(identifier: "America/Chicago")
@@ -25,7 +62,7 @@ final class AppModelTests: XCTestCase {
                 )
             )
         )
-        let model = AppModel()
+        let model = AppModel(userDefaults: defaults)
 
         await model.selectCurrentOffice(
             at: afterMidnight,
@@ -103,6 +140,88 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(model.selectedHour, .compline)
     }
 
+    func testOpenReaderSessionSurvivesRelaunchWithAutomaticSelection() throws {
+        let suiteName = "AppModelTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(
+            UserDefaults(suiteName: suiteName)
+        )
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        let office = OfficeDocument(
+            id: "2026-07-28-matins",
+            date: LocalDay(year: 2026, month: 7, day: 28),
+            hour: .matins,
+            titleLatin: "Ad Matutinum",
+            contextLabel: "Test",
+            sections: []
+        )
+        let model = AppModel(userDefaults: defaults)
+
+        model.beginReaderSession(for: office)
+        model.updateReaderScrollOffset(842.5, for: office)
+
+        let relaunchedModel = AppModel(
+            userDefaults: defaults,
+            date: Date(timeIntervalSince1970: 12 * 60 * 60)
+        )
+        XCTAssertTrue(relaunchedModel.automaticallySelectsCurrentOffice)
+        XCTAssertTrue(relaunchedModel.isReaderSessionActive)
+        XCTAssertEqual(relaunchedModel.selectedHour, .matins)
+        XCTAssertEqual(
+            relaunchedModel.restoredReaderScrollOffset(for: office),
+            842.5
+        )
+        XCTAssertTrue(relaunchedModel.shouldRestoreReader(for: office))
+    }
+
+    func testAutomaticRefreshCannotOverrideAnOpenReader() async throws {
+        let suiteName = "AppModelTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(
+            UserDefaults(suiteName: suiteName)
+        )
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(
+            TimeZone(identifier: "America/Chicago")
+        )
+        let morning = try XCTUnwrap(
+            calendar.date(
+                from: DateComponents(
+                    year: 2026,
+                    month: 7,
+                    day: 28,
+                    hour: 9
+                )
+            )
+        )
+        let office = OfficeDocument(
+            id: "2026-07-27-matins",
+            date: LocalDay(year: 2026, month: 7, day: 27),
+            hour: .matins,
+            titleLatin: "Ad Matutinum",
+            contextLabel: "Test",
+            sections: []
+        )
+        let model = AppModel(
+            userDefaults: defaults,
+            date: morning
+        )
+        model.beginReaderSession(for: office)
+
+        await model.selectCurrentOffice(at: morning, calendar: calendar)
+
+        XCTAssertEqual(model.selectedHour, .matins)
+
+        model.endReaderSession()
+        await model.selectCurrentOffice(at: morning, calendar: calendar)
+
+        XCTAssertFalse(model.isReaderSessionActive)
+        XCTAssertEqual(model.selectedHour, .terce)
+    }
+
     func testSelectingLoadedOfficeDoesNotReloadContent() async throws {
         let day = LocalDay(year: 2026, month: 7, day: 28)
         let repository = CountingContentRepository(day: day)
@@ -132,6 +251,19 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(model.office?.hour, .prime)
     }
 
+    func testSearchUsageSelectsItsExactDayAndOffice() async throws {
+        let day = LocalDay(year: 2026, month: 1, day: 8)
+        let repository = CountingContentRepository(day: day)
+        let model = AppModel(repository: repository)
+
+        await model.selectOffice(on: day, hour: .compline)
+
+        XCTAssertEqual(model.selectedDay?.date, day)
+        XCTAssertEqual(model.office?.date, day)
+        XCTAssertEqual(model.office?.hour, .compline)
+        XCTAssertEqual(model.selectedHour, .compline)
+    }
+
     func testReturningToLoadedOfficeCancelsSupersededSelection() async throws {
         let day = LocalDay(year: 2026, month: 7, day: 28)
         let repository = CountingContentRepository(
@@ -152,6 +284,32 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(model.selectedHour, .lauds)
         XCTAssertEqual(model.office?.hour, .lauds)
         XCTAssertFalse(model.isLoading)
+    }
+
+    func testAdjacentAvailableDayUsesLoadedCorpusIndex() async throws {
+        let suiteName = "AppModelTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(
+            UserDefaults(suiteName: suiteName)
+        )
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        let model = AppModel(userDefaults: defaults)
+
+        await model.start()
+        await model.selectOffice(
+            on: LocalDay(year: 2026, month: 8, day: 6),
+            hour: .lauds
+        )
+
+        XCTAssertEqual(
+            model.availableDay(offsetFromSelectedBy: -1)?.date,
+            LocalDay(year: 2026, month: 8, day: 5)
+        )
+        XCTAssertEqual(
+            model.availableDay(offsetFromSelectedBy: 1)?.date,
+            LocalDay(year: 2026, month: 8, day: 7)
+        )
     }
 }
 

@@ -15,15 +15,17 @@ public enum HoursSharedPreferences {
             ?? defaultAppearanceMode
     }
 
-    public static func migrateAppearanceModeFromStandardDefaults() {
+    @discardableResult
+    public static func migrateAppearanceModeFromStandardDefaults() -> Bool {
         let sharedDefaults = defaults
         guard sharedDefaults.object(forKey: appearanceModeKey) == nil else {
-            return
+            return false
         }
 
         let savedValue = UserDefaults.standard.string(
             forKey: appearanceModeKey
         ) ?? defaultAppearanceMode
         sharedDefaults.set(savedValue, forKey: appearanceModeKey)
+        return true
     }
 }

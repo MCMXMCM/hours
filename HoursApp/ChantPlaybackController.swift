@@ -68,6 +68,9 @@ nonisolated enum CantorGuideSound: String, CaseIterable, Identifiable, Sendable,
 @Observable
 final class ChantPlaybackController {
     static let defaultTempo = 1.0
+    nonisolated static let scholaPitchKey = "cantorGuide.scholaPitch"
+    nonisolated static let chantRegisterKey = "cantorGuide.register"
+    nonisolated static let guideSoundKey = "cantorGuide.sound"
 
     private(set) var isPlaying = false
     private(set) var currentEventID: String?
@@ -78,18 +81,30 @@ final class ChantPlaybackController {
     var scholaPitch: ScholaPitch = .a {
         didSet {
             guard scholaPitch != oldValue else { return }
+            userDefaults.set(
+                scholaPitch.rawValue,
+                forKey: Self.scholaPitchKey
+            )
             restartAfterGuideSelectionChange()
         }
     }
     var chantRegister: ChantRegister = .low {
         didSet {
             guard chantRegister != oldValue else { return }
+            userDefaults.set(
+                chantRegister.rawValue,
+                forKey: Self.chantRegisterKey
+            )
             restartAfterGuideSelectionChange()
         }
     }
     var guideSound: CantorGuideSound = .organ {
         didSet {
             guard guideSound != oldValue else { return }
+            userDefaults.set(
+                guideSound.rawValue,
+                forKey: Self.guideSoundKey
+            )
             restartAfterGuideSelectionChange()
         }
     }
@@ -101,13 +116,37 @@ final class ChantPlaybackController {
 
     private let audioPlayer = ChantAudioPlayer()
     private let lifecycleObservers = AudioLifecycleObserverBag()
+    @ObservationIgnored
+    private let userDefaults: UserDefaults
     private var activeScore: ChantScore?
     private var activeStartEventID: String?
     private var playbackID: UUID?
 
     private static let scheduledBufferWindow = 8
 
-    init() {
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+        if let rawSound = userDefaults.string(
+            forKey: Self.guideSoundKey
+        ), let savedSound = CantorGuideSound(rawValue: rawSound) {
+            guideSound = savedSound
+        }
+        if userDefaults.object(forKey: Self.scholaPitchKey) != nil,
+           let savedPitch = ScholaPitch(
+               rawValue: userDefaults.integer(
+                   forKey: Self.scholaPitchKey
+               )
+           ) {
+            scholaPitch = savedPitch
+        }
+        if userDefaults.object(forKey: Self.chantRegisterKey) != nil,
+           let savedRegister = ChantRegister(
+               rawValue: userDefaults.integer(
+                   forKey: Self.chantRegisterKey
+               )
+           ) {
+            chantRegister = savedRegister
+        }
         observeAudioLifecycle()
     }
 

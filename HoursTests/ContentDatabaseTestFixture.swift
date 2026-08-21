@@ -134,7 +134,9 @@ enum ContentDatabaseTestFixture {
                     rank: .firstClass,
                     color: .white,
                     season: "Advent",
-                    eveningContext: hour == .vespers ? .secondVespers : nil
+                    eveningContext: hour == .vespers || hour == .compline
+                        ? .secondVespers
+                        : nil
                 ),
                 sections: isUnavailable ? [] : [section]
             )

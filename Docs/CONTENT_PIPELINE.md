@@ -1,27 +1,38 @@
 # Content pipeline and release gate
 
-## 1. Pin and snapshot
+## 1. Pin sources and calculate the ordo
 
-Source revisions live in `Tools/ContentCompiler/sources.lock.json`. Divinum Officium is invoked with:
+Source revisions live in `Tools/ContentCompiler/sources.lock.json`. The complete
+1962–2100 date/hour schedule is calculated directly by the pinned local Divinum
+Officium 1960-rubrics engine. The compiler invokes its whole-year calendar
+entry point once per year with:
 
 - `version=Rubrics 1960 - 1960`
-- `prayMatutinum`, `prayLaudes`, `prayPrima`, `prayTertia`, `praySexta`,
-  `prayNona`, `prayVespera`, and `prayCompletorium`
-- Latin plus English
-- every civil date from 1962-01-01 through 2100-12-31
+- the Gregorian computus and the engine's temporal, sanctoral, occurrence,
+  concurrence, vigil, octave, transfer, and commemoration rules
+- every civil year from 1962 through 2100
 
-Each raw HTML result receives a SHA-256 entry in `snapshot-manifest.json`.
+This produces 50,769 resolved days and 406,152 compact date/hour parity
+references without making a network request or rendering one page per office.
+The App Store bundle packages only the declared rolling 12-year reviewed window
+(2025–2036 for release year 2026). The long schedule remains a local
+validation fixture. Both point at normalized recipes and never duplicate prayers
+or scores. Focused representative office snapshots remain useful as review
+fixtures, but full-range page capture is not a build or release requirement.
+
 Gregobase's CC0 CSV index is checksum-pinned, and matched GABC downloads must be
-snapshotted by ID. Matins candidates also come from the pinned Nocturnale
-Romanum repository. Its repository is GPL-3.0-only, so those files must remain
-provenance-distinct and their distribution implications must be resolved before
-an App Store corpus is published.
+snapshotted by ID. Matins candidates also come from the pinned GPL-3.0-only
+Nocturnale Romanum repository. GPL material is permitted in this open-source
+project; those files remain provenance-distinct and retain their notices,
+modification records, revision, checksum, and corresponding-source location.
 
-## 2. Import and normalize offices
+## 2. Normalize reusable office resources
 
-`import-snapshots` parses the generator’s paired Latin/English XHTML cells,
-preserves upstream section IDs and snapshot checksums, and emits independent
-validation candidates. The TypeScript schema is kept field-for-field aligned
+Representative `import-snapshots` fixtures parse the generator’s paired
+Latin/English XHTML cells, preserve upstream section IDs and checksums, and
+emit independent validation candidates. They review resource and recipe
+classes, not every date that reuses them. The TypeScript schema is kept
+field-for-field aligned
 with the Swift `Codable` models; unknown enum values are compilation errors.
 The semantic normalization/review stage converts approved candidates into:
 
@@ -31,7 +42,16 @@ The semantic normalization/review stage converts approved candidates into:
   authoritative), commemorations, and Vespers context.
 - Every record retains `sourceVersion`.
 
-“Pray this evening” is resolved during compilation, not guessed at runtime. A date’s Vespers document must say whether it is First Vespers, Second Vespers, or ferial Vespers and identify the associated feast.
+“Pray this evening” is resolved during compilation, not guessed at runtime. A
+date’s Vespers document must say whether it is First Vespers, Second Vespers,
+or ordinary Vespers and identify the associated observance. The compiler first
+honors an explicit source label, including a source's identification of
+Vespers as belonging to the preceding office in a concurrence. Otherwise, a
+change from the daytime observance identifies First Vespers; an observance
+that demonstrably began with First Vespers receives Second Vespers on its own
+day; all remaining offices are classified as ordinary Vespers. The resolved
+context is also copied to Compline so every evening-facing surface uses the
+same liturgical identity.
 
 ## 3. Resolve chant
 
@@ -94,8 +114,8 @@ The build sources have distinct, non-overlapping jobs:
 - Neumz is unnecessary unless a future native NABC feature is deliberately
   added.
 
-For a coverage audit, `snapshot-scored-reference` captures a resumable,
-checksum-pinned concordance for every requested date and hour.
+For a focused development audit, `snapshot-scored-reference` captures a
+resumable, checksum-pinned concordance for the requested representative dates.
 `compile-scored-snapshots` requires the ordered sidecars. It uses their
 hour-specific metadata for display while comparing the title and rank against
 Divinum Officium as an independent calendar check:
@@ -160,10 +180,9 @@ The audit loaders checksum and parse only the date/hour records named by the
 expectations, keeping this focused gate fast without weakening full-pack
 compilation.
 
-This output cannot overwrite the app bundle: it contains
-provenance-distinct GPL and reference material. Promotion requires fetching the
-selected chants from their pinned primary sources and resolving Nocturnale
-Romanum distribution obligations.
+This development output cannot overwrite the app bundle without the explicit
+reference-bundle flag. GPL content is not a blocker; every promoted payload
+must retain its pinned primary-source provenance and corresponding-source data.
 
 No fuzzy result is accepted automatically. A curated override maps a stable section ID to one known candidate. Multiple equally preferred results produce `ambiguous`; absent results produce `missing`. Both fail release compilation.
 
@@ -195,7 +214,13 @@ The generated source records the upstream revision and must be regenerated and v
 
 ## 5. Coverage and human review
 
-Release compilation requires 406,152 offices, 100% Latin text coverage, 100% scored/formulaic coverage, and zero ambiguity. Calendar goldens must include:
+Release compilation requires every date and all eight hours in the declared
+previous-year-through-next-10-years window, 100% Latin text coverage, 100% scored/formulaic
+resource coverage, and zero ambiguity. Separately, native-provider activation
+requires exact agreement with all 406,152 references in the 1962–2100 parity
+fixture. The compiler validates the finite recipe/score catalog once, then
+verifies every schedule reference and calendar invariant locally. Calendar
+goldens must include:
 
 - First Vespers and feast precedence
 - commemorations and Saturday Office of Our Lady
@@ -203,14 +228,19 @@ Release compilation requires 406,152 offices, 100% Latin text coverage, 100% sco
 - Septuagesima, Holy Week, Easter, and Pentecost
 - fixed/movable collisions
 
-Generated observances, ranks, psalms, antiphons, commemorations, and collects must be compared with the pinned engine and human-reviewed printed-ordo fixtures. A full liturgical-season review is required before TestFlight promotion.
+Generated observances, ranks, psalms, antiphons, commemorations, and collects
+must be compared with the pinned local engine and a focused set of
+human-reviewed printed-ordo fixtures. No release test performs one network
+request per scheduled office. A full liturgical-season review is required
+before TestFlight promotion.
 
 ## 6. Performance budgets
 
 Before the corpus expands beyond 2026, the checked-in budgets are:
 
-- Complete eight-hour 2026 SQLite pack: at most 256 MiB (enforced by the
-  compiler and an iOS test).
+- Normalized one-year SQLite pack: at most 64 MiB.
+- Reviewed rolling 12-year App Store pack: at most 128 MiB.
+- Non-shipping complete 1962–2100 parity pack: at most 256 MiB.
 - Cold repository open: at most 750 ms.
 - One office read/decode: at most 250 ms.
 - Resident memory during representative content access: at most 350 MiB,

@@ -6,13 +6,16 @@ struct TodaySidebarView: View {
     @Binding var hourSelectionView: HourSelectionViewMode
     @Binding var displayedHour: OfficeHour
     let onOpenOffice: (OfficeHour) -> Void
+    let onOpenSearchOffice: (LiturgicalUsageContext) -> Void
 
     @Environment(AppModel.self) private var model
+    @Environment(AppTourCoordinator.self) private var tour
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var wheelSettledHour = OfficeHour.current()
     @State private var showsMonthDays = false
     @State private var showsSettings = false
+    @State private var showsSearch = false
     @State private var appeared = false
     @State private var isNavigatingDay = false
     @State private var daySwipeOffset: CGFloat = 0
@@ -46,6 +49,24 @@ struct TodaySidebarView: View {
             }
         }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    showsSearch = true
+                    tour.receive(.searchOpened)
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.primary.opacity(0.86))
+                .accessibilityLabel("Search prayers and readings")
+                .accessibilityIdentifier("home-search")
+                .appTourTarget(.searchButton)
+            }
+            .sharedBackgroundVisibility(.hidden)
+
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showsSettings = true
@@ -60,17 +81,25 @@ struct TodaySidebarView: View {
                 .accessibilityLabel("Settings")
                 .accessibilityIdentifier("home-settings")
                 .accessibilityHint("Choose display and hour selection options")
+                .appTourTarget(.settingsButton)
             }
             .sharedBackgroundVisibility(.hidden)
         }
         .toolbarBackground(.hidden, for: .navigationBar)
-        .sheet(isPresented: $showsMonthDays) {
+        .sheet(
+            isPresented: $showsMonthDays,
+            onDismiss: calendarDidDismiss
+        ) {
             monthDaysSheet
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
                 .presentationContentInteraction(.scrolls)
+                .appTourOverlayHost(.calendar)
         }
-        .sheet(isPresented: $showsSettings) {
+        .sheet(
+            isPresented: $showsSettings,
+            onDismiss: settingsDidDismiss
+        ) {
             HomeSettingsView(
                 displayMode: $displayMode,
                 hourSelectionView: $hourSelectionView,
@@ -81,10 +110,21 @@ struct TodaySidebarView: View {
             )
             .presentationDetents([.large])
             .presentationBackground(Color.hoursBackground)
+            .appTourOverlayHost(.settings)
+        }
+        .sheet(
+            isPresented: $showsSearch,
+            onDismiss: searchDidDismiss
+        ) {
+            PrayerSearchView(onOpenOffice: onOpenSearchOffice)
+                .presentationDetents([.large])
+                .presentationBackground(Color.hoursBackground)
+                .appTourOverlayHost(.search)
         }
         .onAppear {
             guard !appeared else { return }
-            if model.automaticallySelectsCurrentOffice {
+            if model.automaticallySelectsCurrentOffice,
+               !model.isReaderSessionActive {
                 resetToLocalTime()
             } else {
                 wheelSettledHour = model.selectedHour
@@ -95,6 +135,11 @@ struct TodaySidebarView: View {
         }
         .onChange(of: hourSelectionView) {
             wheelSettledHour = model.selectedHour
+        }
+        .onChange(of: model.office?.id) {
+            guard let office = model.office,
+                  !model.isLoading else { return }
+            tour.receive(.officeLoaded(office.hour))
         }
     }
 
@@ -107,6 +152,7 @@ struct TodaySidebarView: View {
             get: { model.selectedHour },
             set: { hour in
                 model.selectedHour = hour
+                tour.receive(.hourSelected(hour))
                 Task {
                     if model.automaticallySelectsCurrentOffice {
                         await model.selectCurrentOffice()
@@ -128,7 +174,10 @@ struct TodaySidebarView: View {
     private var immediateHourBinding: Binding<OfficeHour> {
         Binding(
             get: { model.selectedHour },
-            set: { model.selectedHour = $0 }
+            set: { hour in
+                model.selectedHour = hour
+                tour.receive(.hourSelected(hour))
+            }
         )
     }
 
@@ -180,6 +229,7 @@ struct TodaySidebarView: View {
                     onOpenOffice(hour)
                 }
             )
+            .appTourTarget(.hourSelector)
             .frame(
                 width: sundialWidth,
                 height: sundialHeight
@@ -241,15 +291,18 @@ struct TodaySidebarView: View {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         wheelSettledHour = hour
                     }
+                    tour.receive(.hourSelected(hour))
                     Task {
                         if model.automaticallySelectsCurrentOffice {
                             await model.selectCurrentOffice()
                         } else {
                             await model.select(hour: hour)
                         }
+                        reportLoadedOfficeToTour(for: hour)
                     }
                 }
             )
+            .appTourTarget(.hourSelector)
             .frame(
                 width: dialDiameter,
                 height: dialHeight
@@ -279,6 +332,9 @@ struct TodaySidebarView: View {
         for hour: OfficeHour
     ) -> some View {
         Button {
+            guard !tour.isActive || tour.step == .prayVespers else {
+                return
+            }
             onOpenOffice(hour)
         } label: {
             HStack(spacing: 7) {
@@ -309,23 +365,33 @@ struct TodaySidebarView: View {
         )
         .accessibilityIdentifier("pray-selected-hour")
         .accessibilityHint("Opens the selected office")
+        .appTourTarget(.prayButton)
     }
 
     private var dayHeader: some View {
         Group {
             if let day = model.selectedDay {
-                let observance = model.office?.observance
                 dayHeaderLabel(
                     for: day,
-                    observance: observance
+                    office: model.office
                 )
                     .contentShape(Rectangle())
                     .onTapGesture {
+                        guard !tour.isActive
+                                || tour.step == .openCalendar else {
+                            return
+                        }
                         showsMonthDays = true
+                        tour.receive(.calendarOpened)
                     }
                     .background {
                         Button {
+                            guard !tour.isActive
+                                    || tour.step == .openCalendar else {
+                                return
+                            }
                             showsMonthDays = true
+                            tour.receive(.calendarOpened)
                         } label: {
                             Color.clear
                                 .contentShape(Rectangle())
@@ -335,7 +401,7 @@ struct TodaySidebarView: View {
                         .accessibilityValue(
                             headerAccessibilityValue(
                                 for: day,
-                                observance: observance
+                                office: model.office
                             )
                         )
                         .accessibilityHint(
@@ -346,6 +412,7 @@ struct TodaySidebarView: View {
             }
         }
         .frame(maxWidth: 620)
+        .appTourTarget(.dayTitle)
         .accessibilityHint(
             "Swipe left for the next day or right for the previous day"
         )
@@ -353,10 +420,15 @@ struct TodaySidebarView: View {
 
     private func dayHeaderLabel(
         for day: LiturgicalDay,
-        observance: OfficeObservance?
+        office: OfficeDocument?
     ) -> some View {
-        VStack(spacing: 12) {
-            if let rank = observance?.rank ?? day.rank {
+        let presentation = HomeHeaderPresentation(
+            day: day,
+            office: office
+        )
+
+        return VStack(spacing: 10) {
+            if let rank = presentation.rank {
                 Text(rank.displayName)
                     .font(
                         .custom(
@@ -369,7 +441,7 @@ struct TodaySidebarView: View {
                     .accessibilityIdentifier("liturgical-rank")
             }
 
-            Text(observance?.titleLatin ?? day.titleLatin)
+            Text(presentation.titleLatin)
                 .font(
                     .custom(
                         "EBGaramond-Regular",
@@ -382,10 +454,27 @@ struct TodaySidebarView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("liturgical-title")
 
+            if let officeContext = presentation.officeContext {
+                Text(officeContext)
+                    .font(
+                        .custom(
+                            "EBGaramond-Regular",
+                            size: 16,
+                            relativeTo: .subheadline
+                        )
+                    )
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier(
+                        "liturgical-office-context"
+                    )
+            }
+
             Text(
                 headerDetail(
                     for: day,
-                    observance: observance
+                    commemorations: presentation.commemorations
                 )
             )
                 .font(
@@ -405,14 +494,19 @@ struct TodaySidebarView: View {
 
     private func headerAccessibilityValue(
         for day: LiturgicalDay,
-        observance: OfficeObservance?
+        office: OfficeDocument?
     ) -> String {
+        let presentation = HomeHeaderPresentation(
+            day: day,
+            office: office
+        )
         return [
-            (observance?.rank ?? day.rank)?.displayName,
-            observance?.titleLatin ?? day.titleLatin,
+            presentation.rank?.displayName,
+            presentation.titleLatin,
+            presentation.officeContext,
             headerDetail(
                 for: day,
-                observance: observance
+                commemorations: presentation.commemorations
             ),
         ]
         .compactMap { $0 }
@@ -453,7 +547,7 @@ struct TodaySidebarView: View {
             if let incomingDay {
                 dayHeaderLabel(
                     for: incomingDay,
-                    observance: nil
+                    office: nil
                 )
                 .frame(width: contentWidth)
                 .offset(
@@ -485,13 +579,11 @@ struct TodaySidebarView: View {
 
     private func headerDetail(
         for day: LiturgicalDay,
-        observance: OfficeObservance?
+        commemorations: [Commemoration]
     ) -> String {
         let date = (day.date.date ?? model.selectedCivilDate).formatted(
             .dateTime.weekday(.wide).month(.wide).day().year()
         )
-        let commemorations = observance?.commemorations
-            ?? day.commemorations
         guard !commemorations.isEmpty else { return date }
         return "\(date) · \(commemorations.map(\.titleLatin).joined(separator: " · "))"
     }
@@ -511,6 +603,15 @@ struct TodaySidebarView: View {
         }
     }
 
+    private func reportLoadedOfficeToTour(for requestedHour: OfficeHour) {
+        guard let office = model.office,
+              !model.isLoading,
+              office.hour == requestedHour else {
+            return
+        }
+        tour.receive(.officeLoaded(office.hour))
+    }
+
     private func setAutomaticHourSelection(_ isEnabled: Bool) {
         guard !isEnabled else {
             resetToLocalTime()
@@ -526,6 +627,9 @@ struct TodaySidebarView: View {
         DragGesture(minimumDistance: 12)
             .onChanged { value in
                 guard !isNavigatingDay else { return }
+                guard !tour.isActive || tour.step == .swipeDay else {
+                    return
+                }
 
                 let horizontalDistance = value.translation.width
                 let verticalDistance = value.translation.height
@@ -546,6 +650,9 @@ struct TodaySidebarView: View {
             }
             .onEnded { value in
                 guard !isNavigatingDay else { return }
+                guard !tour.isActive || tour.step == .swipeDay else {
+                    return
+                }
 
                 let horizontalDistance = value.translation.width
                 let verticalDistance = value.translation.height
@@ -578,14 +685,7 @@ struct TodaySidebarView: View {
     }
 
     private func targetDay(by offset: Int) -> LiturgicalDay? {
-        guard let selectedDay = model.selectedDay,
-              let selectedIndex = model.availableDays.firstIndex(
-                  where: { $0.date == selectedDay.date }
-              ),
-              model.availableDays.indices.contains(selectedIndex + offset) else {
-            return nil
-        }
-        return model.availableDays[selectedIndex + offset]
+        model.availableDay(offsetFromSelectedBy: offset)
     }
 
     private func snapDayHeaderToCenter() {
@@ -625,6 +725,7 @@ struct TodaySidebarView: View {
             incomingDayOffset = 0
             Task {
                 await model.select(civilDate: targetDate)
+                tour.receive(.daySwiped(dayOffset))
                 isNavigatingDay = false
             }
             return
@@ -643,6 +744,7 @@ struct TodaySidebarView: View {
         } completion: {
             Task {
                 await model.select(civilDate: targetDate)
+                tour.receive(.daySwiped(dayOffset))
 
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
@@ -664,6 +766,40 @@ struct TodaySidebarView: View {
             return today...today
         }
         return first...last
+    }
+
+    private func calendarDidDismiss() {
+        guard !model.availableDays.isEmpty else { return }
+        let selected = LocalDay(
+            model.selectedCivilDate,
+            calendar: .hoursGregorian
+        )
+        guard let index = model.availableDays.firstIndex(
+            where: { $0.date == selected }
+        ) else { return }
+        tour.receive(
+            .calendarClosed(
+                canSwipePrevious: index > model.availableDays.startIndex,
+                canSwipeNext: index < model.availableDays.index(
+                    before: model.availableDays.endIndex
+                )
+            )
+        )
+    }
+
+    private func searchDidDismiss() {
+        tour.receive(.searchClosed)
+    }
+
+    private func settingsDidDismiss() {
+        if tour.pendingAboutReplay {
+            Task { @MainActor in
+                await Task.yield()
+                tour.beginPendingAboutReplay(model: model)
+            }
+        } else {
+            tour.receive(.settingsClosed)
+        }
     }
 }
 

@@ -383,7 +383,17 @@ export function officeSectionsFromScoredReference(
           sourceBook: "Breviarium Gregorianum source concordance",
           sourceURL: score.sourceURL ?? null,
           license: licenseForSource(score.source),
-          snapshot: createHash("sha256").update(score.gabc).digest("hex")
+          snapshot: createHash("sha256").update(score.gabc).digest("hex"),
+          sourceRevision: score.source === "Nocturnale Romanum"
+            ? "84ce1514306be54bf4e693c9e8aa3bfd5e5aa3f2"
+            : null,
+          notice: score.source === "Nocturnale Romanum"
+            ? "Nocturnale Romanum, GPL-3.0-only"
+            : null,
+          modifications: "Normalized into a complete GABC-plus-timeline scored realization.",
+          correspondingSource: score.source === "Nocturnale Romanum"
+            ? "https://github.com/Nocturnale-Romanum/nocturnale-romanum"
+            : null
         },
         timeline: { events: [] }
       }
@@ -407,7 +417,7 @@ export function compileScoredReference(options: {
   const sections = officeSectionsFromScoredReference(scores, "reference-section");
   const input: CorpusInput = {
     manifest: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       corpusVersion: "scored-reference-fixture",
       minimumAppVersion: "0.1.0",
       createdAt: "2026-07-24T00:00:00Z",

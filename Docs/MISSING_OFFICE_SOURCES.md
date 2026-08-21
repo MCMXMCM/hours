@@ -16,11 +16,13 @@ The twelve documents are:
 
 The compiler now promotes all twelve as complete Latin documents. The ten
 Easter offices include the reviewed chant payloads and formulaic canticle tones.
-The two Prime documents include the complete Latin office and Martyrology but
-intentionally omit English and Martyrology notation. A rights-cleared English
-translation is deferred. The exceptional Christmas proclamation GABC also
-remains deferred until it can be checked against a physical or licensed scan of
-the applicable Martyrology.
+The two Prime documents include the complete Latin office and Martyrology. Their
+exceptional English bodies use the public-domain 1916 edition as a wording base,
+revised against the 1956 Latin and official 1960 variations. The checked-in
+review matrix was approved by Matthew McCarty on August 20, 2026, and remains a
+hard release gate against unreviewed changes. The
+exceptional Christmas proclamation GABC remains deferred until it can be checked
+against a physical or licensed scan of the applicable Martyrology.
 
 ## Source hierarchy
 
@@ -44,11 +46,10 @@ Use the sources for distinct, non-overlapping purposes:
    <https://books.google.com/books/about/Martyrologium_romanum.html?id=Nu0YAgAACAAJ>
    and
    <https://search.worldcat.org/title/Martyrologium-Romanum/oclc/83468870>.
-6. **Martyrology English comparison:** *The Roman Martyrology*, edited by
-   J. B. O'Connell, Newman Press, 1962. It expressly translates the fourth
-   post-typical 1956 edition and includes eulogies approved through 1961:
-   <https://books.google.com/books/about/The_Roman_Martyrology.html?id=ZLAvAQAAIAAJ>.
-   Treat this as development-only until rights are resolved.
+6. **Martyrology English wording base:** the public-domain 1916 revised
+   *Roman Martyrology*, pinned by PDF and OCR checksums in
+   `martyrology-exceptional-review.json`. OCR locates passages only; wording is
+   transcribed from the scan and revised against the Latin authorities.
 7. **Ordered presentation oracle:** pinned Breviarium Gregorianum snapshots.
    The live reference is <https://breviariumgregorianum.com/index.php>.
 8. **Independent validator:** pinned Divinum Officium Latin and English data
@@ -100,8 +101,10 @@ Sunday Vespers sidecar, substituting the daily Magnificat antiphon and collect:
    double Alleluia where prescribed.
 
 This reuse belongs in compiler components only. Each compiled date/hour must
-still contain one complete, flattened, ordered document and its own visible
-content digest. The app must not reconstruct the office.
+still select one exact, ordered recipe with its own visible-content digest.
+At runtime the app performs deterministic relational joins to the recipe's
+normalized text resources and complete scored realizations; it makes no
+liturgical choices and never reconstructs notation from separate prose.
 
 ## Easter Octave: daily propers
 
@@ -145,7 +148,8 @@ For this fixed 2026 promotion, the compiler reuses byte-identical generated
 Benedictus and Magnificat templates from explicitly pinned, successfully
 captured 2026 offices for the same canticle and termination. The shared psalm
 tones come from the reviewed Easter Sunday sidecar. The compiled date/hour
-documents remain fully flattened; the app performs no reconstruction.
+recipes remain fully ordered. The app performs only the schema-defined
+relational join to their exact text and score references.
 
 The current GregoBase CSV fetched during this research had SHA-256
 `cdb47eb71ee69bf13ca5830f0d7387130a023a5bb8b48f8c9b75356375b53bc0`.
@@ -166,7 +170,7 @@ The date heading and lunar age are generated fields, not part of the static day
 file. The pinned Divinum Officium snapshot materializes them after advancing to
 the next civil date with its Gregorian ecclesiastical-lunar table algorithm.
 The 2026 promotion requires the two exact headings above and compiles them into
-the flattened document. Before generating a corpus for another year, port that
+the date-specific recipe. Before generating a corpus for another year, port that
 algorithm into the compiler with independent table fixtures. Never calculate it
 in the app.
 
@@ -229,10 +233,10 @@ Do not promote either pinned English Martyrology file as authoritative:
   The 1960 calendar and amended text say January 28 (`quinto Kaléndas
   Februárii`).
 
-O'Connell's 1962 English edition contains the complete February 23 eulogies
-without the suppressed vigil and keeps the Christmas eulogies in the Latin
-order. It is the better English comparison source, but its copyright and
-distribution status must be resolved before its wording is shipped.
+The checked-in 1916-based English revision restores the complete February 23
+sequence and keeps the Christmas eulogies in the authoritative Latin order.
+Its review matrix records every substantive 1956/1960 change; release remains
+blocked until a human reviewer records approval in that matrix.
 
 ### Martyrology notation
 
@@ -271,11 +275,11 @@ For each of the twelve replacement documents, the compiler now:
 4. reads each selected GABC from a checked-in, source-ID-named payload, records
    its checksum and printed provenance, and notation-validates it at compile
    time;
-5. materializes one complete flattened document and computes its canonical
+5. materializes one complete ordered recipe and computes its canonical
    visible-content digest;
 6. includes the twelve documents in the authoritative coverage count.
 
-The remaining release work is a primary-source/distribution review, a
-rights-cleared English translation if desired, and a note-for-note review of
-the exceptional Christmas proclamation tone. Ordinary Martyrology prose may
-remain unscored, consistently with other Prime documents.
+The remaining release work is human approval of the exceptional Martyrology
+review matrix and a note-for-note review of the exceptional Christmas
+proclamation tone. Ordinary Martyrology prose may remain unscored,
+consistently with other Prime documents.

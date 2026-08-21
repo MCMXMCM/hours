@@ -4,6 +4,106 @@ import XCTest
 
 @MainActor
 final class GregorianScorePreparationTests: XCTestCase {
+    func testReaderPresentationPreparesSectionsScoresAndOutlineOnce() async throws {
+        let repository = try SQLiteContentRepository(
+            databaseURL: bundledDatabaseURL()
+        )
+        let office = try await repository.office(
+            on: LocalDay(year: 2026, month: 12, day: 8),
+            hour: .vespers
+        )
+        let expectedSections = OfficeReaderSectionBuilder.displaySections(
+            from: office.sections,
+            format: office.format
+        )
+
+        let presentation = try OfficeReaderPresentation.prepare(
+            office: office
+        )
+
+        XCTAssertEqual(presentation.officeID, office.id)
+        XCTAssertEqual(presentation.sections, expectedSections)
+        XCTAssertEqual(
+            Set(presentation.scores.map(\.id)).count,
+            presentation.scores.count
+        )
+        XCTAssertEqual(
+            presentation.outlineEntries,
+            OfficeReaderOutlineBuilder.entries(from: expectedSections)
+        )
+    }
+
+    func testReaderPresentationHonorsCancellation() async throws {
+        let repository = try SQLiteContentRepository(
+            databaseURL: bundledDatabaseURL()
+        )
+        let office = try await repository.office(
+            on: LocalDay(year: 2025, month: 12, day: 25),
+            hour: .matins
+        )
+        let preparation = Task.detached {
+            withUnsafeCurrentTask { task in
+                task?.cancel()
+            }
+            return try OfficeReaderPresentation.prepare(office: office)
+        }
+
+        do {
+            _ = try await preparation.value
+            XCTFail("Expected reader presentation cancellation")
+        } catch is CancellationError {
+            // Expected.
+        }
+    }
+
+    func testPreparedScoreCacheReusesKeysAndEvictsAtItsBound() async throws {
+        let repository = try SQLiteContentRepository(
+            databaseURL: bundledDatabaseURL()
+        )
+        let office = try await repository.office(
+            on: LocalDay(year: 2026, month: 7, day: 26),
+            hour: .compline
+        )
+        let score = try XCTUnwrap(
+            office.playableScores.min {
+                $0.timeline.events.count < $1.timeline.events.count
+            }
+        )
+        let cache = GregorianLayoutCache.shared
+        await cache.resetForTesting()
+        let metrics = GregorianLayoutMetrics()
+
+        _ = try await cache.preparedScore(
+            score: score,
+            width: 390,
+            metrics: metrics
+        )
+        _ = try await cache.preparedScore(
+            score: score,
+            width: 390,
+            metrics: metrics
+        )
+        _ = try await cache.preparedScore(
+            score: score,
+            width: 391,
+            metrics: metrics
+        )
+        var cacheMetrics = await cache.metricsForTesting()
+        XCTAssertEqual(cacheMetrics.preparedScores, 2)
+        XCTAssertEqual(cacheMetrics.preparedScoreHits, 1)
+
+        for width in 300..<333 {
+            _ = try await cache.preparedScore(
+                score: score,
+                width: CGFloat(width),
+                metrics: metrics
+            )
+        }
+        cacheMetrics = await cache.metricsForTesting()
+        XCTAssertEqual(cacheMetrics.preparedScores, 32)
+        XCTAssertEqual(cacheMetrics.parsedScores, 1)
+    }
+
     func testBundledComplinePreparesEveryScoreBeforeReaderPresentation() async throws {
         let databaseURL = try XCTUnwrap(
             Bundle.main.url(
@@ -63,6 +163,19 @@ final class GregorianScorePreparationTests: XCTestCase {
                 )
             }
         }
+    }
+
+    private func bundledDatabaseURL() throws -> URL {
+        try XCTUnwrap(
+            Bundle.main.url(
+                forResource: "base-office",
+                withExtension: "sqlite",
+                subdirectory: "Resources"
+            ) ?? Bundle.main.url(
+                forResource: "base-office",
+                withExtension: "sqlite"
+            )
+        )
     }
 
     func testPreparedDrawingBatchesStaticScoreOperationsWithoutMergingOverlaps() throws {

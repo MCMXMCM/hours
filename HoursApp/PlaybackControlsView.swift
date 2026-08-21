@@ -5,6 +5,7 @@ struct PlaybackControlsView: View {
     let score: ChantScore
     let onClose: () -> Void
     @Environment(ChantPlaybackController.self) private var playback
+    @Environment(AppTourCoordinator.self) private var tour
     @GestureState private var dismissalOffset: CGFloat = 0
 
     var body: some View {
@@ -48,6 +49,7 @@ struct PlaybackControlsView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel("Close cantor guide")
                     .accessibilityIdentifier("cantor-close")
+                    .appTourTarget(.cantorClose)
                 }
 
                 ViewThatFits(in: .horizontal) {
@@ -100,6 +102,9 @@ struct PlaybackControlsView: View {
         .accessibilityAction(.escape, onClose)
         .onChange(of: playback.tempo) { playback.restartIfPlaying(score: score) }
         .onChange(of: playback.loopsPhrase) { playback.restartIfPlaying(score: score) }
+        .onChange(of: playback.scholaPitch) { _, pitch in
+            tour.receive(.scholaPitchChanged(pitch))
+        }
     }
 
     private var dismissalGesture: some Gesture {
@@ -151,6 +156,7 @@ struct PlaybackControlsView: View {
         .fixedSize()
         .accessibilityValue(scholaPitch.wrappedValue.displayName)
         .accessibilityIdentifier("cantor-schola-pitch")
+        .appTourTarget(.cantorPitch)
     }
 
     private func soundControl(

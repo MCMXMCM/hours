@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "englishBase": {
+    "title": "The Roman Martyrology, revised edition, 1916",
+    "url": "https://archive.org/details/romanmartyrology00cathuoft",
+    "pdfURL": "https://archive.org/download/romanmartyrology00cathuoft/romanmartyrology00cathuoft.pdf",
+    "pdfSHA256": "688cfa7b85d8a686a4fde9877cfa133550fef8fce8cf46c6c433abf88983042d",
+    "ocrSHA256": "7131b487ca60c9b9d938a3875e877ba62b1bd1e879dc7f484c0df0309cde2ed6",
+    "license": "Public domain",
+    "usage": "Wording base transcribed from scan; OCR used only as a locator."
+  },
+  "latinAuthority": {
+    "title": "Martyrologium Romanum, fourth post-typical edition",
+    "edition": "Typis Polyglottis Vaticanis, 1956",
+    "usage": "Substantive Latin authority for both exceptional days."
+  },
+  "variationsAuthority": {
+    "title": "Variationes in Martyrologio Romano",
+    "url": "https://www.vatican.va/archive/aas/documents/AAS-52-1960-ocr.pdf",
+    "citation": "Acta Apostolicae Sedis 52 (1960), pp. 593-733",
+    "usage": "Official 1960 omissions, additions, order, rubrics, and feast-date changes."
+  },
+  "approval": {
+    "status": "approved",
+    "reviewedBy": "Matthew McCarty",
+    "reviewedAt": "2026-08-20"
+  },
+  "entries": [
+    { "officeDate": "2026-02-22", "id": "peter-damian", "latinIncipit": "Sancti Petri Damiáni", "basePages": "1916 pp. 56-57", "variation": "Expanded against the 1956 Latin; follows suppression of the preceding vigil." },
+    { "officeDate": "2026-02-22", "id": "polycarp-smyrna", "latinIncipit": "Smyrnæ natális sancti Polycárpi", "basePages": "1916 pp. 26-27", "variation": "Moved from the January entry and completed with the twelve companions and feast reference required by the 1956 Latin." },
+    { "officeDate": "2026-02-22", "id": "sirenus", "latinIncipit": "Apud Sírmium beáti Siréni", "basePages": "1916 p. 56", "variation": "Wording checked against the 1956 Latin." },
+    { "officeDate": "2026-02-22", "id": "sirmium-72", "latinIncipit": "Ibídem natális sanctórum septuagínta duórum", "basePages": "1916 p. 56", "variation": "Wording checked against the 1956 Latin." },
+    { "officeDate": "2026-02-22", "id": "martha", "latinIncipit": "In civitáte Asturicénsi", "basePages": "1916 p. 56", "variation": "Restores torture and death details present in the 1956 Latin." },
+    { "officeDate": "2026-02-22", "id": "lazarus", "latinIncipit": "Constantinópoli sancti Lázari", "basePages": "1916 pp. 56-57", "variation": "Wording checked against the 1956 Latin." },
+    { "officeDate": "2026-02-22", "id": "felix", "latinIncipit": "Bríxiæ sancti Felícis", "basePages": "1916 p. 57", "variation": "Retained in the official Latin order." },
+    { "officeDate": "2026-02-22", "id": "polycarp-priest", "latinIncipit": "Romæ sancti Polycárpi Presbýteri", "basePages": "1916 p. 56", "variation": "Reordered after Felix to match the authoritative Latin." },
+    { "officeDate": "2026-02-22", "id": "florentius", "latinIncipit": "Híspali", "basePages": "1916 p. 57", "variation": "Wording checked against the 1956 Latin." },
+    { "officeDate": "2026-02-22", "id": "romana", "latinIncipit": "Tudérti", "basePages": "1916 p. 57", "variation": "Wording checked against the 1956 Latin." },
+    { "officeDate": "2026-02-22", "id": "milburga", "latinIncipit": "In Anglia sanctæ Milbúrgis", "basePages": "1916 p. 57", "variation": "Wording checked against the 1956 Latin." },
+    { "officeDate": "2026-02-22", "id": "leap-year-rubric", "latinIncipit": "In anno Bissextili", "basePages": "1916 p. 57", "variation": "Revised against the 1956 Latin form." },
+    { "officeDate": "2026-12-24", "id": "chronology", "latinIncipit": "Anno a creatióne mundi", "basePages": "1916 pp. 395-396", "variation": "Preserves the 1956 chronology and incorporates the official audible rubrics." },
+    { "officeDate": "2026-12-24", "id": "anastasia", "latinIncipit": "Eódem die natális sanctæ Anastásiæ", "basePages": "1916 p. 396", "variation": "Wording checked against the 1956 Latin." },
+    { "officeDate": "2026-12-24", "id": "peter-nolasco", "latinIncipit": "Barcinóne", "basePages": "1916 p. 397", "variation": "Moved before Eugenia and corrected from January 31 to January 28 under the official 1960 variation." },
+    { "officeDate": "2026-12-24", "id": "eugenia", "latinIncipit": "Romæ, in cœmetério Aproniáni", "basePages": "1916 p. 396", "variation": "Retained after Peter Nolasco in the official Latin order." },
+    { "officeDate": "2026-12-24", "id": "nicomedia", "latinIncipit": "Nicomedíæ pássio multórum míllium", "basePages": "1916 pp. 396-397", "variation": "Retained after Eugenia in the official Latin order." }
+  ]
+}

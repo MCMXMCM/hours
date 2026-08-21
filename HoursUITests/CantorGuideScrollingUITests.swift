@@ -3,7 +3,7 @@ import XCTest
 @MainActor
 final class CantorGuideScrollingUITests: XCTestCase {
     func testCantorGuideStartsAndStopsRealPlayback() {
-        let app = XCUIApplication()
+        let app = makeApplication()
         app.launchArguments += [
             "-automaticOfficeSelectionEnabled",
             "NO",
@@ -11,8 +11,8 @@ final class CantorGuideScrollingUITests: XCTestCase {
             "compline",
             "-hourSelectionView",
             "sunDial",
-            "--ui-test-reader-section",
-            "compline-ordered-42",
+            "--ui-test-reader-score",
+            "reference-cccbdc9d2a0c189f",
         ]
         app.launch()
 
@@ -61,10 +61,10 @@ final class CantorGuideScrollingUITests: XCTestCase {
     }
 
     func testCantorGuideKeepsSalveReginaPlaybackVisible() {
-        let app = XCUIApplication()
+        let app = makeApplication()
         app.launchArguments += [
-            "--ui-test-reader-section",
-            "compline-ordered-42",
+            "--ui-test-reader-score",
+            "reference-cccbdc9d2a0c189f",
             "--ui-test-cantor-follow",
         ]
         app.launch()
@@ -125,5 +125,11 @@ final class CantorGuideScrollingUITests: XCTestCase {
         let prayButton = app.buttons["pray-selected-hour"]
         XCTAssertTrue(prayButton.waitForExistence(timeout: 3))
         prayButton.tap()
+    }
+
+    private func makeApplication() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments.append("--suppress-app-tour")
+        return app
     }
 }

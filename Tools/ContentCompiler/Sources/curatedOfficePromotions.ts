@@ -3,6 +3,10 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { LoadedScoredOffice } from "./breviariumGregorianum.ts";
 import { canonicalVisibleContentDigest } from "./compiler.ts";
+import {
+  exceptionalMartyrologyEnglish,
+  exceptionalMartyrologyReview
+} from "./exceptionalMartyrology.ts";
 import type {
   ChantScore,
   OfficeDocument,
@@ -75,6 +79,16 @@ const curatedPrimeRequirements: Record<string, {
   }
 };
 
+const curatedObservanceEnglish: Record<string, string> = {
+  "2026-02-22": "First Sunday of Lent",
+  "2026-04-06": "Monday within the Octave of Easter",
+  "2026-04-07": "Tuesday within the Octave of Easter",
+  "2026-04-08": "Wednesday within the Octave of Easter",
+  "2026-04-09": "Thursday within the Octave of Easter",
+  "2026-04-10": "Friday within the Octave of Easter",
+  "2026-12-24": "Vigil of the Nativity of the Lord"
+};
+
 function officeKey(value: { date: string; hour: string }): string {
   return `${value.date}:${value.hour}`;
 }
@@ -130,41 +144,52 @@ function cleanOrderedSections(source: LoadedScoredOffice): OfficeSection[] {
     return {
       ...section,
       id: `curated-${source.hour}-${index}`,
-      english: null
+      english: section.english
+        ?? (section.latin === "Orémus." ? "Let us pray." : null)
     };
   });
 }
 
-function properAntiphon(office: OfficeDocument): string {
+function properAntiphon(office: OfficeDocument): { latin: string; english: string } {
   const title = office.hour === "lauds"
     ? "Canticum: Benedictus"
     : "Canticum: Magnificat";
-  const source = office.sections.find(section => section.title === title)?.latin;
-  const match = source?.match(/\n\nAnt\. ([\s\S]+?)\n\nCanticum /);
-  if (!match) {
+  const source = office.sections.find(section => section.title === title);
+  const latin = source?.latin.match(/\n\nAnt\. ([\s\S]+?)\n\nCanticum /)?.[1];
+  const english = source?.english?.match(/\n\nAnt\. ([\s\S]+?)\n\nCanticle /)?.[1];
+  if (!latin || !english) {
     throw new Error(`${localDateKey(office)}:${office.hour} lacks its proper antiphon`);
   }
-  return match[1].trim();
+  return { latin: latin.trim(), english: english.trim() };
 }
 
-function properCollect(office: OfficeDocument): string {
-  const source = office.sections.find(section => section.title === "Oratio")?.latin;
-  const match = source?.match(/\n\nOrémus\.\n\n([\s\S]+?)\n\n℟\. Amen\.\s*$/);
-  if (!match) {
+function properCollect(office: OfficeDocument): { latin: string; english: string } {
+  const source = office.sections.find(section => section.title === "Oratio");
+  const latin = source?.latin.match(
+    /\n\nOrémus\.\n\n([\s\S]+?)\n\n℟\. Amen\.\s*$/
+  )?.[1];
+  const english = source?.english?.match(
+    /\n\nLet us pray\.\n\n([\s\S]+?)\n\n℟\. Amen\.\s*$/i
+  )?.[1];
+  if (!latin || !english) {
     throw new Error(`${localDateKey(office)}:${office.hour} lacks its proper collect`);
   }
-  return match[1].replace(/\n\n/g, "\n").trim();
+  return {
+    latin: latin.replace(/\n\n/g, "\n").trim(),
+    english: english.replace(/\n\n/g, "\n").trim()
+  };
 }
 
-function octaveVerse(office: OfficeDocument): string {
+function octaveVerse(office: OfficeDocument): { latin: string; english: string } {
   const source = office.sections.find(
     section => section.title === "Versus (In loco Capituli)"
-  )?.latin;
-  const match = source?.match(/\n\n(Ant\. [\s\S]+)$/);
-  if (!match) {
+  );
+  const latin = source?.latin.match(/\n\n(Ant\. [\s\S]+)$/)?.[1];
+  const english = source?.english?.match(/\n\n(Ant\. [\s\S]+)$/)?.[1];
+  if (!latin || !english) {
     throw new Error(`${localDateKey(office)}:${office.hour} lacks Hæc dies`);
   }
-  return match[1].trim();
+  return { latin: latin.trim(), english: english.trim() };
 }
 
 function generatedCanticleTemplate(
@@ -221,18 +246,22 @@ function replaceEasterPropers(
   const repeatedAntiphonIndex = 19;
   const collectIndex = 22;
   const antiphon = properAntiphon(office);
-  const chant = exactChant(sourceID, mode, antiphon);
+  const collect = properCollect(office);
+  const verse = octaveVerse(office);
+  const chant = exactChant(sourceID, mode, antiphon.latin);
 
   sections[verseIndex] = {
     ...sections[verseIndex],
     kind: "versicle",
     title: "Versus (In loco Capituli)",
-    latin: octaveVerse(office),
+    latin: verse.latin,
+    english: verse.english,
     chant: exactChant("2230", "2", "Hæc dies")
   };
   sections[antiphonIndex] = {
     ...sections[antiphonIndex],
-    latin: antiphon,
+    latin: antiphon.latin,
+    english: antiphon.english,
     chant
   };
   sections[canticleIndex] = {
@@ -241,12 +270,14 @@ function replaceEasterPropers(
   };
   sections[repeatedAntiphonIndex] = {
     ...sections[repeatedAntiphonIndex],
-    latin: antiphon.replace(/\s+\*\s+/, " "),
+    latin: antiphon.latin.replace(/\s+\*\s+/, " "),
+    english: antiphon.english,
     chant
   };
   sections[collectIndex] = {
     ...sections[collectIndex],
-    latin: properCollect(office)
+    latin: collect.latin,
+    english: collect.english
   };
   return sections;
 }
@@ -256,9 +287,13 @@ function easterOffice(
   proper: { sourceID: string; mode: string; incipit: string },
   collectIncipit: string,
   scaffold: LoadedScoredOffice,
-  scored: LoadedScoredOffice[]
+  scored: LoadedScoredOffice[],
+  enrichSections: (
+    sections: OfficeSection[],
+    office: OfficeDocument
+  ) => OfficeSection[]
 ): OfficeDocument {
-  const scaffoldSections = cleanOrderedSections(scaffold);
+  const scaffoldSections = enrichSections(cleanOrderedSections(scaffold), office);
   const sections = office.hour === "lauds"
     ? scaffoldSections.slice(2)
     : scaffoldSections;
@@ -279,10 +314,13 @@ function easterOffice(
     format: "authoritativeOrdered",
     visibleContentDigest,
     sections,
-    observance: office.observance ?? {
-      observanceID: `curated/${localDateKey(office)}`,
-      titleLatin: office.contextLabel,
-      commemorations: []
+    observance: {
+      ...(office.observance ?? {
+        observanceID: `curated/${localDateKey(office)}`,
+        titleLatin: office.contextLabel,
+        commemorations: []
+      }),
+      titleEnglish: curatedObservanceEnglish[localDateKey(office)]
     }
   };
 }
@@ -294,12 +332,16 @@ function primeOffice(office: OfficeDocument): OfficeDocument {
   const sections = office.sections.map((section, index) => ({
     ...structuredClone(section),
     id: `curated-prime-${index}`,
-    english: null,
     chant: null
   }));
   const martyrology = sections.find(section => section.title === "Martyrologium");
   if (!martyrology) {
     throw new Error(`${localDateKey(office)}:prime has an incomplete Martyrology`);
+  }
+  exceptionalMartyrologyReview();
+  martyrology.english = exceptionalMartyrologyEnglish[localDateKey(office)];
+  if (!martyrology.english) {
+    throw new Error(`${key} lacks its pinned 1916-based English revision`);
   }
   let previous = -1;
   for (const incipit of requirements.orderedIncipits) {
@@ -314,23 +356,36 @@ function primeOffice(office: OfficeDocument): OfficeDocument {
       throw new Error(`${key} contains suppressed Martyrology text "${forbidden}"`);
     }
   }
+  if (
+    /vigil of (?:the apostle )?saint matthias/i.test(martyrology.english)
+    || /31st of january|last day of january/i.test(martyrology.english)
+  ) {
+    throw new Error(`${key} retains forbidden legacy English Martyrology wording`);
+  }
   return {
     ...office,
     sourceVersion: `${office.sourceVersion}+curated-martyrology-1960`,
     format: "authoritativeOrdered",
     visibleContentDigest: canonicalVisibleContentDigest(sections),
     sections,
-    observance: office.observance ?? {
-      observanceID: `curated/${localDateKey(office)}`,
-      titleLatin: office.contextLabel,
-      commemorations: []
+    observance: {
+      ...(office.observance ?? {
+        observanceID: `curated/${localDateKey(office)}`,
+        titleLatin: office.contextLabel,
+        commemorations: []
+      }),
+      titleEnglish: curatedObservanceEnglish[localDateKey(office)]
     }
   };
 }
 
 export function curatedOfficePromotions(
   offices: OfficeDocument[],
-  scored: LoadedScoredOffice[]
+  scored: LoadedScoredOffice[],
+  enrichSections: (
+    sections: OfficeSection[],
+    office: OfficeDocument
+  ) => OfficeSection[] = sections => sections
 ): ReadonlyMap<string, OfficeDocument> {
   const officesByKey = new Map(
     offices.map(office => [`${localDateKey(office)}:${office.hour}`, office])
@@ -358,7 +413,8 @@ export function curatedOfficePromotions(
           proper[hour],
           proper.collectIncipit,
           hour === "lauds" ? laudsScaffold! : vespersScaffold!,
-          scored
+          scored,
+          enrichSections
         )
       );
     }
@@ -380,5 +436,8 @@ export function curatedPromotionChecksum(): string {
   }
   hash.update(sourceGABC("2230"));
   hash.update(JSON.stringify(curatedPrimeRequirements));
+  hash.update(JSON.stringify(curatedObservanceEnglish));
+  hash.update(JSON.stringify(exceptionalMartyrologyEnglish));
+  hash.update(exceptionalMartyrologyReview().checksum);
   return hash.digest("hex");
 }

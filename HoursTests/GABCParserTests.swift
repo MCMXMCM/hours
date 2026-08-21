@@ -254,6 +254,19 @@ final class GregorianScoreParserTests: XCTestCase {
         )
     }
 
+    func testProjectsCompleteLatinWithoutLosingWordBoundaries() throws {
+        let timeline = makeTimeline(
+            pitches: [5, 6, 7, 8, 9, 10, 9],
+            syllables: ["Sal", "ve,", "Re", "gí", "na", "Dó", "mi"]
+        )
+        let score = try GregorianScoreParser.parse(
+            gabc: "name: Salve; %% (c4) Sal(f)ve,(g) Re(h)gí(i)na(j) *()Dó(k)mi(j) (::)",
+            timeline: timeline
+        )
+
+        XCTAssertEqual(score.lyricText, "Salve, Regína * Dómi")
+    }
+
     func testUsesVersicleAndResponseGlyphsInsteadOfAsciiSlashes() throws {
         let timeline = makeTimeline(
             pitches: [5, 6],

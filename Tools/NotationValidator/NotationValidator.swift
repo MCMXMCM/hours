@@ -5,7 +5,7 @@ import Darwin
 struct NotationValidator {
     static func main() async {
         let arguments = Array(CommandLine.arguments.dropFirst())
-        let allowIncomplete = arguments.contains("--allow-incomplete")
+        let databaseOnly = arguments.contains("--database-only")
         guard let databasePath = arguments.first, !databasePath.hasPrefix("--") else {
             fail(usage)
         }
@@ -33,45 +33,22 @@ struct NotationValidator {
 
         do {
             let databaseURL = URL(fileURLWithPath: databasePath)
+            try ContentDatabaseValidator.validate(
+                databaseURL: databaseURL,
+                validatesNotation: true
+            )
+            if databaseOnly {
+                print("Validated normalized database, schedule, recipes, and every unique score.")
+                return
+            }
             let repository = try SQLiteContentRepository(databaseURL: databaseURL)
-            let days: [LiturgicalDay]
-            do {
-                days = try await repository.availableDays()
-            } catch {
-                throw ValidationError(
-                    "Could not decode the day index: \(error.localizedDescription)"
-                )
-            }
-            var offices: [OfficeDocument] = []
-            offices.reserveCapacity(days.count * OfficeHour.allCases.count)
-            var missingOfficeCount = 0
-            for day in days {
-                for hour in OfficeHour.allCases {
-                    do {
-                        offices.append(try await repository.office(on: day.date, hour: hour))
-                    } catch ContentRepositoryError.contentUnavailable where allowIncomplete {
-                        missingOfficeCount += 1
-                    } catch {
-                        throw ValidationError(
-                            "Could not decode \(day.date):\(hour.rawValue): "
-                                + error.localizedDescription
-                        )
-                    }
-                }
-            }
-            let unavailableOfficeCount = offices.filter {
-                $0.format == .contentUnavailable
-            }.count
-            try GregorianCorpusValidator.validate(offices: offices)
             try validateSemanticFixtures()
-            let layoutCount = try validateEngraving(offices: offices)
+            let scoreCount = try await repository.forEachScoredRealization {
+                try validateEngraving(score: $0)
+            }
             print(
-                "Validated \(offices.flatMap(\.playableScores).count) native scores "
-                    + "across \(offices.count) offices and \(layoutCount) responsive layouts"
-                    + (unavailableOfficeCount == 0 && missingOfficeCount == 0
-                        ? "."
-                        : "; \(unavailableOfficeCount) metadata-only placeholders and "
-                            + "\(missingOfficeCount) omitted offices.")
+                "Validated \(scoreCount) unique native scores and "
+                    + "\(scoreCount * engravingWidths.count) responsive layouts."
             )
         } catch let error as GregorianCorpusValidationError {
             fail(
@@ -85,7 +62,8 @@ struct NotationValidator {
     }
 
     private static let usage = """
-        usage: NotationValidator /path/to/content.sqlite [--allow-incomplete]
+        usage: NotationValidator /path/to/content.sqlite
+               NotationValidator /path/to/content.sqlite --database-only
                NotationValidator /path/to/content.sqlite \
         --reader-layout-report YYYY-MM-DD HOUR WIDTH
         """
@@ -169,7 +147,9 @@ struct NotationValidator {
         exit(EXIT_FAILURE)
     }
 
-    private static func validateEngraving(offices: [OfficeDocument]) throws -> Int {
+    private static let engravingWidths: [CGFloat] = [320, 390, 768]
+
+    private static func validateEngraving(score: ChantScore) throws {
         guard GregorianGlyphName.allCases.count == 49 else {
             throw ValidationError("generated glyph catalog should contain 49 names")
         }
@@ -180,43 +160,33 @@ struct NotationValidator {
             }
         }
 
-        let widths: [CGFloat] = [320, 390, 768]
-        var count = 0
-        var seenScoreIDs: Set<String> = []
-        let scores = offices
-            .flatMap(\.playableScores)
-            .filter { seenScoreIDs.insert($0.id).inserted }
-        for score in scores {
-            let notation = try GregorianScoreParser.parse(
-                gabc: score.gabc,
-                timeline: score.timeline
+        let notation = try GregorianScoreParser.parse(
+            gabc: score.gabc,
+            timeline: score.timeline
+        )
+        for width in engravingWidths {
+            let layout = GregorianEngravingLayoutEngine().layout(
+                score: notation,
+                width: width
             )
-            for width in widths {
-                let layout = GregorianEngravingLayoutEngine().layout(
-                    score: notation,
-                    width: width
-                )
-                guard layout.events.map(\.eventID) == notation.eventIDs else {
-                    throw ValidationError("\(score.id) lost event identity at width \(width)")
+            guard layout.events.map(\.eventID) == notation.eventIDs else {
+                throw ValidationError("\(score.id) lost event identity at width \(width)")
+            }
+            guard layout.size.width.isFinite, layout.size.height.isFinite,
+                  layout.glyphs.allSatisfy({
+                      $0.frame.minX.isFinite && $0.frame.minY.isFinite
+                          && $0.frame.width.isFinite && $0.frame.height.isFinite
+                  }) else {
+                throw ValidationError("\(score.id) produced non-finite engraving geometry")
+            }
+            for line in Dictionary(grouping: layout.neumes, by: \.lineIndex).values {
+                let ordered = line.sorted { $0.hitFrame.minX < $1.hitFrame.minX }
+                for pair in zip(ordered, ordered.dropFirst())
+                where pair.0.hitFrame.maxX > pair.1.hitFrame.minX + 0.01 {
+                    throw ValidationError("\(score.id) produced overlapping neume targets")
                 }
-                guard layout.size.width.isFinite, layout.size.height.isFinite,
-                      layout.glyphs.allSatisfy({
-                          $0.frame.minX.isFinite && $0.frame.minY.isFinite
-                              && $0.frame.width.isFinite && $0.frame.height.isFinite
-                      }) else {
-                    throw ValidationError("\(score.id) produced non-finite engraving geometry")
-                }
-                for line in Dictionary(grouping: layout.neumes, by: \.lineIndex).values {
-                    let ordered = line.sorted { $0.hitFrame.minX < $1.hitFrame.minX }
-                    for pair in zip(ordered, ordered.dropFirst())
-                    where pair.0.hitFrame.maxX > pair.1.hitFrame.minX + 0.01 {
-                        throw ValidationError("\(score.id) produced overlapping neume targets")
-                    }
-                }
-                count += 1
             }
         }
-        return count
     }
 
     private static func validateSemanticFixtures() throws {

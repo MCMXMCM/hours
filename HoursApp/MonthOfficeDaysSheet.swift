@@ -5,9 +5,10 @@ struct MonthOfficeDaysSheet: View {
     let days: [LiturgicalDay]
     @Binding var selection: Date
     let availableRange: ClosedRange<Date>
-    let onDone: () -> Void
+    let onClose: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(AppTourCoordinator.self) private var tour
     @State private var displayedMonth: Date
     @State private var monthTransition: MonthNavigationDirection?
     @State private var scrollEdges = MonthScrollEdges()
@@ -21,13 +22,13 @@ struct MonthOfficeDaysSheet: View {
         days: [LiturgicalDay],
         selection: Binding<Date>,
         availableRange: ClosedRange<Date>,
-        onDone: @escaping () -> Void
+        onClose: @escaping () -> Void
     ) {
         let calendar = Calendar.hoursGregorian
         self.days = days
         _selection = selection
         self.availableRange = availableRange
-        self.onDone = onDone
+        self.onClose = onClose
         _displayedMonth = State(
             initialValue: OfficeCalendarMath.startOfMonth(
                 containing: selection.wrappedValue,
@@ -75,6 +76,9 @@ struct MonthOfficeDaysSheet: View {
                     .simultaneousGesture(monthOverscrollGesture)
                     .task(id: displayedMonth) {
                         await Task.yield()
+                        try? await Task.sleep(
+                            for: .milliseconds(120)
+                        )
                         if monthDays.contains(
                             where: { $0.date == selectedLocalDay }
                         ) {
@@ -115,7 +119,7 @@ struct MonthOfficeDaysSheet: View {
                             selection: $selection,
                             in: availableRange,
                             isNavigationEmbedded: true,
-                            onDone: onDone
+                            onClose: onClose
                         )
                     } label: {
                         Image(systemName: "calendar")
@@ -125,11 +129,15 @@ struct MonthOfficeDaysSheet: View {
                         "Opens the calendar to choose another month or day"
                     )
                     .accessibilityIdentifier("month-days-calendar")
+                    .appTourTarget(.calendarIcon)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", action: onDone)
-                        .accessibilityIdentifier("month-days-done")
+                    SheetCloseButton(
+                        accessibilityLabel: "Close Calendar",
+                        accessibilityIdentifier: "month-days-close",
+                        action: onClose
+                    )
                 }
             }
         }
@@ -227,6 +235,9 @@ struct MonthOfficeDaysSheet: View {
         withAnimation(.easeInOut(duration: 0.2)) {
             displayedMonth = month
         }
+        if direction == .next {
+            tour.receive(.calendarMonthAdvanced)
+        }
     }
 
     private func dayButton(
@@ -234,13 +245,12 @@ struct MonthOfficeDaysSheet: View {
     ) -> some View {
         let isSelected = day.date == selectedLocalDay
         let isToday = day.date == todayLocalDay
-
         return Button {
             guard let date = day.date.date(in: calendar) else {
                 return
             }
             selection = date
-            onDone()
+            onClose()
         } label: {
             HStack(alignment: .center, spacing: 16) {
                 VStack(spacing: 1) {

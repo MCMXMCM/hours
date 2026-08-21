@@ -29,6 +29,48 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertFalse(AppDisplayMode.system.showsAmbientSky)
     }
 
+    func testPresentedReaderControlsDynamicAppearanceAfterRestoration() {
+        XCTAssertEqual(
+            RootView.appearanceHour(
+                presentedOfficeHour: .sext,
+                hourSelectionView: .wheel,
+                displayedHour: .compline,
+                selectedHour: .sext
+            ),
+            .sext
+        )
+        XCTAssertEqual(
+            RootView.appearanceHour(
+                presentedOfficeHour: .compline,
+                hourSelectionView: .wheel,
+                displayedHour: .sext,
+                selectedHour: .compline
+            ),
+            .compline
+        )
+    }
+
+    func testHomeAppearanceStillFollowsTheActiveHourSelector() {
+        XCTAssertEqual(
+            RootView.appearanceHour(
+                presentedOfficeHour: nil,
+                hourSelectionView: .wheel,
+                displayedHour: .vespers,
+                selectedHour: .prime
+            ),
+            .vespers
+        )
+        XCTAssertEqual(
+            RootView.appearanceHour(
+                presentedOfficeHour: nil,
+                hourSelectionView: .sunDial,
+                displayedHour: .vespers,
+                selectedHour: .prime
+            ),
+            .prime
+        )
+    }
+
     func testSundialShadowUsesTheEffectiveAppearance() {
         XCTAssertFalse(
             AppDisplayMode.showsSundialShadow(in: .dark)

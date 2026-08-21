@@ -4,9 +4,10 @@ import SwiftUI
 struct OfficeCalendarView: View {
     @Binding var selection: Date
     let availableRange: ClosedRange<Date>
-    let onDone: () -> Void
+    let onClose: () -> Void
 
     @State private var displayedMonth: Date
+    @Environment(AppTourCoordinator.self) private var tour
 
     private let isNavigationEmbedded: Bool
     private let calendar: Calendar
@@ -21,14 +22,14 @@ struct OfficeCalendarView: View {
         in availableRange: ClosedRange<Date>,
         today: Date = Date(),
         isNavigationEmbedded: Bool = false,
-        onDone: @escaping () -> Void
+        onClose: @escaping () -> Void
     ) {
         let calendar = Calendar.hoursGregorian
         let normalizedToday = calendar.startOfDay(for: today)
 
         _selection = selection
         self.availableRange = availableRange
-        self.onDone = onDone
+        self.onClose = onClose
         self.isNavigationEmbedded = isNavigationEmbedded
         self.calendar = calendar
         self.today = normalizedToday
@@ -55,6 +56,7 @@ struct OfficeCalendarView: View {
                 containing: selection,
                 calendar: calendar
             )
+            tour.receive(.calendarGridOpened)
         }
     }
 
@@ -92,7 +94,12 @@ struct OfficeCalendarView: View {
             }
 
             ToolbarItem(placement: .confirmationAction) {
-                Button("Done", action: onDone)
+                SheetCloseButton(
+                    accessibilityLabel: "Close Calendar",
+                    accessibilityIdentifier: "office-calendar-close",
+                    appTourTarget: .calendarClose,
+                    action: onClose
+                )
             }
         }
     }

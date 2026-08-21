@@ -48,6 +48,46 @@ function generatorDate(isoDate: string): string {
   return `${month}-${day}-${year}`;
 }
 
+export function renderDivinumOffice(options: {
+  sourceRoot: string;
+  date: string;
+  hour: OfficeHour;
+  latinLanguage?: "Latin" | "Latin-gabc";
+}): string {
+  const sourceRoot = resolve(options.sourceRoot);
+  const generatorDirectory = join(sourceRoot, "standalone", "tools", "epubgen2");
+  const generator = join(generatorDirectory, "EofficiumXhtml.pl");
+  const query = new URLSearchParams({
+    date1: generatorDate(options.date),
+    command: commandByHour[options.hour],
+    version: "Rubrics 1960 - 1960",
+    testmode: "regular",
+    lang1: options.latinLanguage ?? "Latin",
+    lang2: "English",
+    votive: "",
+    nofancychars: "1"
+  }).toString();
+  let html: string;
+  try {
+    html = execFileSync("perl", [generator, query], {
+      cwd: generatorDirectory,
+      encoding: "utf8",
+      maxBuffer: 16 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"]
+    });
+  } catch (error) {
+    throw new Error(
+      `Divinum Officium failed for ${options.date} ${options.hour}. `
+      + "Use its documented generator container when local Perl modules are unavailable.",
+      { cause: error }
+    );
+  }
+  if (!html.includes("<html") && !html.includes("<!DOCTYPE")) {
+    throw new Error(`Divinum Officium returned invalid HTML for ${options.date} ${options.hour}`);
+  }
+  return html;
+}
+
 export function assertPinnedCheckout(sourceRoot: string, expectedRevision: string): void {
   const actual = execFileSync("git", ["rev-parse", "HEAD"], {
     cwd: sourceRoot,
@@ -62,41 +102,12 @@ export function snapshotDivinumOfficium(options: SnapshotOptions): SnapshotRecor
   const sourceRoot = resolve(options.sourceRoot);
   const outputRoot = resolve(options.outputRoot);
   assertPinnedCheckout(sourceRoot, options.expectedRevision);
-  const generatorDirectory = join(sourceRoot, "standalone", "tools", "epubgen2");
-  const generator = join(generatorDirectory, "EofficiumXhtml.pl");
   const records: SnapshotRecord[] = [];
   mkdirSync(outputRoot, { recursive: true });
 
   for (const date of civilDates(options.from, options.to)) {
     for (const hour of officeHours) {
-      const command = commandByHour[hour];
-      const query = new URLSearchParams({
-        date1: generatorDate(date),
-        command,
-        version: "Rubrics 1960 - 1960",
-        testmode: "regular",
-        lang1: "Latin",
-        lang2: "English",
-        votive: "",
-        nofancychars: "1"
-      }).toString();
-      let html: string;
-      try {
-        html = execFileSync("perl", [generator, query], {
-          cwd: generatorDirectory,
-          encoding: "utf8",
-          maxBuffer: 16 * 1024 * 1024,
-          stdio: ["ignore", "pipe", "ignore"]
-        });
-      } catch (error) {
-        throw new Error(
-          `Divinum Officium failed for ${date} ${hour}. Use its documented generator container when local Perl modules are unavailable.`,
-          { cause: error }
-        );
-      }
-      if (!html.includes("<html") && !html.includes("<!DOCTYPE")) {
-        throw new Error(`Divinum Officium returned invalid HTML for ${date} ${hour}`);
-      }
+      const html = renderDivinumOffice({ sourceRoot, date, hour });
       const file = `${date}-${hour}.html`;
       writeFileSync(join(outputRoot, file), html);
       records.push({

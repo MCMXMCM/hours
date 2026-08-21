@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { compileCorpus, loadCorpus, validateCorpus } from "./compiler.ts";
 import { revisionFromLock, snapshotDivinumOfficium } from "./divinumOfficium.ts";
@@ -26,10 +26,27 @@ import {
   type ObservanceExpectation
 } from "./observanceAudit.ts";
 import { officeHours, type OfficeHour } from "./types.ts";
+import {
+  generatePerennialOrdo,
+  uniqueOfficeConfigurations,
+  type PerennialOrdoRange
+} from "./perennialOrdo.ts";
+import {
+  compilePerennialPreview,
+  compilePerennialRelease,
+  populatePerennialSourceCache
+} from "./perennialCorpus.ts";
 
 function valueAfter(flag: string): string | undefined {
   const index = process.argv.indexOf(flag);
   return index >= 0 ? process.argv[index + 1] : undefined;
+}
+
+function optionalPerennialRange(): PerennialOrdoRange | undefined {
+  const from = valueAfter("--window-from");
+  const to = valueAfter("--window-to");
+  if (Boolean(from) !== Boolean(to)) usage();
+  return from && to ? { from, to } : undefined;
 }
 
 function usage(): never {
@@ -47,6 +64,10 @@ function usage(): never {
   console.error("   or: cli.ts inspect-scored-reference --input office.html");
   console.error("   or: cli.ts compile-scored-reference --input office.html --output fixture.sqlite --date YYYY-MM-DD --hour matins");
   console.error("   or: cli.ts enrich-known-readings --input corpus.sqlite --output corpus.sqlite --chant-tools-root jgabc");
+  console.error("   or: cli.ts export-perennial-ordo --source-root divinum-officium --output ordo.json --from 1962 --to 2100");
+  console.error("   or: cli.ts cache-perennial-recipes --ordo ordo.json --source-root divinum-officium --cache sources.sqlite [--window-from YYYY-MM-DD --window-to YYYY-MM-DD] [--concurrency 12]");
+  console.error("   or: cli.ts compile-perennial-preview --ordo ordo.json --cache sources.sqlite --catalog base-office.sqlite --divinum-input snapshots/2026 --output base-office.sqlite [--window-from YYYY-MM-DD --window-to YYYY-MM-DD]");
+  console.error("   or: cli.ts compile-perennial-release --ordo ordo.json --cache sources.sqlite --catalog base-office.sqlite --divinum-input snapshots/2026 --output base-office.sqlite [--window-from YYYY-MM-DD --window-to YYYY-MM-DD]");
   process.exit(64);
 }
 
@@ -55,7 +76,73 @@ if (!command) usage();
 const allowIncomplete = process.argv.includes("--allow-incomplete");
 
 try {
-  if (command === "snapshot") {
+  if (command === "cache-perennial-recipes") {
+    const ordoPath = valueAfter("--ordo");
+    const sourceRoot = valueAfter("--source-root");
+    const cache = valueAfter("--cache");
+    if (!ordoPath || !sourceRoot || !cache) usage();
+    const ordo = JSON.parse(readFileSync(resolve(ordoPath), "utf8"));
+    await populatePerennialSourceCache({
+      ordo,
+      sourceRoot: resolve(sourceRoot),
+      cache: resolve(cache),
+      range: optionalPerennialRange(),
+      concurrency: Number(valueAfter("--concurrency") ?? "12"),
+      progress(completed, total) {
+        console.log(`Resolved ${completed}/${total} reusable office configurations`);
+      }
+    });
+    console.log(`Cached perennial recipe sources in ${resolve(cache)}`);
+  } else if (
+    command === "compile-perennial-preview"
+    || command === "compile-perennial-release"
+  ) {
+    const ordoPath = valueAfter("--ordo");
+    const cache = valueAfter("--cache");
+    const catalog = valueAfter("--catalog");
+    const divinumInput = valueAfter("--divinum-input");
+    const output = valueAfter("--output");
+    if (!ordoPath || !cache || !catalog || !divinumInput || !output) usage();
+    const compile = command === "compile-perennial-release"
+      ? compilePerennialRelease
+      : compilePerennialPreview;
+    const result = compile({
+      ordoPath: resolve(ordoPath),
+      cache: resolve(cache),
+      database2026: resolve(catalog),
+      divinumSnapshots2026: resolve(divinumInput),
+      output: resolve(output),
+      range: optionalPerennialRange()
+    });
+    console.log(
+      `Compiled ${result.recipes} reusable ${
+        command === "compile-perennial-release" ? "release" : "preview"
+      } recipes to ${resolve(output)} `
+      + `(${result.bytes} bytes)`
+    );
+    result.warnings.forEach(warning => console.warn(`warning: ${warning}`));
+  } else if (command === "export-perennial-ordo") {
+    const sourceRoot = valueAfter("--source-root");
+    const outputPath = valueAfter("--output");
+    const fromYear = Number(valueAfter("--from"));
+    const toYear = Number(valueAfter("--to"));
+    if (!sourceRoot || !outputPath || !fromYear || !toYear) usage();
+    const revision = revisionFromLock(
+      resolve("Tools/ContentCompiler/sources.lock.json"),
+      "Divinum Officium"
+    );
+    const schedule = generatePerennialOrdo({
+      sourceRoot: resolve(sourceRoot),
+      sourceRevision: revision,
+      fromYear,
+      toYear
+    });
+    writeFileSync(resolve(outputPath), `${JSON.stringify(schedule)}\n`);
+    console.log(
+      `Exported ${schedule.days.length} resolved days and `
+      + `${uniqueOfficeConfigurations(schedule).size} reusable office configurations`
+    );
+  } else if (command === "snapshot") {
     const sourceRoot = valueAfter("--source-root");
     const output = valueAfter("--output");
     const from = valueAfter("--from");

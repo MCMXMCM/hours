@@ -1,7 +1,7 @@
 import HoursCore
 import SwiftUI
 
-enum AppDisplayMode: String, CaseIterable, Identifiable {
+enum AppDisplayMode: String, Codable, CaseIterable, Identifiable {
     case dynamic
     case system
 
@@ -38,7 +38,7 @@ enum AppDisplayMode: String, CaseIterable, Identifiable {
     }
 }
 
-enum HourSelectionViewMode: String, CaseIterable, Identifiable {
+enum HourSelectionViewMode: String, Codable, CaseIterable, Identifiable {
     case sunDial
     case wheel
 

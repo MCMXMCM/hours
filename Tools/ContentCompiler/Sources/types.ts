@@ -97,6 +97,9 @@ export interface SourcePin {
   license: string;
   url: string;
   checksum: string;
+  notice?: string | null;
+  modifications?: string | null;
+  correspondingSource?: string | null;
 }
 
 export interface ChantEvent {
@@ -132,6 +135,10 @@ export interface ChantScore {
     sourceURL?: string | null;
     license: string;
     snapshot: string;
+    sourceRevision?: string | null;
+    notice?: string | null;
+    modifications?: string | null;
+    correspondingSource?: string | null;
   };
   timeline: ChantTimeline;
 }
@@ -140,9 +147,11 @@ export interface OfficeSection {
   id: string;
   kind: OfficeSectionKind;
   title: string;
+  titleEnglish?: string | null;
   latin: string;
   english?: string | null;
   rubric?: string | null;
+  rubricEnglish?: string | null;
   chant?: ChantScore | null;
 }
 
@@ -187,6 +196,7 @@ export interface LiturgicalDay {
 export interface Coverage {
   startDate: LocalDay;
   endDate: LocalDay;
+  reviewedCenterYear?: number | null;
   expectedOfficeCount: number;
   generatedOfficeCount: number;
   authoritativeOfficeCount?: number | null;
@@ -206,10 +216,37 @@ export interface Manifest {
   packSHA256: string;
   packURL?: string | null;
   signature: string;
+  compilerRevision?: string | null;
+  normalizedCounts?: {
+    textResources: number;
+    scoredChantRealizations: number;
+    recipes: number;
+    scheduledOffices: number;
+  } | null;
+  notices?: string[];
 }
 
 export interface CorpusInput {
   manifest: Manifest;
   days: LiturgicalDay[];
   offices: OfficeDocument[];
+}
+
+/**
+ * Compiler-only normalized input. A recipe is stored once and the civil-date
+ * schedule refers to it by key; callers never need to materialize hundreds of
+ * thousands of duplicate OfficeDocument values in memory.
+ */
+export interface ScheduledCorpusInput {
+  manifest: Manifest;
+  days: LiturgicalDay[];
+  recipes: Array<{
+    key: string;
+    office: OfficeDocument;
+  }>;
+  schedule: Array<{
+    date: LocalDay;
+    hour: OfficeHour;
+    recipeKey: string;
+  }>;
 }

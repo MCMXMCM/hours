@@ -3,37 +3,111 @@ import SwiftUI
 import UIKit
 
 struct HomeSettingsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AppTourCoordinator.self) private var tour
     @Binding var displayMode: AppDisplayMode
     @Binding var hourSelectionView: HourSelectionViewMode
     let isAtLocalTime: Bool
     let onAutomaticHourSelectionChanged: (Bool) -> Void
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    automaticHourSelection
-                    livePreviewSettings
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 28) {
+                        automaticHourSelection
+                        livePreviewSettings
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 12)
+                    .padding(.bottom, 36)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 12)
-                .padding(.bottom, 36)
+                .task(id: tour.step) {
+                    let step = tour.step
+                    let anchor: String?
+                    switch step {
+                    case .changeHourDisplay, .restoreHourDisplay:
+                        anchor = "settings-tour-hour-display"
+                    case .changeAppearance, .restoreAppearance:
+                        anchor = "settings-tour-appearance"
+                    case .restoreAutomaticTracking:
+                        anchor = "settings-tour-synchronization"
+                    default:
+                        anchor = nil
+                    }
+                    guard let anchor else { return }
+                    await Task.yield()
+                    guard !Task.isCancelled, tour.step == step else { return }
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        proxy.scrollTo(anchor, anchor: .center)
+                    }
+                    if step == .restoreAutomaticTracking,
+                       isAtLocalTime {
+                        tour.receive(
+                            .automaticHourSelectionChanged(true)
+                        )
+                    }
+                }
             }
             .background(Color.hoursBackground)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    aboutNavigationLink
+                }
+
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    SheetCloseButton(
+                        accessibilityLabel: "Close Settings",
+                        accessibilityIdentifier: "settings-close",
+                        action: dismiss.callAsFunction
+                    )
+                    .appTourTarget(.settingsClose)
                 }
             }
         }
+        .onAppear {
+            tour.receive(.settingsOpened)
+        }
+        .onChange(of: hourSelectionView) { _, mode in
+            tour.receive(.hourDisplayChanged(mode))
+        }
+        .onChange(of: displayMode) { _, mode in
+            tour.receive(.appearanceChanged(mode))
+        }
+    }
+
+    private var aboutNavigationLink: some View {
+        NavigationLink {
+            AboutSettingsView(
+                onClose: { dismiss() },
+                onAppTour: {
+                    tour.requestAboutReplay()
+                    dismiss()
+                }
+            )
+            .onAppear {
+                tour.receive(.aboutOpened)
+            }
+        } label: {
+            Image(systemName: "info.circle")
+                .font(.system(size: 18, weight: .medium))
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("About Hours")
+        .accessibilityHint(
+            "Shows the canonical hour schedule and contact information"
+        )
+        .accessibilityIdentifier("settings-about")
+        .appTourTarget(.settingsAbout)
     }
 
     private var livePreviewSettings: some View {
         TimelineView(
-            .periodic(from: .now, by: 1)
+            .periodic(from: .now, by: 60)
         ) { context in
             let currentHour = OfficeHour.current(
                 at: context.date
@@ -72,7 +146,7 @@ struct HomeSettingsView: View {
                                     displayMode: displayMode,
                                     currentHour: currentHour,
                                     colorScheme:
-                                        selectedDisplayColorScheme
+                                    selectedDisplayColorScheme
                                 )
                             }
                         }
@@ -81,6 +155,8 @@ struct HomeSettingsView: View {
                         maxWidth: SettingsPreviewLayout.maximumRowWidth
                     )
                     .frame(maxWidth: .infinity)
+                    .id("settings-tour-hour-display")
+                    .appTourTarget(.settingsHourDisplay)
                 }
 
                 previewSection(
@@ -130,6 +206,8 @@ struct HomeSettingsView: View {
                         maxWidth: SettingsPreviewLayout.maximumRowWidth
                     )
                     .frame(maxWidth: .infinity)
+                    .id("settings-tour-appearance")
+                    .appTourTarget(.settingsAppearance)
                 }
             }
         }
@@ -137,29 +215,8 @@ struct HomeSettingsView: View {
 
     private var automaticHourSelection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Synchronize")
-                    .font(.system(.title3, design: .serif))
-
-                Spacer()
-
-                NavigationLink {
-                    AboutSettingsView {
-                        dismiss()
-                    }
-                } label: {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 18, weight: .medium))
-                        .frame(width: 44, height: 32)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("About Hours")
-                .accessibilityHint(
-                    "Shows the canonical hour schedule and contact information"
-                )
-                .accessibilityIdentifier("settings-about")
-            }
+            Text("Synchronize")
+                .font(.system(.title3, design: .serif))
 
             Picker(
                 "Synchronization",
@@ -167,6 +224,9 @@ struct HomeSettingsView: View {
                     get: { isAtLocalTime },
                     set: { isAutomatic in
                         onAutomaticHourSelectionChanged(isAutomatic)
+                        tour.receive(
+                            .automaticHourSelectionChanged(isAutomatic)
+                        )
                     }
                 )
             ) {
@@ -178,6 +238,7 @@ struct HomeSettingsView: View {
             .accessibilityIdentifier(
                 "synchronization-mode-picker"
             )
+            .appTourTarget(.settingsSynchronization)
 
             sectionDescription(
                 automaticHourSelectionDescription,
@@ -185,6 +246,7 @@ struct HomeSettingsView: View {
                     "automatic-hour-selection-description"
             )
         }
+        .id("settings-tour-synchronization")
     }
 
     private var automaticHourSelectionDescription: String {
@@ -239,7 +301,9 @@ struct HomeSettingsView: View {
 private struct AboutSettingsView: View {
     private static let brandWidth: CGFloat = 232
 
-    let onDone: () -> Void
+    let onClose: () -> Void
+    let onAppTour: () -> Void
+    @Environment(AppTourCoordinator.self) private var tour
 
     var body: some View {
         ScrollView {
@@ -259,6 +323,40 @@ private struct AboutSettingsView: View {
                 }
                 .frame(maxWidth: .infinity)
 
+                Button {
+                    if !tour.isActive {
+                        onAppTour()
+                    }
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "sparkles.rectangle.stack")
+                            .font(.system(size: 21))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 30)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("App Tour")
+                                .font(.body)
+                            Text("Replay the guided tour of Hours")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer(minLength: 8)
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(
+                    "Closes Settings and begins the tour from Home"
+                )
+                .accessibilityIdentifier("about-app-tour")
+                .appTourTarget(.aboutTour)
+
                 contactSection
             }
             .padding(.horizontal, 24)
@@ -270,8 +368,11 @@ private struct AboutSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Done", action: onDone)
-                    .accessibilityIdentifier("about-done")
+                SheetCloseButton(
+                    accessibilityLabel: "Close Settings",
+                    accessibilityIdentifier: "about-close",
+                    action: onClose
+                )
             }
         }
     }
@@ -413,6 +514,7 @@ private struct PreviewSelectionCard<Preview: View>: View {
             VStack(spacing: 8) {
                 preview()
                     .frame(height: SettingsPreviewLayout.previewHeight)
+                    .allowsHitTesting(false)
                     .clipShape(
                         RoundedRectangle(
                             cornerRadius: 18,

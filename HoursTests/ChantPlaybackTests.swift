@@ -7,10 +7,48 @@ import XCTest
 final class ChantPlaybackTests: XCTestCase {
     private static var retainedAudioControllers: [ChantPlaybackController] = []
 
+    override func setUp() {
+        super.setUp()
+        let defaults = UserDefaults.standard
+        defaults.removeObject(
+            forKey: ChantPlaybackController.guideSoundKey
+        )
+        defaults.removeObject(
+            forKey: ChantPlaybackController.scholaPitchKey
+        )
+        defaults.removeObject(
+            forKey: ChantPlaybackController.chantRegisterKey
+        )
+    }
+
     func testCantorGuideDefaultsToOneHundredPercentTempo() {
         let controller = ChantPlaybackController()
 
         XCTAssertEqual(controller.tempo, 1.0)
+    }
+
+    func testCantorGuideOptionsSurviveRelaunch() throws {
+        let suiteName = "ChantPlaybackTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(
+            UserDefaults(suiteName: suiteName)
+        )
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        let controller = ChantPlaybackController(
+            userDefaults: defaults
+        )
+
+        controller.guideSound = .simpleTone
+        controller.scholaPitch = .bFlat
+        controller.chantRegister = .high
+
+        let relaunchedController = ChantPlaybackController(
+            userDefaults: defaults
+        )
+        XCTAssertEqual(relaunchedController.guideSound, .simpleTone)
+        XCTAssertEqual(relaunchedController.scholaPitch, .bFlat)
+        XCTAssertEqual(relaunchedController.chantRegister, .high)
     }
 
     func testCantorGuideDismissesOnlyForADeliberateDownwardSwipe() {

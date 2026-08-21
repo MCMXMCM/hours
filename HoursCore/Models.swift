@@ -72,6 +72,42 @@ public struct LocalDay: Codable, Hashable, Comparable, Sendable, CustomStringCon
     public static func < (lhs: LocalDay, rhs: LocalDay) -> Bool {
         (lhs.year, lhs.month, lhs.day) < (rhs.year, rhs.month, rhs.day)
     }
+
+    /// The church-calendar year containing this day, from the First Sunday
+    /// of Advent through the day before the following First Sunday of Advent.
+    public var liturgicalYearRange: ClosedRange<LocalDay> {
+        let adventThisCivilYear = Self.firstSundayOfAdvent(in: year)
+        let startYear = self < adventThisCivilYear ? year - 1 : year
+        let start = Self.firstSundayOfAdvent(in: startYear)
+        let nextStart = Self.firstSundayOfAdvent(in: startYear + 1)
+        guard let nextStartDate = nextStart.date,
+              let endDate = Calendar.hoursGregorian.date(
+                byAdding: .day,
+                value: -1,
+                to: nextStartDate
+              ) else {
+            return start...nextStart
+        }
+        return start...Self(endDate)
+    }
+
+    private static func firstSundayOfAdvent(in year: Int) -> LocalDay {
+        let calendar = Calendar.hoursGregorian
+        let november27 = LocalDay(year: year, month: 11, day: 27)
+        guard let date = november27.date(in: calendar) else {
+            return november27
+        }
+        let weekday = calendar.component(.weekday, from: date)
+        let daysUntilSunday = (8 - weekday) % 7
+        guard let advent = calendar.date(
+            byAdding: .day,
+            value: daysUntilSunday,
+            to: date
+        ) else {
+            return november27
+        }
+        return LocalDay(advent, calendar: calendar)
+    }
 }
 
 public extension Calendar {
@@ -540,11 +576,17 @@ public struct ChantScore: Codable, Hashable, Sendable, Identifiable {
     }
 }
 
+/// A complete, indivisible pairing of GABC lyrics, neumes, and event identity.
+/// Hours never applies the notation to a separately syllabified text.
+public typealias ScoredChantRealization = ChantScore
+
 public struct OfficeSection: Codable, Hashable, Sendable, Identifiable {
     public let id: String
     public let kind: OfficeSectionKind
     public let title: String
+    public let titleEnglish: String?
     public let rubric: String?
+    public let rubricEnglish: String?
     public let latin: String
     public let english: String?
     public let chant: ChantScore?
@@ -553,7 +595,9 @@ public struct OfficeSection: Codable, Hashable, Sendable, Identifiable {
         id: String,
         kind: OfficeSectionKind,
         title: String,
+        titleEnglish: String? = nil,
         rubric: String? = nil,
+        rubricEnglish: String? = nil,
         latin: String,
         english: String? = nil,
         chant: ChantScore? = nil
@@ -561,7 +605,9 @@ public struct OfficeSection: Codable, Hashable, Sendable, Identifiable {
         self.id = id
         self.kind = kind
         self.title = title
+        self.titleEnglish = titleEnglish
         self.rubric = rubric
+        self.rubricEnglish = rubricEnglish
         self.latin = latin
         self.english = english
         self.chant = chant
@@ -667,25 +713,54 @@ public struct ContentSourcePin: Codable, Hashable, Sendable {
     public let revision: String
     public let license: String
     public let checksum: String
+    public let notice: String?
+    public let modifications: String?
+    public let correspondingSource: URL?
 
     public init(
         name: String,
         url: URL,
         revision: String,
         license: String,
-        checksum: String
+        checksum: String,
+        notice: String? = nil,
+        modifications: String? = nil,
+        correspondingSource: URL? = nil
     ) {
         self.name = name
         self.url = url
         self.revision = revision
         self.license = license
         self.checksum = checksum
+        self.notice = notice
+        self.modifications = modifications
+        self.correspondingSource = correspondingSource
+    }
+}
+
+public struct NormalizedContentCounts: Codable, Hashable, Sendable {
+    public let textResources: Int
+    public let scoredChantRealizations: Int
+    public let recipes: Int
+    public let scheduledOffices: Int
+
+    public init(
+        textResources: Int,
+        scoredChantRealizations: Int,
+        recipes: Int,
+        scheduledOffices: Int
+    ) {
+        self.textResources = textResources
+        self.scoredChantRealizations = scoredChantRealizations
+        self.recipes = recipes
+        self.scheduledOffices = scheduledOffices
     }
 }
 
 public struct ContentCoverage: Codable, Hashable, Sendable {
     public let startDate: LocalDay
     public let endDate: LocalDay
+    public let reviewedCenterYear: Int?
     public let expectedOfficeCount: Int
     public let generatedOfficeCount: Int
     public let authoritativeOfficeCount: Int?
@@ -696,6 +771,7 @@ public struct ContentCoverage: Codable, Hashable, Sendable {
     public init(
         startDate: LocalDay,
         endDate: LocalDay,
+        reviewedCenterYear: Int? = nil,
         expectedOfficeCount: Int,
         generatedOfficeCount: Int,
         authoritativeOfficeCount: Int? = nil,
@@ -705,6 +781,7 @@ public struct ContentCoverage: Codable, Hashable, Sendable {
     ) {
         self.startDate = startDate
         self.endDate = endDate
+        self.reviewedCenterYear = reviewedCenterYear
         self.expectedOfficeCount = expectedOfficeCount
         self.generatedOfficeCount = generatedOfficeCount
         self.authoritativeOfficeCount = authoritativeOfficeCount
@@ -715,10 +792,26 @@ public struct ContentCoverage: Codable, Hashable, Sendable {
 
     public var isReleaseReady: Bool {
         !isSample
+            && hasReviewedWindowCoverage
             && expectedOfficeCount == generatedOfficeCount
             && authoritativeOfficeCount == expectedOfficeCount
             && unresolvedScoreCount == 0
             && ambiguousScoreCount == 0
+    }
+
+    public var hasReviewedWindowCoverage: Bool {
+        guard let reviewedCenterYear else { return false }
+        let expectedStart = LocalDay(
+            year: reviewedCenterYear - 1,
+            month: 1,
+            day: 1
+        )
+        let expectedEnd = LocalDay(
+            year: reviewedCenterYear + 10,
+            month: 12,
+            day: 31
+        )
+        return startDate == expectedStart && endDate == expectedEnd
     }
 }
 
@@ -733,6 +826,9 @@ public struct ContentManifest: Codable, Hashable, Sendable {
     public let signature: String
     public let sources: [ContentSourcePin]
     public let coverage: ContentCoverage
+    public let compilerRevision: String?
+    public let normalizedCounts: NormalizedContentCounts?
+    public let notices: [String]?
 
     public init(
         schemaVersion: Int,
@@ -744,7 +840,10 @@ public struct ContentManifest: Codable, Hashable, Sendable {
         packURL: URL? = nil,
         signature: String,
         sources: [ContentSourcePin],
-        coverage: ContentCoverage
+        coverage: ContentCoverage,
+        compilerRevision: String? = nil,
+        normalizedCounts: NormalizedContentCounts? = nil,
+        notices: [String]? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.corpusVersion = corpusVersion
@@ -756,6 +855,9 @@ public struct ContentManifest: Codable, Hashable, Sendable {
         self.signature = signature
         self.sources = sources
         self.coverage = coverage
+        self.compilerRevision = compilerRevision
+        self.normalizedCounts = normalizedCounts
+        self.notices = notices
     }
 
     public var signingPayload: Data {
@@ -763,5 +865,128 @@ public struct ContentManifest: Codable, Hashable, Sendable {
             "\(schemaVersion)|\(corpusVersion)|\(minimumAppVersion)|\(packSHA256)"
                 .utf8
         )
+    }
+}
+
+public enum LiturgicalSearchLanguage: String, Codable, Hashable, Sendable {
+    case all
+    case latin
+    case english
+}
+
+public struct LiturgicalSearchHit: Codable, Identifiable, Hashable, Sendable {
+    public let id: String
+    public let kind: OfficeSectionKind
+    public let titleLatin: String
+    public let titleEnglish: String?
+    public let snippet: String
+    public let snippetLanguage: LiturgicalSearchLanguage
+    public let hasScoredRealizations: Bool
+
+    public init(
+        id: String,
+        kind: OfficeSectionKind,
+        titleLatin: String,
+        titleEnglish: String? = nil,
+        snippet: String,
+        snippetLanguage: LiturgicalSearchLanguage,
+        hasScoredRealizations: Bool = false
+    ) {
+        self.id = id
+        self.kind = kind
+        self.titleLatin = titleLatin
+        self.titleEnglish = titleEnglish
+        self.snippet = snippet
+        self.snippetLanguage = snippetLanguage
+        self.hasScoredRealizations = hasScoredRealizations
+    }
+}
+
+public struct LiturgicalUsageContext: Codable, Hashable, Sendable {
+    public let observanceID: String?
+    public let firstDate: LocalDay
+    public let lastDate: LocalDay
+    public let hour: OfficeHour
+    public let observanceTitleLatin: String
+    public let observanceTitleEnglish: String?
+    public let occurrenceCount: Int
+    public let settingModes: [String]
+
+    public init(
+        observanceID: String? = nil,
+        firstDate: LocalDay,
+        lastDate: LocalDay,
+        hour: OfficeHour,
+        observanceTitleLatin: String,
+        observanceTitleEnglish: String? = nil,
+        occurrenceCount: Int = 1,
+        settingModes: [String] = []
+    ) {
+        self.observanceID = observanceID
+        self.firstDate = firstDate
+        self.lastDate = lastDate
+        self.hour = hour
+        self.observanceTitleLatin = observanceTitleLatin
+        self.observanceTitleEnglish = observanceTitleEnglish
+        self.occurrenceCount = occurrenceCount
+        self.settingModes = settingModes
+    }
+
+    public init(
+        date: LocalDay,
+        hour: OfficeHour,
+        dayTitleLatin: String,
+        dayTitleEnglish: String? = nil,
+        settingModes: [String] = []
+    ) {
+        self.init(
+            firstDate: date,
+            lastDate: date,
+            hour: hour,
+            observanceTitleLatin: dayTitleLatin,
+            observanceTitleEnglish: dayTitleEnglish,
+            settingModes: settingModes
+        )
+    }
+
+    public var date: LocalDay { firstDate }
+    public var dayTitleLatin: String { observanceTitleLatin }
+    public var dayTitleEnglish: String? { observanceTitleEnglish }
+}
+
+public struct LiturgicalSearchResult: Identifiable, Hashable, Sendable {
+    public let id: String
+    public let kind: OfficeSectionKind
+    public let titleLatin: String
+    public let titleEnglish: String?
+    public let rubricLatin: String?
+    public let rubricEnglish: String?
+    public let latin: String
+    public let english: String?
+    public let scoredRealizations: [ScoredChantRealization]
+    public let contexts: [LiturgicalUsageContext]
+
+    public init(
+        id: String,
+        kind: OfficeSectionKind,
+        titleLatin: String,
+        titleEnglish: String? = nil,
+        rubricLatin: String? = nil,
+        rubricEnglish: String? = nil,
+        latin: String,
+        english: String? = nil,
+        scoredRealizations: [ScoredChantRealization] = [],
+        contexts: [LiturgicalUsageContext] = []
+    ) {
+        self.id = id
+        self.kind = kind
+        self.titleLatin = titleLatin
+        self.titleEnglish = titleEnglish
+        self.rubricLatin = rubricLatin
+        self.rubricEnglish = rubricEnglish
+        self.latin = latin
+        self.english = english
+        self.scoredRealizations = scoredRealizations
+        self.contexts = contexts
     }
 }

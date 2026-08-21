@@ -1,62 +1,59 @@
 import HoursCore
 import Observation
+import OSLog
 import SwiftUI
 
 struct OfficeReaderView: View {
     let office: OfficeDocument
     let displayMode: AppDisplayMode
-
-    private let sections: [OfficeSection]
-    private let scores: [ChantScore]
-    private let scoreSignature: Int
+    let restoredScrollOffset: Double?
+    let onScrollOffsetChange: (Double) -> Void
 
     @Environment(AppModel.self) private var model
     @Environment(ChantPlaybackController.self) private var playback
+    @Environment(AppTourCoordinator.self) private var tour
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedScore: ChantScore?
     @State private var selectedScoreSectionID: String?
     @State private var showsSections = false
     @State private var showsOptions = false
     @State private var cantorTracking = CantorGuideTrackingState()
+    @State private var presentation: OfficeReaderPresentation?
     @State private var preparedScores: PreparedOfficeScores?
+    @State private var scrollPosition = ScrollPosition(edge: .top)
+    @State private var hasAppliedInitialScroll = false
+    @State private var transientState = OfficeReaderTransientState()
 
     private static let topAnchorID = "office-reader-top"
 
-    init(office: OfficeDocument, displayMode: AppDisplayMode) {
+    init(
+        office: OfficeDocument,
+        displayMode: AppDisplayMode,
+        restoredScrollOffset: Double? = nil,
+        onScrollOffsetChange: @escaping (Double) -> Void = { _ in }
+    ) {
         self.office = office
         self.displayMode = displayMode
-
-        let sections = OfficeReaderSectionBuilder.displaySections(
-            from: office.sections,
-            format: office.format
-        )
-        self.sections = sections
-
-        var seenScoreIDs: Set<String> = []
-        let scores = sections.compactMap(\.chant).filter {
-            seenScoreIDs.insert($0.id).inserted
-        }
-        self.scores = scores
-
-        var hasher = Hasher()
-        for score in scores {
-            hasher.combine(score.id)
-            hasher.combine(score.gabc)
-            hasher.combine(score.mode)
-            hasher.combine(score.timeline.events.count)
-        }
-        self.scoreSignature = hasher.finalize()
+        self.restoredScrollOffset = restoredScrollOffset
+        self.onScrollOffsetChange = onScrollOffsetChange
     }
 
     var body: some View {
         GeometryReader { geometry in
             if office.format == .contentUnavailable {
                 unavailableOffice
-            } else {
+            } else if let presentation,
+                      presentation.officeID == office.id {
+                let sections = presentation.sections
+                let firstChantSectionID = sections.first(where: {
+                    $0.chant != nil
+                })?.id
+                let scores = presentation.scores
                 let scoreWidth = min(geometry.size.width, 820)
                 let preparationKey = ScorePreparationKey(
                     officeID: office.id,
-                    scoreSignature: scoreSignature,
+                    scoreSignature: presentation.scoreSignature,
                     width: Int(scoreWidth.rounded()),
                     notationScale: Int((model.notationScale * 100).rounded()),
                     lyricScale: Int(
@@ -92,7 +89,12 @@ struct OfficeReaderView: View {
                                                 selectedSectionID:
                                                     selectedScoreSectionID
                                             ),
+                                        isAppTourFirstChant:
+                                            section.id == firstChantSectionID,
                                         onTapEvent: { score, eventID in
+                                            if tour.step == .tapFirstNeume {
+                                                playback.scholaPitch = .a
+                                            }
                                             selectedScore = score
                                             selectedScoreSectionID = section.id
                                             #if DEBUG
@@ -113,6 +115,7 @@ struct OfficeReaderView: View {
                                                 fromEventID: eventID
                                             )
                                             #endif
+                                            tour.receive(.cantorGuideOpened)
                                         },
                                         onActiveNeumeFrameChange: { activeNeume in
                                             cantorTracking.latestActiveNeume = activeNeume
@@ -134,12 +137,47 @@ struct OfficeReaderView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.bottom, 100)
                         }
+                        .scrollPosition($scrollPosition)
+                        .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                            max(0, geometry.visibleRect.minY)
+                        } action: { _, offset in
+                            transientState.latestScrollOffset = offset
+                        }
+                        .onScrollPhaseChange { _, phase in
+                            guard phase == .idle else { return }
+                            saveScrollOffset()
+                        }
                         .task {
                             await Task.yield()
-                            if let testSectionID = Self.uiTestSectionID {
+                            if let testScoreID = Self.uiTestScoreID,
+                               let testSection = sections.first(where: {
+                                   $0.chant?.id == testScoreID
+                               }) {
+                                proxy.scrollTo(testSection.id, anchor: .top)
+                            } else if let testSectionID = Self.uiTestSectionID {
                                 proxy.scrollTo(testSectionID, anchor: .top)
+                            } else if let restoredScrollOffset {
+                                transientState.latestScrollOffset = CGFloat(
+                                    restoredScrollOffset
+                                )
+                                scrollPosition.scrollTo(
+                                    y: restoredScrollOffset
+                                )
                             } else {
                                 proxy.scrollTo(Self.topAnchorID, anchor: .top)
+                            }
+                            await Task.yield()
+                            hasAppliedInitialScroll = true
+                        }
+                        .task(id: tour.step) {
+                            guard tour.step == .tapFirstNeume,
+                                  let firstChantSectionID else { return }
+                            await Task.yield()
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                proxy.scrollTo(
+                                    firstChantSectionID,
+                                    anchor: .top
+                                )
                             }
                         }
                         .overlay(alignment: .bottom) {
@@ -181,9 +219,7 @@ struct OfficeReaderView: View {
                         )
                         .sheet(isPresented: $showsSections) {
                             OfficeSectionsSheet(
-                                entries: OfficeReaderOutlineBuilder.entries(
-                                    from: sections
-                                ),
+                                entries: presentation.outlineEntries,
                                 onSelect: { entry in
                                     withAnimation(
                                         .easeInOut(duration: 0.3)
@@ -193,11 +229,15 @@ struct OfficeReaderView: View {
                                             anchor: .top
                                         )
                                     }
+                                    tour.receive(
+                                        .readerSectionSelected(entry.title)
+                                    )
                                     showsSections = false
                                 }
                             )
                             .presentationDetents([.medium, .large])
                             .presentationDragIndicator(.visible)
+                            .appTourOverlayHost(.reader)
                         }
                     }
                     } else {
@@ -222,6 +262,8 @@ struct OfficeReaderView: View {
                         scores: scoresByID
                     )
                 }
+            } else {
+                preparingOffice
             }
         }
         .background {
@@ -235,22 +277,35 @@ struct OfficeReaderView: View {
                     .ignoresSafeArea()
             }
         }
-        .sheet(isPresented: $showsOptions) {
-            PrayerOptionsView()
+        .sheet(
+            isPresented: $showsOptions,
+            onDismiss: {
+                tour.receive(.readerOptionsClosed)
+            }
+        ) {
+            PrayerOptionsView {
+                showsOptions = false
+            }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.hoursBackground)
+                .appTourOverlayHost(.reader)
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 if office.format != .contentUnavailable {
                     HStack(spacing: 2) {
                         Button {
+                            guard !tour.isActive
+                                    || tour.step == .openReaderContents else {
+                                return
+                            }
                             showsSections = true
                         } label: {
                             Image(systemName: "list.bullet.rectangle")
                                 .font(.system(size: 15, weight: .regular))
                                 .frame(width: 34, height: 34)
+                                .appTourTarget(.readerContents)
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
@@ -261,11 +316,16 @@ struct OfficeReaderView: View {
                         .accessibilityIdentifier("office-sections")
 
                         Button {
+                            guard !tour.isActive
+                                    || tour.step == .openReaderOptions else {
+                                return
+                            }
                             showsOptions = true
                         } label: {
                             Image(systemName: "gearshape")
                                 .font(.system(size: 15, weight: .regular))
                                 .frame(width: 34, height: 34)
+                                .appTourTarget(.readerOptions)
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
@@ -277,6 +337,36 @@ struct OfficeReaderView: View {
         }
         .onDisappear {
             playback.stop()
+        }
+        .task(id: office.id) {
+            guard office.format != .contentUnavailable else { return }
+            presentation = nil
+            preparedScores = nil
+
+            let office = office
+            let preparationTask = Task.detached(
+                priority: .userInitiated
+            ) {
+                try OfficeReaderPresentation.prepare(office: office)
+            }
+            do {
+                let prepared = try await withTaskCancellationHandler {
+                    try await preparationTask.value
+                } onCancel: {
+                    preparationTask.cancel()
+                }
+                try Task.checkCancellation()
+                guard prepared.officeID == office.id else { return }
+                presentation = prepared
+            } catch is CancellationError {
+                return
+            } catch {
+                return
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase != .active else { return }
+            saveScrollOffset()
         }
     }
 
@@ -358,13 +448,29 @@ struct OfficeReaderView: View {
         selectedScore = nil
         selectedScoreSectionID = nil
         cantorTracking.reset()
+        tour.receive(.cantorGuideClosed)
+    }
+
+    private func saveScrollOffset() {
+        guard hasAppliedInitialScroll else { return }
+        onScrollOffsetChange(
+            Double(transientState.latestScrollOffset)
+        )
     }
 
     private static var uiTestSectionID: String? {
+        uiTestArgument(after: "--ui-test-reader-section")
+    }
+
+    private static var uiTestScoreID: String? {
+        uiTestArgument(after: "--ui-test-reader-score")
+    }
+
+    private static func uiTestArgument(after flag: String) -> String? {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         guard let argumentIndex = arguments.firstIndex(
-            of: "--ui-test-reader-section"
+            of: flag
         ) else {
             return nil
         }
@@ -450,10 +556,30 @@ struct OfficeReaderView: View {
                 .lineSpacing(-4)
                 .accessibilityIdentifier("office-reader-title")
 
+            if model.showsEnglish,
+               let titleEnglish = office.titleEnglish,
+               !titleEnglish.isEmpty {
+                Text(titleEnglish)
+                    .font(.custom("EBGaramond-Regular", size: 23, relativeTo: .title3))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
             Text(office.observance?.titleLatin ?? office.contextLabel)
                 .font(.custom("EBGaramond-Regular", size: 19, relativeTo: .body))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+
+            if model.showsEnglish,
+               let titleEnglish = office.observance?.titleEnglish,
+               !titleEnglish.isEmpty {
+                Text(titleEnglish)
+                    .font(.custom("EBGaramond-Regular", size: 18, relativeTo: .body))
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
         .padding(.horizontal, 24)
         .padding(.top, 36)
@@ -462,19 +588,79 @@ struct OfficeReaderView: View {
     }
 }
 
-struct OfficeReaderOutlineEntry: Equatable, Identifiable {
+nonisolated struct OfficeReaderPresentation: Sendable {
+    private static let signposter = OSSignposter(
+        subsystem: "com.matthewmccarty.hours",
+        category: "OfficeReader"
+    )
+
+    let officeID: String
+    let sections: [OfficeSection]
+    let scores: [ChantScore]
+    let scoreSignature: Int
+    let outlineEntries: [OfficeReaderOutlineEntry]
+
+    static func prepare(
+        office: OfficeDocument
+    ) throws -> OfficeReaderPresentation {
+        let interval = signposter.beginInterval(
+            "ReaderPresentationPreparation"
+        )
+        defer {
+            signposter.endInterval(
+                "ReaderPresentationPreparation",
+                interval
+            )
+        }
+
+        try Task.checkCancellation()
+        let sections = OfficeReaderSectionBuilder.displaySections(
+            from: office.sections,
+            format: office.format
+        )
+        try Task.checkCancellation()
+
+        var seenScoreIDs: Set<String> = []
+        let scores = sections.compactMap(\.chant).filter {
+            seenScoreIDs.insert($0.id).inserted
+        }
+        var hasher = Hasher()
+        for score in scores {
+            try Task.checkCancellation()
+            hasher.combine(score.id)
+            hasher.combine(score.gabc)
+            hasher.combine(score.mode)
+            hasher.combine(score.timeline.events.count)
+        }
+        try Task.checkCancellation()
+
+        return OfficeReaderPresentation(
+            officeID: office.id,
+            sections: sections,
+            scores: scores,
+            scoreSignature: hasher.finalize(),
+            outlineEntries: OfficeReaderOutlineBuilder.entries(
+                from: sections
+            )
+        )
+    }
+}
+
+private final class OfficeReaderTransientState {
+    var latestScrollOffset: CGFloat = 0
+}
+
+nonisolated struct OfficeReaderOutlineEntry: Equatable, Identifiable, Sendable {
     let id: String
     let title: String
 }
 
-enum OfficeReaderOutlineBuilder {
+nonisolated enum OfficeReaderOutlineBuilder {
     static func entries(
         from sections: [OfficeSection]
     ) -> [OfficeReaderOutlineEntry] {
         sections.compactMap { section in
-            let title = section.title.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
+            let title = outlineTitle(for: section)
             guard !title.isEmpty else { return nil }
             return OfficeReaderOutlineEntry(
                 id: section.id,
@@ -482,54 +668,136 @@ enum OfficeReaderOutlineBuilder {
             )
         }
     }
+
+    private static func outlineTitle(for section: OfficeSection) -> String {
+        let title = section.title.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        if !title.isEmpty {
+            return title
+        }
+
+        // The ordered Matins source stores lesson and Te Deum labels as
+        // content inside the broader "Pater" part. Repeated-heading
+        // suppression correctly hides that inherited part title, so recover
+        // these explicit structural labels for the jump outline itself.
+        let latin = section.latin.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        if isNumberedLessonTitle(latin) {
+            return latin
+        }
+        if normalizedWords(latin).starts(with: ["te", "deum", "laudamus"]) {
+            return "Te Deum"
+        }
+        return ""
+    }
+
+    private static func isNumberedLessonTitle(_ value: String) -> Bool {
+        let parts = value.split(whereSeparator: \.isWhitespace)
+        guard parts.count == 2,
+              parts[0].localizedCaseInsensitiveCompare("Lectio") == .orderedSame,
+              let number = Int(parts[1])
+        else {
+            return false
+        }
+        return number > 0
+    }
+
+    private static func normalizedWords(_ value: String) -> [String] {
+        value
+            .folding(
+                options: [.caseInsensitive, .diacriticInsensitive],
+                locale: Locale(identifier: "la")
+            )
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+    }
 }
 
 private struct OfficeSectionsSheet: View {
     let entries: [OfficeReaderOutlineEntry]
     let onSelect: (OfficeReaderOutlineEntry) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppTourCoordinator.self) private var tour
 
     var body: some View {
         NavigationStack {
-            List(entries) { entry in
-                Button {
-                    onSelect(entry)
-                } label: {
-                    Text(entry.title)
-                        .font(
-                            .custom(
-                                "EBGaramond-Regular",
-                                size: 21,
-                                relativeTo: .body
+            ScrollViewReader { proxy in
+                List(entries) { entry in
+                    Button {
+                        guard !tour.isActive
+                                || tour.step == .chooseOratio else {
+                            return
+                        }
+                        onSelect(entry)
+                    } label: {
+                        Text(entry.title)
+                            .font(
+                                .custom(
+                                    "EBGaramond-Regular",
+                                    size: 21,
+                                    relativeTo: .body
+                                )
                             )
-                        )
-                        .foregroundStyle(Color.hoursPrimaryText)
-                        .frame(
-                            maxWidth: .infinity,
-                            minHeight: 36,
-                            alignment: .leading
-                        )
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Jump to \(entry.title)")
-                .accessibilityIdentifier(
-                    "office-outline-jump-\(entry.id)"
-                )
-            }
-            .listStyle(.plain)
-            .navigationTitle("Office sections")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
+                            .foregroundStyle(Color.hoursPrimaryText)
+                            .frame(
+                                maxWidth: .infinity,
+                                minHeight: 56,
+                                alignment: .leading
+                            )
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
                     }
-                    .accessibilityIdentifier("office-sections-done")
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Jump to \(entry.title)")
+                    .accessibilityIdentifier(
+                        Self.isOratio(entry.title)
+                            ? "tour-reader-oratio"
+                            : "office-outline-jump-\(entry.id)"
+                    )
+                    .id(entry.id)
+                    .appTourTarget(
+                        .readerOratio,
+                        when: Self.isOratio(entry.title)
+                    )
+                }
+                .listStyle(.plain)
+                .task(id: tour.step) {
+                    guard tour.step == .chooseOratio,
+                          let entry = entries.first(where: {
+                              Self.isOratio($0.title)
+                          }) else { return }
+                    await Task.yield()
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        proxy.scrollTo(entry.id, anchor: .center)
+                    }
+                }
+                .navigationTitle("Office sections")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        SheetCloseButton(
+                            accessibilityLabel: "Close Office Sections",
+                            accessibilityIdentifier: "office-sections-close",
+                            action: dismiss.callAsFunction
+                        )
+                    }
                 }
             }
         }
         .accessibilityIdentifier("office-sections-sheet")
+        .onAppear {
+            tour.receive(.readerContentsOpened)
+        }
+    }
+
+    private static func isOratio(_ title: String) -> Bool {
+        title.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: Locale(identifier: "la")
+        )
+        .trimmingCharacters(in: .whitespacesAndNewlines) == "oratio"
     }
 }
 
@@ -602,7 +870,7 @@ enum CantorGuideViewportTracking {
     }
 }
 
-enum OfficeReaderSectionBuilder {
+nonisolated enum OfficeReaderSectionBuilder {
     static func displaySections(
         from source: [OfficeSection],
         format: OfficeDocument.Format?
@@ -750,6 +1018,11 @@ enum OfficeReaderSectionBuilder {
                     score(chant, coversParagraph: latinParagraphs[$0])
                 }
         }
+        let chantsCoveringText = Set(
+            zip(chants, matchedParagraphs).compactMap { chant, matches in
+                matches.isEmpty ? nil : chant.id
+            }
+        )
 
         for (chantIndex, chant) in chants.enumerated() {
             let matches = matchedParagraphs[chantIndex]
@@ -806,7 +1079,8 @@ enum OfficeReaderSectionBuilder {
                 let english: String?
                 if translationsAlign,
                    let paragraphIndex,
-                   let englishParagraphs {
+                   let englishParagraphs,
+                   chantsCoveringText.contains(chant.id) {
                     english = presentationTranslation(
                         from: englishParagraphs[paragraphIndex]
                     )
@@ -816,7 +1090,13 @@ enum OfficeReaderSectionBuilder {
                 result.append(
                     chant.replacingPresentation(
                         title: result.isEmpty ? presentationTitle : "",
+                        titleEnglish: result.isEmpty
+                            ? .some(text.titleEnglish)
+                            : .some(nil),
                         rubric: result.isEmpty ? text.rubric : nil,
+                        rubricEnglish: result.isEmpty
+                            ? .some(text.rubricEnglish)
+                            : .some(nil),
                         english: english
                     )
                 )
@@ -1129,7 +1409,36 @@ enum OfficeReaderSectionBuilder {
     }
 
     private static func correctedSource(_ source: [OfficeSection]) -> [OfficeSection] {
-        var corrected = source
+        let standaloneAntiphonTranslations = Set(
+            source.compactMap { section -> String? in
+                guard let english = section.english else { return nil }
+                let values = paragraphs(in: english)
+                guard values.count == 1,
+                      isAntiphonParagraph(values[0]) else {
+                    return nil
+                }
+                return presentationTranslation(from: values[0])
+            }
+        )
+        var corrected = source.map { section in
+            guard section.kind == .psalm,
+                  section.chant != nil,
+                  let english = section.english else {
+                return section
+            }
+            let values = paragraphs(in: english)
+            guard values.count > 1 else { return section }
+            let retained = values.filter { paragraph in
+                !isAntiphonParagraph(paragraph)
+                    || !standaloneAntiphonTranslations.contains(
+                        presentationTranslation(from: paragraph)
+                    )
+            }
+            guard retained.count != values.count else { return section }
+            return section.replacingPresentation(
+                english: .some(retained.joined(separator: "\n\n"))
+            )
+        }
 
         if let firstTextIndex = corrected.firstIndex(where: { $0.chant == nil }),
            normalizedTitle(corrected[firstTextIndex].title) == "incipit",
@@ -1144,7 +1453,9 @@ enum OfficeReaderSectionBuilder {
                 id: section.id,
                 kind: section.kind,
                 title: "Lectio brevis",
+                titleEnglish: section.titleEnglish,
                 rubric: section.rubric,
+                rubricEnglish: section.rubricEnglish,
                 latin: withoutLeadingParagraph(section.latin, matching: ["Incipit"]),
                 english: section.english.map {
                     withoutLeadingParagraph($0, matching: ["Start", "Beginning"])
@@ -1333,22 +1644,28 @@ enum OfficePrayerText {
 }
 
 private extension OfficeSection {
-    func mergingTextMetadata(from textSection: OfficeSection) -> OfficeSection {
+    nonisolated func mergingTextMetadata(
+        from textSection: OfficeSection
+    ) -> OfficeSection {
         OfficeSection(
             id: id,
             kind: kind,
             title: title,
+            titleEnglish: textSection.titleEnglish ?? titleEnglish,
             rubric: textSection.rubric ?? rubric,
+            rubricEnglish: textSection.rubricEnglish ?? rubricEnglish,
             latin: latin,
             english: textSection.english ?? english,
             chant: chant
         )
     }
 
-    func replacingPresentation(
+    nonisolated func replacingPresentation(
         id: String? = nil,
         title: String? = nil,
+        titleEnglish: String?? = nil,
         rubric: String? = nil,
+        rubricEnglish: String?? = nil,
         latin: String? = nil,
         english: String?? = nil
     ) -> OfficeSection {
@@ -1356,7 +1673,9 @@ private extension OfficeSection {
             id: id ?? self.id,
             kind: kind,
             title: title ?? self.title,
+            titleEnglish: titleEnglish ?? (title == "" ? nil : self.titleEnglish),
             rubric: rubric,
+            rubricEnglish: rubricEnglish ?? (rubric == nil ? nil : self.rubricEnglish),
             latin: latin ?? self.latin,
             english: english ?? self.english,
             chant: chant
@@ -1368,6 +1687,8 @@ private struct PrayerOptionsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppModel.self) private var model
     @Environment(ChantPlaybackController.self) private var playback
+    @Environment(AppTourCoordinator.self) private var tour
+    let onClose: () -> Void
 
     var body: some View {
         @Bindable var model = model
@@ -1391,9 +1712,26 @@ private struct PrayerOptionsView: View {
                 Section("Display") {
                     Toggle(
                         "Show English",
-                        isOn: $model.showsEnglish
+                        isOn: Binding(
+                            get: { model.showsEnglish },
+                            set: { isVisible in
+                                model.showsEnglish = isVisible
+                                tour.receive(
+                                    .englishVisibilityChanged(isVisible)
+                                )
+                            }
+                        )
                     )
+                    .padding(.vertical, 8)
                     .accessibilityIdentifier("translation-toggle")
+                    .appTourTarget(.readerEnglish)
+                    .simultaneousGesture(
+                        TapGesture().onEnded {
+                            guard tour.step == .enableEnglish else { return }
+                            model.showsEnglish = true
+                            tour.receive(.englishVisibilityChanged(true))
+                        }
+                    )
 
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
@@ -1463,12 +1801,37 @@ private struct PrayerOptionsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
+                    if !tour.isActive || tour.step == .closeReaderOptions {
+                        SheetCloseButton(
+                            accessibilityLabel: "Close Prayer Options",
+                            accessibilityIdentifier: "prayer-options-close",
+                            action: closeOptions
+                        )
+                        .appTourTarget(.readerOptionsClose)
                     }
                 }
             }
         }
+        .onAppear {
+            tour.receive(.readerOptionsOpened)
+            Task { @MainActor in
+                await Task.yield()
+                if model.showsEnglish {
+                    tour.receive(.englishVisibilityChanged(true))
+                }
+            }
+        }
+        .onChange(of: model.showsEnglish) { _, isVisible in
+            tour.receive(.englishVisibilityChanged(isVisible))
+        }
+    }
+
+    private func closeOptions() {
+        if tour.isActive {
+            guard tour.step == .closeReaderOptions else { return }
+        }
+        onClose()
+        dismiss()
     }
 }
 
@@ -1680,7 +2043,9 @@ enum PsalmTextFormatter {
             .filter { !$0.isEmpty }
     }
 
-    static func strippingScriptureReference(from value: String) -> String {
+    nonisolated static func strippingScriptureReference(
+        from value: String
+    ) -> String {
         guard let separator = value.firstIndex(where: \.isWhitespace) else {
             return value
         }
@@ -1752,40 +2117,29 @@ private struct PsalmTextSectionView: View {
                             Text("\(number).")
                                 .frame(width: 30, alignment: .trailing)
                         }
-                        psalmText(
-                            line.latin,
-                            highlightsAsterisk: true
+                        SelectableTextView(
+                            text: line.latin,
+                            fontSize: 21,
+                            lineSpacing: 3,
+                            emphasizedRanges:
+                                PsalmTextFormatter.emphasizedSyllableRanges(
+                                    in: line.latin
+                                ),
+                            highlightsAsterisks: true
                         )
-                            .font(
-                                .custom(
-                                    "EBGaramond-Regular",
-                                    size: 21,
-                                    relativeTo: .body
-                                )
-                            )
-                            .lineSpacing(3)
-                            .textSelection(.enabled)
                             .accessibilityIdentifier("selectable-prayer-text")
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .font(.custom("EBGaramond-Regular", size: 21, relativeTo: .body))
 
                     if showsEnglish, let english = line.english {
-                        psalmText(
-                            english,
-                            highlightsAsterisk: false
+                        SelectableTextView(
+                            text: english,
+                            fontSize: 18,
+                            isItalic: true,
+                            foreground: .secondary,
+                            lineSpacing: 3
                         )
-                            .font(
-                                .custom(
-                                    "EBGaramond-Regular",
-                                    size: 18,
-                                    relativeTo: .body
-                                )
-                                .italic()
-                            )
-                            .foregroundStyle(.secondary)
-                            .lineSpacing(3)
-                            .textSelection(.enabled)
                             .accessibilityIdentifier("selectable-prayer-text")
                             .padding(.leading, line.number == nil ? 0 : 40)
                             .transition(.opacity.combined(with: .move(edge: .top)))
@@ -1794,44 +2148,6 @@ private struct PsalmTextSectionView: View {
             }
         }
         .padding(.horizontal, 20)
-    }
-
-    private func psalmText(
-        _ value: String,
-        highlightsAsterisk: Bool
-    ) -> Text {
-        guard highlightsAsterisk else {
-            return Text(value)
-        }
-
-        var attributed = AttributedString(value)
-        for range in PsalmTextFormatter.emphasizedSyllableRanges(in: value) {
-            guard let lowerBound = AttributedString.Index(
-                range.lowerBound,
-                within: attributed
-            ),
-            let upperBound = AttributedString.Index(
-                range.upperBound,
-                within: attributed
-            )
-            else {
-                continue
-            }
-            attributed[lowerBound..<upperBound].inlinePresentationIntent =
-                .stronglyEmphasized
-        }
-
-        var searchStart = attributed.startIndex
-        while searchStart < attributed.endIndex,
-              let range = attributed[searchStart...].range(of: "*") {
-            attributed[range].foregroundColor = Color(
-                red: 0.82,
-                green: 0.13,
-                blue: 0.08
-            )
-            searchStart = range.upperBound
-        }
-        return Text(attributed)
     }
 }
 
@@ -1842,6 +2158,7 @@ private struct OfficeSectionView: View {
     let isPriestOrDeaconPresent: Bool
     let scorePreparation: GregorianScorePreparation?
     let isCantorGuideScore: Bool
+    let isAppTourFirstChant: Bool
     let onTapEvent: (ChantScore, String) -> Void
     let onActiveNeumeFrameChange: (ActiveNeumeFrame) -> Void
 
@@ -1874,48 +2191,110 @@ private struct OfficeSectionView: View {
                             "office-section-heading-\(section.id)"
                         )
                 } else {
-                    Text(section.title.uppercased())
-                        .font(.system(.caption2, design: .rounded, weight: .semibold))
-                        .tracking(1.5)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 16)
-                        .accessibilityIdentifier(
-                            "office-section-heading-\(section.id)"
-                        )
+                    VStack(spacing: 5) {
+                        Text(section.title.uppercased())
+                            .font(.system(.caption2, design: .rounded, weight: .semibold))
+                            .tracking(1.5)
+
+                        if showsEnglish,
+                           let titleEnglish = section.titleEnglish,
+                           !titleEnglish.isEmpty {
+                            Text(titleEnglish)
+                                .font(.system(.caption, design: .rounded))
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+                    .accessibilityIdentifier(
+                        "office-section-heading-\(section.id)"
+                    )
                 }
             }
 
             if let rubric = section.userFacingRubric {
-                Text(rubric)
-                    .font(.custom("EBGaramond-Regular", size: 17, relativeTo: .body).italic())
-                    .foregroundStyle(Color(red: 0.68, green: 0.12, blue: 0.09))
-                    .frame(maxWidth: .infinity)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 12)
+                VStack(spacing: 8) {
+                    Text(rubric)
+                        .font(.custom("EBGaramond-Regular", size: 17, relativeTo: .body).italic())
+
+                    if showsEnglish,
+                       let rubricEnglish = section.rubricEnglish,
+                       !rubricEnglish.isEmpty {
+                        Text(rubricEnglish)
+                            .font(translationFont.italic())
+                            .foregroundStyle(.secondary)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
+                .foregroundStyle(Color(red: 0.68, green: 0.12, blue: 0.09))
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 12)
             }
 
             if let score = section.chant {
                 let preparation = scorePreparation
                     ?? .failed("The chant layout was not prepared.")
-                if isCantorGuideScore {
-                    ActiveCantorScoreView(
-                        score: score,
-                        preparation: preparation,
-                        onTapEvent: { eventID in onTapEvent(score, eventID) },
-                        onActiveNeumeFrameChange: onActiveNeumeFrameChange
-                    )
-                } else {
-                    GregorianScoreView(
-                        score: score,
-                        preparation: preparation,
-                        highlightedEventID: nil,
-                        onTapEvent: { eventID in onTapEvent(score, eventID) },
-                        onActiveNeumeFrameChange: onActiveNeumeFrameChange
-                    )
+                ZStack(alignment: .topLeading) {
+                    if isCantorGuideScore {
+                        ActiveCantorScoreView(
+                            score: score,
+                            preparation: preparation,
+                            onTapEvent: { eventID in
+                                onTapEvent(score, eventID)
+                            },
+                            onActiveNeumeFrameChange:
+                                onActiveNeumeFrameChange
+                        )
+                    } else {
+                        GregorianScoreView(
+                            score: score,
+                            preparation: preparation,
+                            highlightedEventID: nil,
+                            onTapEvent: { eventID in
+                                onTapEvent(score, eventID)
+                            },
+                            onActiveNeumeFrameChange:
+                                onActiveNeumeFrameChange
+                        )
+                    }
+
+                    if isAppTourFirstChant,
+                       case let .ready(preparedScore) = preparation,
+                       let firstNeume = preparedScore.layout.neumes.first {
+                        let focusFrame = firstNeume.inkFrame.insetBy(
+                            dx: -6,
+                            dy: -6
+                        )
+                        Button {
+                            onTapEvent(score, firstNeume.id)
+                        } label: {
+                            Color.clear
+                                .frame(
+                                    width: max(28, focusFrame.width),
+                                    height: max(28, focusFrame.height)
+                                )
+                                .contentShape(
+                                    RoundedRectangle(
+                                        cornerRadius: 8,
+                                        style: .continuous
+                                    )
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .position(
+                            x: focusFrame.midX,
+                            y: focusFrame.midY
+                        )
+                        .accessibilityLabel("First neume")
+                        .accessibilityHint("Starts the Cantor Guide")
+                        .accessibilityIdentifier("tour-reader-first-chant")
+                        .appTourTarget(.readerFirstChant)
+                    }
                 }
             } else if section.kind == .psalm {
                 PsalmTextSectionView(
@@ -1924,15 +2303,14 @@ private struct OfficeSectionView: View {
                     isPriestOrDeaconPresent: isPriestOrDeaconPresent
                 )
             } else {
-                Text(
-                    OfficePrayerText.adjusted(
+                SelectableTextView(
+                    text: OfficePrayerText.adjusted(
                         section.latin,
                         isPriestOrDeaconPresent: isPriestOrDeaconPresent
-                    )
+                    ),
+                    fontSize: 23,
+                    lineSpacing: 7
                 )
-                    .font(.custom("EBGaramond-Regular", size: 23, relativeTo: .body))
-                    .lineSpacing(7)
-                    .textSelection(.enabled)
                     .accessibilityIdentifier("selectable-prayer-text")
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
@@ -1941,16 +2319,16 @@ private struct OfficeSectionView: View {
             if showsEnglish,
                section.chant != nil || section.kind != .psalm,
                let english = section.english {
-                Text(
-                    OfficePrayerText.adjusted(
+                SelectableTextView(
+                    text: OfficePrayerText.adjusted(
                         english,
                         isPriestOrDeaconPresent: isPriestOrDeaconPresent
-                    )
+                    ),
+                    fontSize: 19,
+                    isItalic: section.chant != nil,
+                    foreground: .secondary,
+                    lineSpacing: 5
                 )
-                    .font(translationFont)
-                    .foregroundStyle(.secondary)
-                    .lineSpacing(5)
-                    .textSelection(.enabled)
                     .accessibilityIdentifier("selectable-prayer-text")
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)

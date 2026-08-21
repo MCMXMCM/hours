@@ -245,6 +245,47 @@ public struct GregorianScore: Codable, Hashable, Sendable {
     public var eventIDs: [String] {
         neumes.flatMap(\.eventIDs)
     }
+
+    public var lyricText: String {
+        var result = ""
+        var separatesFollowingLyric = false
+
+        func append(_ text: String, startsWord: Bool, isLyricMark: Bool) {
+            guard !text.isEmpty else { return }
+            if !result.isEmpty,
+               (startsWord || separatesFollowingLyric),
+               result.last?.isWhitespace != true {
+                result.append(" ")
+            }
+            result.append(text)
+            separatesFollowingLyric = isLyricMark
+        }
+
+        for element in elements {
+            switch element {
+            case .neume(let neume):
+                append(
+                    neume.lyric,
+                    startsWord: neume.startsWord,
+                    isLyricMark: false
+                )
+            case .lyricMark(let mark):
+                append(
+                    mark.text,
+                    startsWord: mark.startsWord,
+                    isLyricMark: true
+                )
+            case .clef, .accidental, .division, .forcedBreak:
+                continue
+            }
+        }
+
+        return result.replacingOccurrences(
+            of: #"\s+([,.;:!?])"#,
+            with: "$1",
+            options: .regularExpression
+        )
+    }
 }
 
 public enum GregorianScoreParserError: Error, Equatable, LocalizedError, Sendable {

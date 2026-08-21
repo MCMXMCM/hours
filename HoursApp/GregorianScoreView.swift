@@ -1,4 +1,5 @@
 import HoursCore
+import OSLog
 import SwiftUI
 
 struct ActiveNeumeFrame: Equatable {
@@ -157,6 +158,12 @@ struct GregorianScoreView: View {
                 }
                 .accessibilityHint("Starts the cantor guide here")
                 .accessibilityIdentifier(neume.id)
+                .accessibilityActivationPoint(
+                    UnitPoint(
+                        x: neume.hitFrame.midX / layout.size.width,
+                        y: neume.hitFrame.midY / layout.size.height
+                    )
+                )
                 .accessibilitySortPriority(Double(layout.neumes.count - index))
             }
         }
@@ -570,18 +577,19 @@ actor GregorianLayoutCache {
 
     private var parsed: [String: GregorianScore] = [:]
     private var parsedOrder: [String] = []
-    private var layouts: [Key: GregorianLayout] = [:]
-    private var layoutOrder: [Key] = []
+    private var preparedScores: [Key: GregorianPreparedScore] = [:]
+    private var preparedScoreOrder: [Key] = []
+    private var preparedScoreHitCount = 0
 
     nonisolated static func openingLabel(for score: ChantScore) -> String? {
         GregorianEngravingLayoutEngine.openingLabel(forMode: score.mode)
     }
 
-    func layout(
+    func preparedScore(
         score: ChantScore,
         width: CGFloat,
         metrics: GregorianLayoutMetrics
-    ) throws -> GregorianLayout {
+    ) throws -> GregorianPreparedScore {
         let openingLabel = Self.openingLabel(for: score)
         let key = Key(
             scoreID: score.id,
@@ -592,8 +600,9 @@ actor GregorianLayoutCache {
             notationScale: Int((metrics.notationScale * 100).rounded()),
             lyricScale: Int((metrics.lyricScale * 100).rounded())
         )
-        if let cached = layouts[key] {
-            Self.touch(key, in: &layoutOrder)
+        if let cached = preparedScores[key] {
+            preparedScoreHitCount += 1
+            Self.touch(key, in: &preparedScoreOrder)
             return cached
         }
 
@@ -612,31 +621,39 @@ actor GregorianLayoutCache {
             Self.evictOldest(from: &parsed, order: &parsedOrder, limit: 128)
         }
 
-        let result = GregorianEngravingLayoutEngine().layout(
+        let layout = GregorianEngravingLayoutEngine().layout(
             score: parsedScore,
             width: width,
             metrics: metrics,
             openingLabel: openingLabel
         )
-        layouts[key] = result
-        layoutOrder.append(key)
-        Self.evictOldest(from: &layouts, order: &layoutOrder, limit: 96)
+        let result = GregorianPreparedScore(
+            layout: layout,
+            drawing: GregorianScoreDrawing(layout: layout)
+        )
+        preparedScores[key] = result
+        preparedScoreOrder.append(key)
+        Self.evictOldest(
+            from: &preparedScores,
+            order: &preparedScoreOrder,
+            limit: 32
+        )
         return result
     }
 
-    func preparedScore(
-        score: ChantScore,
-        width: CGFloat,
-        metrics: GregorianLayoutMetrics
-    ) throws -> GregorianPreparedScore {
-        let layout = try layout(
-            score: score,
-            width: width,
-            metrics: metrics
-        )
-        return GregorianPreparedScore(
-            layout: layout,
-            drawing: GregorianScoreDrawing(layout: layout)
+    func resetForTesting() {
+        parsed.removeAll()
+        parsedOrder.removeAll()
+        preparedScores.removeAll()
+        preparedScoreOrder.removeAll()
+        preparedScoreHitCount = 0
+    }
+
+    func metricsForTesting() -> GregorianLayoutCacheMetrics {
+        GregorianLayoutCacheMetrics(
+            parsedScores: parsed.count,
+            preparedScores: preparedScores.count,
+            preparedScoreHits: preparedScoreHitCount
         )
     }
 
@@ -659,12 +676,27 @@ actor GregorianLayoutCache {
     }
 }
 
+nonisolated struct GregorianLayoutCacheMetrics: Equatable, Sendable {
+    let parsedScores: Int
+    let preparedScores: Int
+    let preparedScoreHits: Int
+}
+
 enum GregorianScorePreparer {
+    private static let signposter = OSSignposter(
+        subsystem: "com.matthewmccarty.hours",
+        category: "GregorianScorePreparation"
+    )
+
     static func prepare(
         scores: [ChantScore],
         width: CGFloat,
         metrics: GregorianLayoutMetrics
     ) async -> [String: GregorianScorePreparation] {
+        let interval = signposter.beginInterval("NotationPreparation")
+        defer {
+            signposter.endInterval("NotationPreparation", interval)
+        }
         var preparations: [String: GregorianScorePreparation] = [:]
         preparations.reserveCapacity(scores.count)
 

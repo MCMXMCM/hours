@@ -31,7 +31,8 @@ public enum ContentPackError: LocalizedError, Equatable {
 }
 
 public struct ContentPackInstaller: Sendable {
-    public static let supportedSchemaVersion = 1
+    public static let supportedSchemaVersion = 3
+    public static let supportedSchemaVersions: Set<Int> = [1, 2, 3]
 
     public init() {}
 
@@ -41,7 +42,7 @@ public struct ContentPackInstaller: Sendable {
         publicKey: Data,
         currentAppVersion: String
     ) throws {
-        guard manifest.schemaVersion == Self.supportedSchemaVersion else {
+        guard Self.supportedSchemaVersions.contains(manifest.schemaVersion) else {
             throw ContentPackError.unsupportedSchema(manifest.schemaVersion)
         }
         guard SemanticVersion(currentAppVersion) >= SemanticVersion(manifest.minimumAppVersion) else {

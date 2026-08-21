@@ -2,7 +2,12 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { normalize, sep } from "node:path";
 import { compileCorpus } from "./compiler.ts";
-import { loadSnapshotDirectory, type ImportedOfficeCandidate } from "./divinumImporter.ts";
+import {
+  classifyImportedSection,
+  loadSnapshotDirectory,
+  type ImportedOfficeCandidate
+} from "./divinumImporter.ts";
+import { withResolvedEveningContexts } from "./eveningContext.ts";
 import {
   officeHours,
   type CorpusInput,
@@ -40,23 +45,7 @@ function rank(value: string): LiturgicalDay["rank"] {
 }
 
 function sectionKind(section: ImportedOfficeCandidate["sections"][number]): OfficeSectionKind {
-  const value = `${section.titleLatin} ${section.upstreamID} ${section.latin.slice(0, 120)}`.toLowerCase();
-  if (/antiphona finalis/.test(value)) return "marianAntiphon";
-  if (/invitator/.test(value)) return "invitatory";
-  if (/absolut/.test(value)) return "absolution";
-  if (/benedict/.test(value)) return "blessing";
-  if (/lectio|homilia/.test(value)) return "reading";
-  if (/psalm/.test(value)) return "psalm";
-  if (/antiphon/.test(value)) return "antiphon";
-  if (/capitulum/.test(value)) return "chapter";
-  if (/responsor/.test(value)) return "responsory";
-  if (/hymn/.test(value)) return "hymn";
-  if (/versus|versicul/.test(value)) return "versicle";
-  if (/cantic/.test(value)) return "canticle";
-  if (/oratio/.test(value)) return "collect";
-  if (/preces/.test(value)) return "preces";
-  if (/conclus|benedicamus/.test(value)) return "conclusion";
-  return "opening";
+  return classifyImportedSection(section);
 }
 
 function stableID(value: string): string {
@@ -92,7 +81,9 @@ function document(
     id: `${candidate.hour}-${stableID(section.upstreamID) || index + 1}`,
     kind: sectionKind(section),
     title: section.titleLatin,
+    titleEnglish: section.titleEnglish || null,
     rubric: section.rubricLatin ?? null,
+    rubricEnglish: section.rubricEnglish ?? null,
     latin: section.latin,
     english: section.english || null,
     chant: null
@@ -195,7 +186,7 @@ export function developmentCorpusFromSnapshots(options: {
   const last = days.at(-1)!.date;
   const input: CorpusInput = {
     manifest: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       corpusVersion: `development-do-${imported.revision.slice(0, 12)}`,
       minimumAppVersion: "0.1.0",
       createdAt: "2026-07-24T00:00:00Z",
@@ -224,7 +215,7 @@ export function developmentCorpusFromSnapshots(options: {
     days,
     offices
   };
-  return input;
+  return withResolvedEveningContexts(input);
 }
 
 export function compileDevelopmentSnapshots(options: {

@@ -8,10 +8,12 @@ import { DatabaseSync } from "node:sqlite";
 import {
   canonicalVisibleContentDigest,
   compileCorpus,
+  compileScheduledCorpus,
   loadCorpus,
   validateCorpus
 } from "../Sources/compiler.ts";
 import { parseGABC } from "../Sources/gabc.ts";
+import { parenthesizeLiturgicalDirections } from "../Sources/inlineRubrics.ts";
 import { normalizeLatin, resolveChant } from "../Sources/chantResolver.ts";
 import { loadSnapshotDirectory, parseDivinumOffice } from "../Sources/divinumImporter.ts";
 import {
@@ -40,6 +42,7 @@ import {
   canonicalImportedOfficeDigest
 } from "../Sources/observanceAudit.ts";
 import { loadCompiledCorpus } from "../Sources/compiledCorpus.ts";
+import { decodeContentPayload } from "../Sources/contentPayload.ts";
 import {
   addingKnownGeneratedComplineReadings
 } from "../Sources/generatedReadingCorpus.ts";
@@ -47,15 +50,134 @@ import {
   curatedOfficePromotions,
   curatedPromotionChecksum
 } from "../Sources/curatedOfficePromotions.ts";
-import type { OfficeDocument, OfficeSection } from "../Sources/types.ts";
+import { withResolvedEveningContexts } from "../Sources/eveningContext.ts";
+import {
+  exceptionalMartyrologyEnglish,
+  exceptionalMartyrologyReview,
+  requireApprovedExceptionalMartyrology
+} from "../Sources/exceptionalMartyrology.ts";
+import {
+  officeConfigurationKey,
+  perennialOrdoRange,
+  uniqueOfficeConfigurations,
+  type PerennialOrdoSchedule
+} from "../Sources/perennialOrdo.ts";
+import {
+  englishPrimeMartyrologyProclamationToken,
+  latinPrimeMartyrologyProclamationToken,
+  normalizeDynamicOfficeText
+} from "../Sources/dynamicOfficeText.ts";
+import type {
+  CorpusInput,
+  OfficeDocument,
+  OfficeHour,
+  OfficeSection
+} from "../Sources/types.ts";
 
 const fixture = new URL("../Fixtures/evening-pilot.json", import.meta.url).pathname;
+const bundledDatabase = new URL(
+  "../../../HoursApp/Resources/base-office.sqlite",
+  import.meta.url
+).pathname;
+const bundled2026Range = { from: "2026-01-01", to: "2026-12-31" };
+
+test("rolling perennial window retains following-day concurrence context", () => {
+  const schedule: PerennialOrdoSchedule = {
+    sourceRevision: "fixture",
+    rubrics: "Rubrics 1960 - 1960",
+    from: "2025-12-31",
+    to: "2026-01-02",
+    days: [
+      {
+        date: "2025-12-31",
+        titleLatin: "Die VII infra Octavam Nativitatis",
+        rankLatin: "II. classis",
+        occurrenceDetailLatin: "",
+        concurrenceDetailLatin: "Vespera de sequenti",
+        weekdayLatin: "Feria IV"
+      },
+      {
+        date: "2026-01-01",
+        titleLatin: "In Circumcisione Domini",
+        rankLatin: "I. classis",
+        occurrenceDetailLatin: "",
+        concurrenceDetailLatin: "Vespera de sequenti",
+        weekdayLatin: "Feria V"
+      },
+      {
+        date: "2026-01-02",
+        titleLatin: "Sanctissimi Nominis Jesu",
+        rankLatin: "II. classis",
+        occurrenceDetailLatin: "",
+        concurrenceDetailLatin: "",
+        weekdayLatin: "Feria VI"
+      }
+    ]
+  };
+  const range = perennialOrdoRange(schedule, {
+    from: "2026-01-01",
+    to: "2026-01-01"
+  });
+  const configurations = uniqueOfficeConfigurations(schedule, range);
+
+  assert.equal(configurations.size, 8);
+  assert.ok(configurations.has(
+    officeConfigurationKey(schedule.days[1], "vespers", schedule.days[2])
+  ));
+  assert.throws(
+    () => perennialOrdoRange(schedule, {
+      from: "2024-01-01",
+      to: "2026-01-01"
+    }),
+    /outside/
+  );
+});
+
+test("Prime recipes store date-dependent lunar proclamations as tokens", () => {
+  const office: OfficeDocument = {
+    id: "2026-02-22-prime",
+    date: { year: 2026, month: 2, day: 22 },
+    hour: "prime",
+    titleLatin: "Ad Primam",
+    contextLabel: "Dominica",
+    sourceVersion: "fixture",
+    sections: [{
+      id: "martyrology",
+      kind: "reading",
+      title: "Martyrologium",
+      titleEnglish: "Martyrology",
+      rubric: "anticipatur",
+      rubricEnglish: "anticipated",
+      latin: "Martyrologium {anticipatur}\n\nSéptimo Kaléndas Mártii Luna sexta Anno Dómini 2026\nSancti Petri\npercutit sibi pectus mea culpa",
+      english: "Martyrology {anticipated}\n\nFebruary 23rd 2026, the 6th day of the Moon, were born into the better life"
+    }]
+  };
+
+  const normalized = normalizeDynamicOfficeText(office);
+  assert.match(normalized.sections[0].latin, new RegExp(latinPrimeMartyrologyProclamationToken));
+  assert.match(normalized.sections[0].english ?? "", new RegExp(englishPrimeMartyrologyProclamationToken));
+  assert.doesNotMatch(normalized.sections[0].latin, /2026/);
+  assert.doesNotMatch(normalized.sections[0].latin, /^Martyrologium/);
+  assert.doesNotMatch(normalized.sections[0].english ?? "", /^Martyrology/);
+  assert.equal(normalized.sections[0].title, "Martyrologium");
+  assert.equal(normalized.sections[0].rubric, "anticipatur");
+  assert.match(normalized.sections[0].latin, /\(percutit sibi pectus\) mea culpa/);
+});
+
+function loadBundled2026Corpus(): CorpusInput {
+  return loadCompiledCorpus(bundledDatabase, bundled2026Range);
+}
+
 const engravingFixtures = JSON.parse(
   readFileSync(
     new URL("../../../HoursTests/Fixtures/gabc-engraving-fixtures.json", import.meta.url),
     "utf8"
   )
 ) as Array<{ name: string; scoreID: string; gabc: string; eventCount: number }>;
+
+function englishWordCount(value: string): number {
+  return value.split(/\s+/).filter(Boolean).length;
+}
 
 test("fixture validates only through the explicit development gate", () => {
   const corpus = loadCorpus(fixture);
@@ -64,12 +186,17 @@ test("fixture validates only through the explicit development gate", () => {
   assert.match(warnings.join(" "), /Development sample/);
 });
 
-test("release gate requires the complete 1962 through 2100 civil range", () => {
+test("release gate requires a declared rolling reviewed window", () => {
   const corpus = structuredClone(loadCorpus(fixture));
   corpus.manifest.coverage.isSample = false;
   assert.throws(
     () => validateCorpus(corpus),
-    /Release corpus must cover 1962-01-01 through 2100-12-31/
+    /must record its reviewedCenterYear/
+  );
+  corpus.manifest.coverage.reviewedCenterYear = 2026;
+  assert.throws(
+    () => validateCorpus(corpus),
+    /centered on 2026 must cover 2025-01-01 through 2036-12-31/
   );
 });
 
@@ -197,7 +324,7 @@ test("curated Easter promotion payloads are pinned and notation-valid", () => {
   }
   assert.equal(
     curatedPromotionChecksum(),
-    "1716a90339f7d4535abaada2e2b744860810f04754cb7c9711a8b3f34be4981c"
+    "1e61be4857d4fc90a74080b45e5a3efa6aeae88ecdbf777b385a62d72c8edc9a"
   );
 });
 
@@ -230,21 +357,117 @@ test("compiler emits a queryable, indexed SQLite corpus", () => {
   compileCorpus(corpus, output, true);
 
   const db = new DatabaseSync(output, { readOnly: true });
-  const officeCount = db.prepare("SELECT COUNT(*) AS count FROM office_index").get() as { count: number };
+  const officeCount = db.prepare("SELECT COUNT(*) AS count FROM office_schedule").get() as { count: number };
   const dayCount = db.prepare("SELECT COUNT(*) AS count FROM days").get() as { count: number };
   const scoreCount = db.prepare("SELECT COUNT(*) AS count FROM scores").get() as { count: number };
+  const textCount = db.prepare("SELECT COUNT(*) AS count FROM text_resources").get() as { count: number };
+  const recipeCount = db.prepare("SELECT COUNT(*) AS count FROM recipes").get() as { count: number };
   const payload = db.prepare(`
-    SELECT documents.payload
-    FROM office_index
-    JOIN documents ON documents.id = office_index.document_id
-    WHERE office_index.hour = 'vespers'
+    SELECT recipes.payload
+    FROM office_schedule
+    JOIN recipes ON recipes.id = office_schedule.recipe_id
+    WHERE office_schedule.hour = 'vespers'
     LIMIT 1
   `).get() as { payload: Uint8Array };
+  const searchCount = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM text_fts
+    JOIN text_resources ON text_resources.rowid = text_fts.rowid
+    WHERE text_fts MATCH '{title_latin latin} : "domine"'
+  `).get() as { count: number };
+  const manifest = JSON.parse(
+    (db.prepare("SELECT value FROM meta WHERE key = 'manifest'").get() as { value: string }).value
+  );
+  const relations = db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM text_scores) AS textScores,
+      (SELECT COUNT(*) FROM text_recipes) AS textRecipes
+  `).get() as { textScores: number; textRecipes: number };
   db.close();
   assert.equal(officeCount.count, 8);
   assert.equal(dayCount.count, 1);
   assert.equal(scoreCount.count, 8);
+  assert.ok(textCount.count > 0);
+  assert.ok(recipeCount.count > 0);
+  assert.ok(searchCount.count > 0);
+  assert.equal(manifest.schemaVersion, 3);
+  assert.ok(relations.textScores > 0);
+  assert.ok(relations.textRecipes > 0);
+  assert.ok(typeof manifest.compilerRevision === "string" && manifest.compilerRevision.length > 0);
+  assert.equal(manifest.normalizedCounts.scheduledOffices, 8);
+  assert.deepEqual(manifest.notices, []);
   assert.doesNotMatch(new TextDecoder().decode(payload.payload), /timeline/);
+});
+
+test("scheduled compiler stores one recipe for many civil-date references", () => {
+  const directory = mkdtempSync(join(tmpdir(), "hours-scheduled-"));
+  const output = join(directory, "scheduled.sqlite");
+  const corpus = loadCorpus(fixture);
+  const sourceOffice = corpus.offices[0];
+  const secondDate = { year: 2026, month: 1, day: 2 };
+  const secondDay = {
+    ...corpus.days[0],
+    date: secondDate,
+    observanceID: "test/second-day"
+  };
+
+  compileScheduledCorpus({
+    manifest: {
+      ...corpus.manifest,
+      coverage: {
+        ...corpus.manifest.coverage,
+        endDate: secondDate,
+        expectedOfficeCount: 2,
+        generatedOfficeCount: 2,
+        authoritativeOfficeCount:
+          sourceOffice.format === "authoritativeOrdered" ? 2 : 0
+      }
+    },
+    days: [corpus.days[0], secondDay],
+    recipes: [{ key: "shared-office", office: sourceOffice }],
+    schedule: [
+      { date: sourceOffice.date, hour: sourceOffice.hour, recipeKey: "shared-office" },
+      { date: secondDate, hour: sourceOffice.hour, recipeKey: "shared-office" }
+    ]
+  }, output, true);
+
+  const db = new DatabaseSync(output, { readOnly: true });
+  const recipeCount = db.prepare(
+    "SELECT COUNT(*) AS count FROM recipes"
+  ).get() as { count: number };
+  const scheduleCount = db.prepare(
+    "SELECT COUNT(*) AS count FROM office_schedule"
+  ).get() as { count: number };
+  db.close();
+  assert.equal(recipeCount.count, 1);
+  assert.equal(scheduleCount.count, 2);
+});
+
+test("compiler rejects GABC and stored-timeline syllable drift", () => {
+  const corpus = structuredClone(loadCorpus(fixture));
+  const section = corpus.offices[0].sections[0];
+  section.chant = {
+    id: "alignment-negative",
+    incipit: "Dominus",
+    gabc: "name: alignment; %% Do(h)-mi(i)nus(j::)",
+    mode: "VIII",
+    reviewStatus: "humanReviewed",
+    provenance: {
+      collection: "Test",
+      sourceBook: "Test fixture",
+      license: "CC0-1.0",
+      snapshot: "fixture"
+    },
+    timeline: parseGABC(
+      "name: alignment; %% Do(h)-mi(i)nus(j::)",
+      "alignment-negative"
+    )
+  };
+  section.chant.gabc = "name: alignment; %% Do(h)mi(i)nus(j::)";
+  assert.throws(
+    () => validateCorpus(corpus, true),
+    /GABC\/timeline syllable or neume drift/
+  );
 });
 
 test("compiled corpus can be losslessly rehydrated for deterministic enrichment", () => {
@@ -323,11 +546,7 @@ test("known Compline frame tones are added once from the pinned formula output",
 });
 
 test("bundled 2026 corpus includes generated Compline tones and penitential prose", () => {
-  const database = new URL(
-    "../../../HoursApp/Resources/base-office.sqlite",
-    import.meta.url
-  ).pathname;
-  const corpus = loadCompiledCorpus(database);
+  const corpus = loadBundled2026Corpus();
   const compline = corpus.offices.find(office =>
     office.hour === "compline"
     && office.date.year === 2026
@@ -348,19 +567,247 @@ test("bundled 2026 corpus includes generated Compline tones and penitential pros
   ));
 });
 
+test("bundled August 25 Prime ends with the scored conclusion", () => {
+  const corpus = loadBundled2026Corpus();
+  const prime = corpus.offices.find(office => office.id === "2026-08-25-prime");
+  assert.ok(prime);
+
+  const conclusion = prime.sections.filter(section => section.title === "Conclusio");
+  assert.equal(conclusion.length, 2);
+  assert.ok(conclusion.every(section => section.chant));
+  assert.doesNotMatch(
+    conclusion.map(section => section.latin).join("\n"),
+    /Adiutórium nostrum|Benedícite/
+  );
+
+  const database = new DatabaseSync(bundledDatabase, { readOnly: true });
+  try {
+    const scheduledPrimeTexts = database.prepare(`
+      SELECT DISTINCT text_resources.payload
+      FROM office_schedule
+      JOIN recipe_sections
+        ON recipe_sections.recipe_id = office_schedule.recipe_id
+      JOIN text_resources
+        ON text_resources.id = recipe_sections.text_id
+      WHERE office_schedule.hour = 'prime'
+    `).all() as Array<{ payload: Uint8Array }>;
+    const legacyConclusions = scheduledPrimeTexts.flatMap(row => {
+      const section = JSON.parse(
+        decodeContentPayload(row.payload)
+      ) as OfficeSection;
+      return /Adiutórium nostrum/.test(section.latin)
+          && /Benedícite/.test(section.latin)
+          && /Dóminus nos benedícat/.test(section.latin)
+        ? [section.latin]
+        : [];
+    });
+    assert.deepEqual(legacyConclusions, []);
+  } finally {
+    database.close();
+  }
+});
+
+test("bundled 2026 corpus distinguishes inline directions from spoken text", () => {
+  const corpus = loadBundled2026Corpus();
+  const compline = corpus.offices.find(office => office.id === "2026-08-19-compline");
+  const confiteor = compline?.sections.find(section => /Confíteor Deo/.test(section.latin));
+
+  assert.ok(confiteor);
+  assert.match(confiteor.latin, /\(percutit sibi pectus\) mea culpa/);
+  assert.match(confiteor.english ?? "", /\(strikes his breast\) through my fault/);
+
+  for (const section of corpus.offices.flatMap(office => office.sections)) {
+    assert.equal(section.latin, parenthesizeLiturgicalDirections(section.latin));
+    if (section.english) {
+      assert.equal(section.english, parenthesizeLiturgicalDirections(section.english));
+    }
+  }
+});
+
+test("bundled source-gap offices retain English and gate exceptional Martyrology wording", () => {
+  const corpus = loadBundled2026Corpus();
+
+  assert.ok(corpus.offices.every(office => office.titleEnglish?.trim()));
+  assert.ok(corpus.offices.every(office => office.observance?.titleEnglish?.trim()));
+
+  const exceptionalDates = ["2026-02-22", "2026-12-24"];
+  for (const date of exceptionalDates) {
+    const prime = corpus.offices.find(office => office.id === `${date}-prime`);
+    assert.ok(prime);
+    const martyrology = prime.sections.find(section => section.title === "Martyrologium");
+    assert.ok(martyrology?.english?.trim());
+    assert.ok(martyrology.english?.includes("And elsewhere many other holy martyrs"));
+    assert.doesNotMatch(martyrology.english ?? "", /^\s*Martyrology\s*\{\s*anticipated\s*\}/i);
+  }
+  assert.equal(corpus.manifest.coverage.isSample, false);
+  assert.equal(exceptionalMartyrologyReview().matrix.approval.status, "approved");
+
+  for (const day of ["06", "07", "08", "09", "10"]) {
+    for (const hour of ["lauds", "vespers"] as const) {
+      const office = corpus.offices.find(candidate =>
+        candidate.id === `2026-04-${day}-${hour}`
+      );
+      assert.ok(office);
+      assert.ok(office.sections.some(section =>
+        section.latin === "Orémus."
+        && section.english === "Let us pray."
+      ));
+      const substantiveMissing = office.sections.filter(section =>
+        !section.english?.trim()
+        && section.latin.replace(/[^A-Za-zÀ-ž]/g, "").length >= 8
+      );
+      assert.deepEqual(substantiveMissing, []);
+    }
+  }
+
+  const missingOutsideMartyrology = corpus.offices.flatMap(office =>
+    office.sections.filter(section =>
+      section.title !== "Martyrologium"
+      && !section.english?.trim()
+      && section.latin.replace(/[^A-Za-zÀ-ž]/g, "").length >= 8
+    ).map(section => `${office.id}:${section.id}`)
+  );
+  assert.deepEqual(missingOutsideMartyrology, []);
+});
+
+test("exceptional Martyrology matrix pins public-domain sources and records release approval", () => {
+  const review = exceptionalMartyrologyReview();
+  assert.equal(
+    review.matrix.englishBase.pdfSHA256,
+    "688cfa7b85d8a686a4fde9877cfa133550fef8fce8cf46c6c433abf88983042d"
+  );
+  assert.equal(review.matrix.approval.status, "approved");
+  assert.equal(review.matrix.approval.reviewedBy, "Matthew McCarty");
+  assert.equal(review.matrix.approval.reviewedAt, "2026-08-20");
+  assert.doesNotThrow(() => requireApprovedExceptionalMartyrology());
+  assert.doesNotMatch(exceptionalMartyrologyEnglish["2026-02-22"], /Vigil of.*Matthias/i);
+  assert.match(exceptionalMartyrologyEnglish["2026-12-24"], /fifth Kalends of February/);
+  assert.ok(
+    exceptionalMartyrologyEnglish["2026-12-24"].indexOf("Peter Nolasco")
+      < exceptionalMartyrologyEnglish["2026-12-24"].indexOf("Saint Eugenia")
+  );
+});
+
+test("bundled August 19 Sext carries complete English through every reported gap", () => {
+  const corpus = loadBundled2026Corpus();
+  const office = corpus.offices.find(candidate =>
+    candidate.id === "2026-08-19-sext"
+  );
+  assert.ok(office);
+
+  const incipit = office.sections.find(section => section.title === "Incipit");
+  assert.match(incipit?.english ?? "", /O God,[\s\S]*come to my assistance/i);
+  assert.match(incipit?.english ?? "", /world without end/i);
+  assert.match(incipit?.english ?? "", /Alleluia/i);
+
+  for (const psalm of ["Psalmus 55", "Psalmus 56", "Psalmus 57"]) {
+    const section = office.sections.find(candidate =>
+      candidate.title === psalm
+      && englishWordCount(candidate.english ?? "") > 80
+    );
+    assert.ok(section, `${psalm} is absent`);
+    assert.ok(
+      englishWordCount(section.english ?? "") > 80,
+      `${psalm} still has only a fragment of its English translation`
+    );
+  }
+  const psalm57 = office.sections.find(section =>
+    section.title === "Psalmus 57"
+    && section.english?.includes("57:10")
+  );
+  assert.ok(psalm57);
+  assert.ok(
+    psalm57.english!.indexOf("57:9") < psalm57.english!.indexOf("57:10"),
+    "Psalm 57 English verses are out of order"
+  );
+
+  const chapterEnglish = office.sections
+    .filter(section => section.title === "Capitulum Responsorium Versus")
+    .map(section => section.english ?? "")
+    .join("\n");
+  assert.match(chapterEnglish, /mouth of the righteous/i);
+  assert.match(chapterEnglish, /law of his God is in his heart/i);
+  assert.match(chapterEnglish, /None of his steps shall slide/i);
+
+  const prayerEnglish = office.sections
+    .filter(section => section.title === "Oratio")
+    .map(section => section.english ?? "")
+    .join("\n");
+  assert.match(prayerEnglish, /O Lord, hear my prayer/i);
+  assert.match(prayerEnglish, /wondrously inspire blessed John/i);
+});
+
+test("bundled August 19 None keeps nested chapter translations separate", () => {
+  const corpus = loadBundled2026Corpus();
+  const office = corpus.offices.find(candidate =>
+    candidate.id === "2026-08-19-none"
+  );
+  assert.ok(office);
+
+  const sections = office.sections.filter(section =>
+    section.title === "Capitulum Responsorium Versus"
+  );
+  const chapter = sections.find(section =>
+    section.chant?.gabc.includes("Ius(h)tum(h) de(h)dú(h)xit")
+    && section.chant.gabc.includes("ho(h)nes(h)tá(h)vit")
+  );
+  const versicle = sections.find(section =>
+    section.chant?.gabc.includes("Ju(h)stu(h)m de(h)dú(h)xi(h)t")
+  );
+  const response = sections.find(section =>
+    section.chant?.gabc.includes("E(h)t o(h)sté(h)ndi(h)t")
+  );
+
+  assert.equal(
+    chapter?.english,
+    "She conducted the just, when he fled from his brother's wrath, through "
+      + "the right ways, and showed him the kingdom of God, and gave him the "
+      + "knowledge of the holy things, made him honourable in his labours, "
+      + "and accomplished his labours."
+  );
+  assert.equal(
+    versicle?.english,
+    "℣. The Lord guided the just in right paths."
+  );
+  assert.equal(
+    response?.english,
+    "℟. And showed him the kingdom of God."
+  );
+});
+
+test("bundled long scored psalms never collapse to one English verse", () => {
+  const corpus = loadBundled2026Corpus();
+  const longScoredPsalms = corpus.offices.flatMap(office =>
+    office.sections.filter(section =>
+      section.kind === "psalm"
+      && /^Psalmus \d+/.test(section.title)
+      && (section.chant?.gabc.length ?? 0) > 1_200
+    )
+  );
+
+  assert.ok(longScoredPsalms.length > 100);
+  for (const section of longScoredPsalms) {
+    assert.ok(
+      englishWordCount(section.english ?? "") > 30,
+      `${section.id} (${section.title}) has truncated or missing English`
+    );
+  }
+});
+
 test("bundled chant text and timelines contain no leaked GABC percent comments", () => {
-  const database = new URL(
-    "../../../HoursApp/Resources/base-office.sqlite",
-    import.meta.url
-  ).pathname;
-  const corpus = loadCompiledCorpus(database);
+  const corpus = loadBundled2026Corpus();
   const chantSections = corpus.offices.flatMap(office =>
     office.sections.filter(section => section.chant)
   );
 
   assert.ok(chantSections.length > 0);
   for (const section of chantSections) {
+    assert.ok(
+      section.english?.trim(),
+      `${section.id} (${section.title}) lacks its available English translation`
+    );
     assert.doesNotMatch(section.latin, /^\s*%/);
+    assert.doesNotMatch(section.latin, /Solesmes\s+1961,\s*100%/i);
     assert.doesNotMatch(section.chant!.incipit, /^\s*%/);
     const timeline = parseGABC(section.chant!.gabc, section.chant!.id);
     for (const event of timeline.events) {
@@ -410,6 +857,56 @@ test("Divinum Officium XHTML importer preserves bilingual sections and upstream 
   assert.match(office.sections[0].latin, /Deus in adiutórium/);
   assert.match(office.sections[0].english, /O God, come to my assistance/);
   assert.equal(office.sections[1].rubricLatin, "ex Psalterio");
+});
+
+test("Divinum Officium importer separates Matins blessings, readings, and responsories", () => {
+  const html = `
+    <p class="cen"><span class="x">Feria ~ III. classis<br></span></p><span class="s">Tempus</span>
+    <TABLE><TR><TD ID="Matutinum9"><p><b>Benedictio</b><br>
+      ℣. Iube, Dómine, benedícere.<br><br>Benedictio. Deus nos benedícat.<br><br>℟. Amen.<br><br>
+      <b>Lectio 1</b><br><br>In princípio erat Verbum.<br><br>℣. Tu autem, Dómine.<br><br>
+      ℟. Deo grátias.<br><br>℟. In princípio.<br><br>* Et Verbum erat apud Deum.</p></TD>
+      <TD><p><b>Blessing</b><br>℣. Grant, Lord, a blessing.<br><br>May God bless us.<br><br>℟. Amen.<br><br>
+      <b>Reading 1</b><br><br>In the beginning was the Word.<br><br>℣. But thou, O Lord.<br><br>
+      ℟. Thanks be to God.<br><br>℟. In the beginning.<br><br>* And the Word was with God.</p></TD></TR></TABLE>`;
+  const office = parseDivinumOffice(html, {
+    date: "2026-01-01", hour: "matins", file: "fixture.html", sha256: "fixture"
+  });
+  assert.deepEqual(office.sections.map(section => section.kind), [
+    "blessing", "reading", "responsory"
+  ]);
+  assert.equal(office.sections[1].titleLatin, "Lectio 1");
+  assert.doesNotMatch(office.sections[1].latin, /In princípio\.\n\n\*/);
+  assert.match(office.sections[2].latin, /^℟\. In princípio/);
+});
+
+test("Divinum Officium importer keeps inline directions distinct from prayer text", () => {
+  const office = parseDivinumOffice(`
+    <p class="cen"><span class="rd">Feria ~ IV. classis<br/></span></p>
+    <TR><TD ID="Completorium1"><p><b>Preces</b><br/>
+      Confíteor: <span class="w">(percutit sibi pectus)</span> mea culpa.<br/>
+      <span class="w">110:9</span> Sanctum et terríbile nomen eius.
+    </p></TD><TD><p><b>Prayers</b><br/>
+      I confess: <span class="w">strikes his breast</span> through my fault.<br/>
+      <span class="w">The first verse of the following hymn is said genuflecting.</span><br/>
+      <span class="w">110:9</span> Holy and terrible is his name.
+    </p></TD></TR>
+  `, {
+    date: "2026-08-19",
+    hour: "compline",
+    file: "inline-rubrics.html",
+    sha256: "fixture"
+  });
+
+  assert.match(office.sections[0].latin, /\(percutit sibi pectus\) mea culpa/);
+  assert.match(office.sections[0].english, /\(strikes his breast\) through my fault/);
+  assert.match(
+    office.sections[0].english,
+    /\(The first verse of the following hymn is said genuflecting\.\)/
+  );
+  assert.doesNotMatch(office.sections[0].english, /\(genuflecting\)/);
+  assert.match(office.sections[0].latin, /110:9 Sanctum/);
+  assert.doesNotMatch(office.sections[0].latin, /\(110:9\)/);
 });
 
 test("Divinum Officium snapshot import rejects changed source files", () => {
@@ -763,6 +1260,16 @@ test("ordered snapshots replace the two-stream fuzzy merge", () => {
       title: "Canticum Simeonis",
       latin: "This legacy stream would require string matching.",
       chant: null
+    }, {
+      id: "bilingual-source",
+      kind: "prayer",
+      title: "Prex poenitentialis",
+      titleEnglish: "Penitential prayer",
+      rubric: "secreto",
+      rubricEnglish: "silently",
+      latin: "Pater noster, qui es in cælis.",
+      english: "Our Father, who art in heaven.",
+      chant: null
     }]
   };
   const source: LoadedScoredOffice = {
@@ -801,6 +1308,133 @@ test("ordered snapshots replace the two-stream fuzzy merge", () => {
     new Set(result.sections.map(section => section.id)).size,
     result.sections.length
   );
+  const enriched = result.sections.find(
+    section => section.latin === "Pater noster, qui es in cælis."
+  );
+  assert.equal(enriched?.english, "Our Father, who art in heaven.");
+  assert.equal(enriched?.titleEnglish, "Penitential prayer");
+  assert.equal(
+    result.sections.find(section => section.latin === "Benedictio:")?.english,
+    "Blessing:"
+  );
+});
+
+test("scored lyric alignment preserves complete opening and psalm translations", () => {
+  const chant = (id: string, incipit: string, gabc: string) => ({
+    id,
+    incipit,
+    gabc,
+    mode: null,
+    reviewStatus: "generatedFormula" as const,
+    provenance: {
+      collection: "Chant Tools",
+      sourceBook: "fixture",
+      sourceURL: null,
+      license: "Unlicense",
+      snapshot: id
+    },
+    timeline: { events: [] }
+  });
+  const office: OfficeDocument = {
+    id: "2026-08-19-sext",
+    date: { year: 2026, month: 8, day: 19 },
+    hour: "sext",
+    titleLatin: "Ad Sextam",
+    titleEnglish: "Sext",
+    contextLabel: "S. Joannis Eudes Confessoris",
+    sourceVersion: "fixture",
+    observance: {
+      observanceID: "fixture/john-eudes",
+      titleLatin: "S. Joannis Eudes Confessoris",
+      rank: "thirdClass",
+      commemorations: []
+    },
+    sections: [{
+      id: "opening-source",
+      kind: "opening",
+      title: "Incipit",
+      latin: "Incipit\n\n℣. Deus in adiutórium meum inténde.\n\n℟. Dómine, ad adiuvándum me festína.\n\nGlória Patri.\n\nSicut erat in princípio et in sǽcula sæculórum.\n\nAllelúia.",
+      english: "Start\n\n℣. O God, come to my assistance.\n\n℟. O Lord, make haste to help me.\n\nGlory be to the Father.\n\nAs it was in the beginning, world without end.\n\nAlleluia.",
+      chant: null
+    }, {
+      id: "psalm-source",
+      kind: "psalm",
+      title: "Psalmi",
+      latin: "Psalmus 56\n\n56:2 Miserére mei, Deus.\n\n56:3 Clamábo ad Deum altíssimum.",
+      english: "Psalm 56\n\n56:2 Have mercy on me, O God.\n\n56:3 I will cry to God the most High.",
+      chant: null
+    }, {
+      id: "pater-source",
+      kind: "prayer",
+      title: "Pater",
+      latin: "Pater noster.\n\nAllelúia.",
+      english: "Our Father.\n\nAlleluia.",
+      chant: null
+    }, {
+      id: "responsory-source",
+      kind: "reading",
+      title: "Lectio 3",
+      latin: "℟. Benedíctus qui venit in nómine Dómini, Deus Dóminus, et illúxit nobis.\n\n℟. Allelúia.\n\n℣. Hæc dies quam fecit Dóminus, exsultémus et lætémur in ea.",
+      english: "℟. Blessed be he that cometh in the name of the Lord; God is the Lord who hath showed us light.\n\n℟. Alleluia.\n\n℣. This is the day which the Lord hath made; let us rejoice and be glad in it.",
+      chant: null
+    }]
+  };
+  const orderedSections = [{
+    id: "opening-score",
+    kind: "opening" as const,
+    title: "Incipit",
+    latin: "V/",
+    english: null,
+    rubric: null,
+    chant: chant("opening-score", "V/", "(c3) V/.() De(h)us(h) in(h) ad(h)ju(h)tó(h)ri(h)um(h) me(h)um(h) in(h)tén(h)de.(h.) (::) R/.() Dó(h)mi(h)ne(h) ad(h) ad(h)ju(h)ván(h)dum(h) me(h) fe(h)stí(h)na.(h.) (::) Gló(h)ri(h)a(h) Pa(h)tri.(h.) (::) Sic(h)ut(h) e(h)rat(h) in(h) prin(h)cí(h)pi(h)o(h) et(h) in(h) sae(h)cu(h)la(h) sae(h)cu(h)ló(h)rum.(h.) (::) Al(h)le(h)lú(h){ia}.(h.) (::)"),
+    sourceOffset: 1,
+    sourceRole: "chant" as const
+  }, {
+    id: "psalm-score",
+    kind: "psalm" as const,
+    title: "Psalmus 56",
+    latin: "Miserére mei, Deus",
+    english: "Have mercy on me, O God.",
+    rubric: null,
+    chant: chant("psalm-score", "Miserére mei, Deus", "(c4) 1. Mi(f)se(g)ré(h)re(h) me(h)i,(h) De(h)us.(h.) 2.(::) Cla(h)má(h)bo(h) ad(h) De(h)um(h) al(h)tís(h)si(h)mum.(h.) (::)"),
+    sourceOffset: 2,
+    sourceRole: "chant" as const
+  }, {
+    id: "mislabeled-responsory-score",
+    kind: "prayer" as const,
+    title: "Pater",
+    latin: "Benedíctus qui venit in nómine Dómini",
+    english: null,
+    rubric: null,
+    chant: chant("mislabeled-responsory-score", "Benedíctus qui venit", "(c3) Be(h)ne(h)díc(h)tus(h) qui(h) ve(h)nit(h) in(h) nó(h)mi(h)ne(h) Dó(h)mi(h)ni,(h) De(h)us(h) Dó(h)mi(h)nus,(h) et(h) il(h)lú(h)xit(h) no(h)bis.(h) (::) Al(h)le(h)lú(h)ia.(h) (::) Hæc(h) di(h)es(h) quam(h) fe(h)cit(h) Dó(h)mi(h)nus,(h) ex(h)sul(h)té(h)mus(h) et(h) læ(h)té(h)mur(h) in(h) e(h)a.(h) (::)"),
+    sourceOffset: 3,
+    sourceRole: "chant" as const
+  }];
+  const source: LoadedScoredOffice = {
+    date: "2026-08-19",
+    hour: "sext",
+    file: "fixture.html",
+    sha256: "fixture",
+    sourceURL: "https://example.invalid",
+    scoreCount: 3,
+    scores: [],
+    observance: {
+      titleLatin: office.contextLabel,
+      rank: "thirdClass",
+      commemorations: []
+    },
+    orderedSections,
+    visibleContentDigest: canonicalVisibleContentDigest(orderedSections)
+  };
+
+  const result = officeWithScoredReference(office, source);
+  assert.match(result.sections[0].english ?? "", /O God, come to my assistance/);
+  assert.match(result.sections[0].english ?? "", /Glory be to the Father/);
+  assert.match(result.sections[0].english ?? "", /world without end/);
+  assert.match(result.sections[0].english ?? "", /Alleluia/);
+  assert.match(result.sections[1].english ?? "", /I will cry to God the most High/);
+  assert.match(result.sections[2].english ?? "", /Blessed be he that cometh/);
+  assert.match(result.sections[2].english ?? "", /This is the day which the Lord hath made/);
 });
 
 test("legacy ordered snapshots remove leaked GABC comments from chant text", () => {
@@ -930,6 +1564,148 @@ test("reference header metadata preserves first Vespers and all commemorations",
   });
 });
 
+test("reference header metadata recognizes ligatured second Vespers", () => {
+  const metadata = parseReferenceObservance(`
+    <html>
+      <body>
+        <p class="classis">I. classis</p>
+        <h1>In Dedicatione S. Michaëlis Archangelis</h1>
+        <p class="subtitle">Vespera de præcedenti.</p>
+      </body>
+    </html>
+  `, "vespers");
+
+  assert.equal(metadata.eveningContext, "secondVespers");
+});
+
+test("reference header metadata accepts observance-only English page titles", () => {
+  const metadata = parseReferenceObservance(`
+    <html>
+      <head>
+        <title>Tuesday of the Twelfth Week after Pentecost - Breviarium Gregorianum</title>
+      </head>
+      <body>
+        <h1>Feria tertia infra Hebdomadam XII post Pentecosten</h1>
+      </body>
+    </html>
+  `, "lauds");
+
+  assert.equal(
+    metadata.titleEnglish,
+    "Tuesday of the Twelfth Week after Pentecost"
+  );
+});
+
+test("evening resolution distinguishes first, second, and ordinary Vespers", () => {
+  const localDay = (date: string) => {
+    const [year, month, day] = date.split("-").map(Number);
+    return { year, month, day };
+  };
+  const day = (
+    date: string,
+    titleLatin: string,
+    rank: "firstClass" | "thirdClass"
+  ) => ({
+    date: localDay(date),
+    observanceID: titleLatin,
+    titleLatin,
+    rank,
+    color: null,
+    season: "Test",
+    eveningContext: null,
+    commemorations: [],
+    sourceVersion: "test"
+  });
+  const office = (
+    date: string,
+    hour: OfficeHour,
+    titleLatin: string,
+    rank: "firstClass" | "thirdClass"
+  ): OfficeDocument => ({
+    id: `${date}-${hour}`,
+    date: localDay(date),
+    hour,
+    titleLatin: `Ad ${hour}`,
+    contextLabel: titleLatin,
+    sourceVersion: "test",
+    observance: {
+      observanceID: titleLatin,
+      titleLatin,
+      rank,
+      color: null,
+      season: "Test",
+      eveningContext: null,
+      commemorations: []
+    },
+    sections: [{
+      id: `${date}-${hour}-section`,
+      kind: "prayer",
+      title: "Oratio",
+      latin: "Orémus."
+    }]
+  });
+  const wenceslaus = "S. Wenceslai Ducis et Martyris";
+  const michaelmas = "In Dedicatione S. Michaëlis Archangelis";
+  const jerome = "S. Hieronymi Presbyteri";
+  const days = [
+    day("2026-09-28", wenceslaus, "thirdClass"),
+    day("2026-09-29", michaelmas, "firstClass"),
+    day("2026-09-30", jerome, "thirdClass")
+  ];
+  const offices = [
+    office("2026-09-28", "matins", wenceslaus, "thirdClass"),
+    office("2026-09-28", "vespers", michaelmas, "firstClass"),
+    office("2026-09-28", "compline", michaelmas, "firstClass"),
+    office("2026-09-29", "matins", michaelmas, "firstClass"),
+    office("2026-09-29", "vespers", michaelmas, "firstClass"),
+    office("2026-09-29", "compline", michaelmas, "firstClass"),
+    office("2026-09-30", "matins", jerome, "thirdClass"),
+    office("2026-09-30", "vespers", jerome, "thirdClass"),
+    office("2026-09-30", "compline", jerome, "thirdClass")
+  ];
+  const input: CorpusInput = {
+    manifest: {
+      schemaVersion: 1,
+      corpusVersion: "test",
+      minimumAppVersion: "0.1.0",
+      createdAt: "2026-01-01T00:00:00Z",
+      rubrics: "Rubrics 1960 - 1960",
+      sources: [],
+      coverage: {
+        startDate: localDay("2026-09-28"),
+        endDate: localDay("2026-09-30"),
+        expectedOfficeCount: offices.length,
+        generatedOfficeCount: offices.length,
+        unresolvedScoreCount: 0,
+        ambiguousScoreCount: 0,
+        isSample: true
+      },
+      packSHA256: "",
+      signature: ""
+    },
+    days,
+    offices
+  };
+
+  const resolved = withResolvedEveningContexts(input);
+  assert.deepEqual(
+    resolved.days.map(value => value.eveningContext),
+    ["firstVespers", "secondVespers", "ferialVespers"]
+  );
+  assert.deepEqual(
+    resolved.offices
+      .filter(value => value.hour === "vespers")
+      .map(value => value.observance?.eveningContext),
+    ["firstVespers", "secondVespers", "ferialVespers"]
+  );
+  assert.deepEqual(
+    resolved.offices
+      .filter(value => value.hour === "compline")
+      .map(value => value.observance?.eveningContext),
+    ["firstVespers", "secondVespers", "ferialVespers"]
+  );
+});
+
 test("scored compilation rejects legacy snapshots without ordered sidecars", () => {
   const office: OfficeDocument = {
     id: "2026-12-08-matins",
@@ -1018,6 +1794,22 @@ test("shipping corpus uses metadata-only placeholders for reference gaps", () =>
     assert.ok(placeholder.observance?.titleLatin);
   }
 
+  const classifiedOffices = offices.map(office => {
+    if (
+      (office.hour === "vespers" || office.hour === "compline")
+      && office.observance
+    ) {
+      return {
+        ...office,
+        observance: {
+          ...office.observance,
+          eveningContext: "ferialVespers" as const
+        }
+      };
+    }
+    return office;
+  });
+
   const shippable = {
     ...corpus,
     manifest: {
@@ -1028,13 +1820,13 @@ test("shipping corpus uses metadata-only placeholders for reference gaps", () =>
         authoritativeOfficeCount: 1
       }
     },
-    offices
+    offices: classifiedOffices
   };
   assert.doesNotThrow(() => validateCorpus(shippable, true));
   assert.throws(
     () => validateCorpus({
       ...shippable,
-      offices: offices.map((office, index) => index === 1
+      offices: classifiedOffices.map((office, index) => index === 1
         ? { ...office, sections: source.sections }
         : office)
     }, true),
