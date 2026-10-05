@@ -51,22 +51,15 @@ public struct LocalDay: Codable, Hashable, Comparable, Sendable, CustomStringCon
 
     /// The date Hours selects while following the current canonical hour.
     ///
-    /// The preceding civil date remains active through Matins so the automatic
-    /// Office date advances with Lauds at 4 a.m., rather than at midnight.
+    /// Matins opens the liturgical day, so the automatic Office date is the
+    /// civil date: Matins said after midnight is that of the new day. The
+    /// following day's First Vespers and Compline are already stored under
+    /// the evening's civil date.
     public static func currentOfficeDay(
         at date: Date = Date(),
         calendar: Calendar = .hoursGregorian
     ) -> Self {
-        let hour = calendar.component(.hour, from: date)
-        guard hour < 4,
-              let previousDay = calendar.date(
-                  byAdding: .day,
-                  value: -1,
-                  to: date
-              ) else {
-            return Self(date, calendar: calendar)
-        }
-        return Self(previousDay, calendar: calendar)
+        Self(date, calendar: calendar)
     }
 
     public static func < (lhs: LocalDay, rhs: LocalDay) -> Bool {
@@ -257,6 +250,10 @@ public enum LiturgicalRank: String, Codable, Hashable, Sendable {
         case .fourthClass: "IV. classis"
         }
     }
+
+    public var englishDisplayName: String {
+        displayName.replacingOccurrences(of: "classis", with: "Class")
+    }
 }
 
 public enum LiturgicalColor: String, Codable, Hashable, Sendable {
@@ -301,6 +298,11 @@ public struct LiturgicalDay: Codable, Hashable, Sendable, Identifiable {
     public let titleLatin: String
     public let titleEnglish: String?
     public let rank: LiturgicalRank?
+    public let sourceRank: String?
+    public var rankDisplayName: String? { sourceRank ?? rank?.displayName }
+    /// The rank as shown to readers: the 1960 class in English, otherwise the
+    /// source's own rite (for example, "Duplex II. classis").
+    public var rankLabel: String? { rank?.englishDisplayName ?? sourceRank }
     public let color: LiturgicalColor?
     public let season: String
     public let eveningContext: EveningContext?
@@ -313,6 +315,7 @@ public struct LiturgicalDay: Codable, Hashable, Sendable, Identifiable {
         titleLatin: String,
         titleEnglish: String? = nil,
         rank: LiturgicalRank? = nil,
+        sourceRank: String? = nil,
         color: LiturgicalColor? = nil,
         season: String,
         eveningContext: EveningContext? = nil,
@@ -324,6 +327,7 @@ public struct LiturgicalDay: Codable, Hashable, Sendable, Identifiable {
         self.titleLatin = titleLatin
         self.titleEnglish = titleEnglish
         self.rank = rank
+        self.sourceRank = sourceRank
         self.color = color
         self.season = season
         self.eveningContext = eveningContext
@@ -357,13 +361,14 @@ public enum ChantReviewStatus: String, Codable, Hashable, Sendable {
     case exactMatch
     case humanReviewed
     case generatedFormula
+    case sourceTranscription
     case ambiguous
     case missing
 
     public var isReleaseReady: Bool {
         switch self {
         case .exactMatch, .humanReviewed, .generatedFormula: true
-        case .ambiguous, .missing: false
+        case .sourceTranscription, .ambiguous, .missing: false
         }
     }
 }
@@ -628,8 +633,14 @@ public struct OfficeSection: Codable, Hashable, Sendable, Identifiable {
 public struct OfficeDocument: Codable, Hashable, Sendable, Identifiable {
     public enum Format: String, Codable, Hashable, Sendable {
         case authoritativeOrdered
+        /// Faithful ordered source import, awaiting independent liturgical review.
+        case sourceOrdered
         case legacyReconstructed
         case contentUnavailable
+
+        public var preservesSourceOrder: Bool {
+            self == .authoritativeOrdered || self == .sourceOrdered
+        }
     }
 
     public let id: String
@@ -681,6 +692,11 @@ public struct OfficeObservance: Codable, Hashable, Sendable, Identifiable {
     public let titleLatin: String
     public let titleEnglish: String?
     public let rank: LiturgicalRank?
+    public let sourceRank: String?
+    public var rankDisplayName: String? { sourceRank ?? rank?.displayName }
+    /// The rank as shown to readers: the 1960 class in English, otherwise the
+    /// source's own rite (for example, "Duplex II. classis").
+    public var rankLabel: String? { rank?.englishDisplayName ?? sourceRank }
     public let color: LiturgicalColor?
     public let season: String?
     public let eveningContext: EveningContext?
@@ -691,6 +707,7 @@ public struct OfficeObservance: Codable, Hashable, Sendable, Identifiable {
         titleLatin: String,
         titleEnglish: String? = nil,
         rank: LiturgicalRank? = nil,
+        sourceRank: String? = nil,
         color: LiturgicalColor? = nil,
         season: String? = nil,
         eveningContext: EveningContext? = nil,
@@ -700,6 +717,7 @@ public struct OfficeObservance: Codable, Hashable, Sendable, Identifiable {
         self.titleLatin = titleLatin
         self.titleEnglish = titleEnglish
         self.rank = rank
+        self.sourceRank = sourceRank
         self.color = color
         self.season = season
         self.eveningContext = eveningContext
@@ -988,5 +1006,40 @@ public struct LiturgicalSearchResult: Identifiable, Hashable, Sendable {
         self.english = english
         self.scoredRealizations = scoredRealizations
         self.contexts = contexts
+    }
+}
+
+/// How an observance title is shown, wherever it appears.
+///
+/// Source titles may carry the week-of-month marker that selects the week's
+/// Scripture ("Dominica XIX Post Pentecosten I. Octobris"), or its ordinal
+/// alone once the month was removed ("… Post Pentecosten I."); neither is part
+/// of the title. English titles are stored for use after "of" ("the First
+/// Sunday of Advent") and begin with a capital when they stand alone.
+public enum ObservanceTitle {
+    private static let months = "Januarii|Februarii|Martii|Aprilis|Maii|Iunii|Junii|Iulii|Julii|Augusti|Septembris|Octobris|Novembris|Decembris"
+
+    public static func latin(_ title: String) -> String {
+        title
+            .replacingOccurrences(
+                of: #"\s+[IVX]+\.\s+(?:\#(months))\s*$"#,
+                with: "",
+                options: [.regularExpression, .caseInsensitive]
+            )
+            .replacingOccurrences(
+                of: #"(\b(?:Post Pentecosten|post Octavam Pentecostes))\s+[IVXLCDM]+\.\s*$"#,
+                with: "$1",
+                options: [.regularExpression, .caseInsensitive]
+            )
+    }
+
+    public static func english(_ title: String) -> String {
+        let value = title.replacingOccurrences(
+            of: #"(\b(?:Sunday after Pentecost|Week after the Octave of Pentecost)),\s*(?:the\s+)?(?:First|Second|Third|Fourth|Fifth)\s*$"#,
+            with: "$1",
+            options: [.regularExpression, .caseInsensitive]
+        )
+        guard let first = value.first, first.isLowercase else { return value }
+        return first.uppercased() + value.dropFirst()
     }
 }

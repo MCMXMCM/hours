@@ -2,8 +2,16 @@ import XCTest
 
 @MainActor
 final class HoursUITests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        MainActor.assumeIsolated { UITestAppState.reset() }
+    }
+
     func testSelectablePrayerTextInteraction() {
         let app = makeApplication()
+        // On a day whose Hour is sung from its opening, the translation is the
+        // first prose on the page.
+        app.launchArguments += ["-prayerOptions.showsEnglish", "YES"]
         app.launch()
 
         openSundialOffice("prime", in: app)
@@ -11,18 +19,25 @@ final class HoursUITests: XCTestCase {
             app.staticTexts["office-reader-title"].waitForExistence(timeout: 5)
         )
 
-        let paragraph = app.textViews
-            .matching(identifier: "selectable-prayer-text")
-            .firstMatch
-        for _ in 0..<12 where !paragraph.isHittable {
-            app.swipeUp()
+        // Take a paragraph whose first line is on screen; a long one's centre
+        // may lie below the screen.
+        let reader = app.scrollViews["office-reader-scroll"]
+        let paragraphs = app.textViews.matching(identifier: "selectable-prayer-text")
+        var visibleParagraph: XCUIElement?
+        for _ in 0..<12 {
+            visibleParagraph = paragraphs.allElementsBoundByIndex.first {
+                $0.frame.minY > 150 && $0.frame.minY < app.frame.maxY - 200
+            }
+            if visibleParagraph != nil { break }
+            reader.swipeUp()
         }
-        XCTAssertTrue(paragraph.isHittable)
+        guard let paragraph = visibleParagraph else {
+            return XCTFail("No prayer paragraph became visible")
+        }
 
-        paragraph.coordinate(
-            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
-        )
-        .press(forDuration: 1)
+        paragraph.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: 40, dy: 12))
+            .press(forDuration: 1)
         XCTAssertTrue(app.menuItems["Copy"].waitForExistence(timeout: 3))
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())
@@ -128,55 +143,133 @@ final class HoursUITests: XCTestCase {
         )
     }
 
-    func testCompactTercePsalmHidesImporterLabelsAndScoredVerseDuplicate() {
+    func testCompactComplinePsalmShowsLaterVersesAsProse() {
         let app = makeApplication()
-        selectHourOnLaunch("terce", in: app)
+        app.launchArguments += [
+            "-readerRestoration.isPresented",
+            "YES",
+            "-readerRestoration.day",
+            "2026-08-29",
+            "-readerRestoration.hour",
+            "compline",
+            "-readerRestoration.scrollOffset",
+            "0",
+        ]
         app.launch()
 
-        openSundialOffice("terce", in: app)
-        XCTAssertTrue(app.staticTexts["office-reader-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["office-reader-title"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["translation-toggle"].exists)
         app.buttons["prayer-options"].tap()
         let translationToggle = app.switches["translation-toggle"]
         XCTAssertTrue(translationToggle.waitForExistence(timeout: 3))
         XCTAssertEqual(translationToggle.value as? String, "0")
-        translationToggle.tap()
-        XCTAssertEqual(translationToggle.value as? String, "1")
+        setSwitch(translationToggle, on: true)
+        let compactPsalmodyToggle = app.switches["compact-psalmody-toggle"]
+        XCTAssertTrue(compactPsalmodyToggle.exists)
+        XCTAssertEqual(compactPsalmodyToggle.value as? String, "0")
+        setSwitch(compactPsalmodyToggle, on: true)
         app.buttons["prayer-options-close"].tap()
 
-        let secondPsalmHeading = app.staticTexts["Psalmus 79 (9,20)"]
-        for _ in 0..<12 where !secondPsalmHeading.isHittable {
-            app.swipeUp()
+        // A second sheet cannot be presented while the first is closing.
+        let sectionsSheet = app.navigationBars["Office sections"]
+        for _ in 0..<3 where !sectionsSheet.exists {
+            app.buttons["office-sections"].tap()
+            _ = sectionsSheet.waitForExistence(timeout: 3)
         }
-        XCTAssertTrue(secondPsalmHeading.isHittable)
-
-        let secondVerse = app.descendants(matching: .any).matching(
-            NSPredicate(format: "label BEGINSWITH %@", "Dux itíneris fuísti")
+        XCTAssertTrue(sectionsSheet.exists)
+        // The psalm's entry begins at its antiphon, so find it by name.
+        let psalm87Jump = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "Jump to Psalmus 87")
         ).firstMatch
-        for _ in 0..<6 where !secondVerse.isHittable {
+        XCTAssertTrue(psalm87Jump.waitForExistence(timeout: 5))
+        for _ in 0..<12 where !psalm87Jump.isHittable {
             app.swipeUp()
         }
-        XCTAssertTrue(secondVerse.isHittable)
-        XCTAssertFalse(app.staticTexts["SECTION 4"].exists)
-        XCTAssertFalse(app.staticTexts["[2]"].exists)
-        XCTAssertFalse(
-            app.descendants(matching: .any).matching(
-                NSPredicate(format: "label BEGINSWITH %@", "79:9 ")
-            ).firstMatch.exists
+        XCTAssertTrue(psalm87Jump.isHittable)
+        psalm87Jump.tap()
+
+        let psalm87SecondVerse = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "label BEGINSWITH %@",
+                "2. Intret in conspéctu tuo"
+            )
+        ).firstMatch
+        for _ in 0..<6 where !psalm87SecondVerse.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(psalm87SecondVerse.isHittable)
+
+        app.buttons["office-sections"].tap()
+        let psalm102SecondHalfJump = app.buttons[
+            "office-outline-jump-2026-08-29-compline-section-22"
+        ]
+        for _ in 0..<12 where !psalm102SecondHalfJump.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(psalm102SecondHalfJump.isHittable)
+        psalm102SecondHalfJump.tap()
+
+        let psalm102MissingEnglishVerse = app.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "label BEGINSWITH %@",
+                    "2. Recordátus est"
+                )
+            ).firstMatch
+        for _ in 0..<6 where !psalm102MissingEnglishVerse.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(psalm102MissingEnglishVerse.isHittable)
+
+        let psalm102FollowingEnglish = app.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "label BEGINSWITH %@",
+                    "For the spirit shall pass in him"
+                )
+            ).firstMatch
+        for _ in 0..<3 where !psalm102FollowingEnglish.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(psalm102FollowingEnglish.isHittable)
+        let psalm102FollowingLatin = app.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "label BEGINSWITH %@",
+                    "3. Quóniam spíritus"
+                )
+            ).firstMatch
+        XCTAssertTrue(psalm102FollowingLatin.isHittable)
+        XCTAssertEqual(
+            psalm102FollowingLatin.frame.minX,
+            psalm102FollowingEnglish.frame.minX,
+            accuracy: 2,
+            "The English should align with the Latin text after the verse number."
         )
+        XCTAssertFalse(app.staticTexts["SECTION 20"].exists)
+        XCTAssertFalse(app.staticTexts["[2]"].exists)
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())
-        screenshot.name = "Compact Terce psalm"
+        screenshot.name = "Compact August 29 Compline psalmody"
         screenshot.lifetime = .keepAlways
         add(screenshot)
     }
 
     func testPrayerOptionsIncludeClericPresenceNeumeSizeAndScholaControls() {
         let app = makeApplication()
+        app.launchArguments += [
+            "-readerRestoration.isPresented",
+            "YES",
+            "-readerRestoration.day",
+            "2026-08-30",
+            "-readerRestoration.hour",
+            "compline",
+            "-readerRestoration.scrollOffset",
+            "0",
+        ]
         app.launch()
 
-        openSundialOffice("lauds", in: app)
-        XCTAssertTrue(app.staticTexts["office-reader-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["office-reader-title"].waitForExistence(timeout: 10))
 
         let optionsButton = app.buttons["prayer-options"]
         XCTAssertTrue(optionsButton.waitForExistence(timeout: 3))
@@ -190,8 +283,14 @@ final class HoursUITests: XCTestCase {
         XCTAssertTrue(translationToggle.exists)
         XCTAssertEqual(translationToggle.label, "Show English")
         XCTAssertEqual(translationToggle.value as? String, "0")
-        translationToggle.tap()
-        XCTAssertEqual(translationToggle.value as? String, "1")
+        setSwitch(translationToggle, on: true)
+
+        let compactPsalmodyToggle = app.switches["compact-psalmody-toggle"]
+        XCTAssertTrue(compactPsalmodyToggle.exists)
+        XCTAssertEqual(compactPsalmodyToggle.label, "Compact psalmody")
+        XCTAssertEqual(compactPsalmodyToggle.value as? String, "0")
+        setSwitch(compactPsalmodyToggle, on: true)
+        setSwitch(compactPsalmodyToggle, on: false)
 
         let clericPresence = app.buttons["priest-or-deacon-present"]
         XCTAssertTrue(clericPresence.exists)
@@ -232,8 +331,15 @@ final class HoursUITests: XCTestCase {
         app.buttons["High"].tap()
         XCTAssertEqual(chantRegister.value as? String, "High")
 
+        let printButton = app.buttons["prayer-print-hour"]
+        if !printButton.exists {
+            app.swipeUp()
+        }
+        XCTAssertTrue(printButton.waitForExistence(timeout: 3))
+        XCTAssertEqual(printButton.label, "Print this hour")
+
         app.buttons["prayer-options-close"].tap()
-        let firstNeume = firstRenderedNeume(in: app)
+        let firstNeume = app.buttons["tour-reader-first-chant"]
         XCTAssertTrue(firstNeume.waitForExistence(timeout: 5))
         firstNeume.tap()
 
@@ -247,8 +353,97 @@ final class HoursUITests: XCTestCase {
         )).firstMatch.exists)
     }
 
-    func testHomeClockCalendarAndReader() {
+    func testPrintCurrentHourPresentsNativePrintOptions() {
         let app = makeApplication()
+        app.launchArguments += [
+            "-readerRestoration.isPresented",
+            "YES",
+            "-readerRestoration.day",
+            "2026-08-30",
+            "-readerRestoration.hour",
+            "compline",
+            "-readerRestoration.scrollOffset",
+            "0",
+        ]
+        app.launch()
+
+        XCTAssertTrue(
+            app.staticTexts["office-reader-title"]
+                .waitForExistence(timeout: 10)
+        )
+        app.buttons["prayer-options"].tap()
+        XCTAssertTrue(
+            app.navigationBars["Prayer options"]
+                .waitForExistence(timeout: 3)
+        )
+        setSwitch(app.switches["compact-psalmody-toggle"], on: true)
+
+        let printButton = app.buttons["prayer-print-hour"]
+        for _ in 0..<3 where !printButton.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(printButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(printButton.isEnabled)
+        XCTAssertTrue(printButton.isHittable)
+        printButton.tap()
+
+        let closePrintOptions = app.buttons["Close"]
+        XCTAssertTrue(closePrintOptions.waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["Portrait"].exists)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Compact Compline native print preview"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        closePrintOptions.tap()
+        XCTAssertTrue(
+            app.navigationBars["Prayer options"]
+                .waitForExistence(timeout: 3)
+        )
+    }
+
+    func testNonCompactPrintPreviewKeepsChantInsidePage() {
+        let app = makeApplication()
+        app.launchArguments += [
+            "-readerRestoration.isPresented",
+            "YES",
+            "-readerRestoration.day",
+            "2026-09-01",
+            "-readerRestoration.hour",
+            "compline",
+            "-readerRestoration.scrollOffset",
+            "0",
+        ]
+        app.launch()
+
+        XCTAssertTrue(
+            app.staticTexts["office-reader-title"]
+                .waitForExistence(timeout: 10)
+        )
+        app.buttons["prayer-options"].tap()
+        XCTAssertTrue(
+            app.navigationBars["Prayer options"]
+                .waitForExistence(timeout: 3)
+        )
+        setSwitch(app.switches["compact-psalmody-toggle"], on: false)
+
+        let printButton = app.buttons["prayer-print-hour"]
+        for _ in 0..<3 where !printButton.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(printButton.waitForExistence(timeout: 3))
+        printButton.tap()
+
+        let closePrintOptions = app.buttons["Close"]
+        XCTAssertTrue(closePrintOptions.waitForExistence(timeout: 20))
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Non-compact Compline native print preview"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        closePrintOptions.tap()
+    }
+
+    func testHomeClockCalendarAndReader() {
+        let app = makeApplication(hourDisplay: "wheel")
         selectHourOnLaunch("vespers", in: app)
         app.launch()
 
@@ -679,7 +874,7 @@ final class HoursUITests: XCTestCase {
     }
 
     func testHomeSettingsSwitchesHourSelectionViews() {
-        let app = makeApplication()
+        let app = makeApplication(hourDisplay: nil)
         app.launch()
 
         let settingsButton = app.buttons["home-settings"]
@@ -855,7 +1050,7 @@ final class HoursUITests: XCTestCase {
     }
 
     func testWheelResetReturnsToLocalTime() {
-        let app = makeApplication()
+        let app = makeApplication(hourDisplay: nil)
         app.launch()
 
         app.buttons["home-settings"].tap()
@@ -905,7 +1100,7 @@ final class HoursUITests: XCTestCase {
     }
 
     func testDepartureSwipeAndForegroundKeepWheelAutomatic() {
-        let app = makeApplication()
+        let app = makeApplication(hourDisplay: nil)
         app.launch()
 
         app.buttons["home-settings"].tap()
@@ -1043,6 +1238,35 @@ final class HoursUITests: XCTestCase {
         waitForExpectations(timeout: 3)
     }
 
+    func testSundialRelaunchRestoresLiturgicalTitle() {
+        let app = makeApplication()
+        app.launchArguments += [
+            "-hourSelectionView",
+            "sunDial",
+            "-automaticOfficeSelectionEnabled",
+            "NO",
+            "-manuallySelectedOfficeHour",
+            "vespers",
+            "-readerRestoration.isPresented",
+            "NO",
+        ]
+        app.launch()
+
+        XCTAssertTrue(
+            app.staticTexts["liturgical-title"]
+                .waitForExistence(timeout: 5)
+        )
+        app.terminate()
+        app.launch()
+
+        XCTAssertTrue(
+            app.staticTexts["liturgical-title"]
+                .waitForExistence(timeout: 5),
+            "The current day title must be restored after reopening the sundial."
+        )
+        XCTAssertFalse(app.otherElements["home-load-error"].exists)
+    }
+
     func testManualHourSurvivesForegroundAndRelaunch() {
         let app = makeApplication()
         app.launch()
@@ -1120,7 +1344,7 @@ final class HoursUITests: XCTestCase {
     }
 
     func testFullLiveAppTourAndStateRestoration() {
-        let setupApp = makeApplication()
+        let setupApp = makeApplication(hourDisplay: nil)
         setupApp.launch()
         XCTAssertTrue(
             setupApp.buttons["home-settings"]
@@ -1144,7 +1368,7 @@ final class HoursUITests: XCTestCase {
         setupApp.buttons["settings-close"].tap()
         setupApp.terminate()
 
-        let app = XCUIApplication()
+        let app = pinnedRoman1960Application()
         app.launchArguments += [
             "--reset-app-tour",
             "-automaticOfficeSelectionEnabled",
@@ -1512,6 +1736,12 @@ final class HoursUITests: XCTestCase {
             tourCallout.frame.intersects(detailBack.frame),
             "The result instructions must not cover Back."
         )
+        let detailBackScreenshot = XCTAttachment(
+            screenshot: app.screenshot()
+        )
+        detailBackScreenshot.name = "App Tour — Detail Back"
+        detailBackScreenshot.lifetime = .keepAlways
+        add(detailBackScreenshot)
         detailBack.tap()
         waitForTourStep("Return home", overlay: tourCallout)
 
@@ -1676,7 +1906,7 @@ final class HoursUITests: XCTestCase {
     }
 
     func testTourAdvancesWhenVespersIsAlreadySelected() {
-        let app = XCUIApplication()
+        let app = pinnedRoman1960Application()
         app.launchArguments += [
             "--reset-app-tour",
             "-hourSelectionView",
@@ -1739,7 +1969,13 @@ final class HoursUITests: XCTestCase {
     }
 
     func testAboutReplayDismissesSettingsAndStartsFromHome() {
-        let app = makeApplication()
+        let app = makeApplication(hourDisplay: "wheel")
+        // A fixed starting hour, so that the wheel reaches Vespers whatever
+        // the time of day.
+        app.launchArguments += [
+            "-automaticOfficeSelectionEnabled", "NO",
+            "-manuallySelectedOfficeHour", "sext",
+        ]
         app.launch()
 
         XCTAssertTrue(
@@ -1760,14 +1996,7 @@ final class HoursUITests: XCTestCase {
         let replayWheel = app.descendants(matching: .any)[
             "canonical-hour-dial"
         ]
-        replayWheel.coordinate(
-            withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)
-        ).press(
-            forDuration: 0.2,
-            thenDragTo: replayWheel.coordinate(
-                withNormalizedOffset: CGVector(dx: 0.2, dy: 0.5)
-            )
-        )
+        spinWheel(to: "vespers", wheel: replayWheel, in: app)
         expectation(
             for: NSPredicate(
                 format: "label CONTAINS %@",
@@ -1780,7 +2009,7 @@ final class HoursUITests: XCTestCase {
     }
 
     func testAboutReplayRemainsInteractiveWithoutRelaunchingApp() {
-        let app = XCUIApplication()
+        let app = pinnedRoman1960Application()
         app.launchArguments += [
             "--reset-app-tour",
             "-hourSelectionView",
@@ -1840,9 +2069,28 @@ final class HoursUITests: XCTestCase {
         waitForExpectations(timeout: timeout)
     }
 
-    private func makeApplication() -> XCUIApplication {
+    /// Most cases open an Hour from the sundial; the fresh install's default
+    /// is the wheel. A case that switches the display in Settings passes nil,
+    /// since a launch argument would override its choice.
+    private func makeApplication(hourDisplay: String? = "sunDial") -> XCUIApplication {
+        let app = pinnedRoman1960Application()
+        if let hourDisplay {
+            app.launchArguments += ["-hourSelectionView", hourDisplay]
+        }
+        app.launchArguments += [
+            "--suppress-app-tour",
+            "-readerRestoration.isPresented",
+            "NO",
+        ]
+        return app
+    }
+
+    /// The edition is a persisted setting, and a test that switches it
+    /// (OfficeTraditionUITests) would otherwise leave later tests reading
+    /// Roman 1954. The launch argument overrides the stored choice.
+    private func pinnedRoman1960Application() -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments.append("--suppress-app-tour")
+        app.launchArguments += ["-officeTradition", "roman1960"]
         return app
     }
 
@@ -1880,7 +2128,8 @@ final class HoursUITests: XCTestCase {
         let sundial = app.descendants(matching: .any)[
             "canonical-hour-sundial"
         ]
-        if sundial.waitForExistence(timeout: 1),
+        // Allow the home screen to finish launching before choosing a path.
+        if sundial.waitForExistence(timeout: 5),
            dialButton.waitForExistence(timeout: 1) {
             if !isSelected(dialButton) {
                 dialButton.tap()
@@ -2004,6 +2253,20 @@ final class HoursUITests: XCTestCase {
             "Selected"
         )
         expectation(for: selected, evaluatedWith: button)
+        waitForExpectations(timeout: 3)
+    }
+
+    private func setSwitch(_ toggle: XCUIElement, on: Bool) {
+        let expectedValue = on ? "1" : "0"
+        guard toggle.value as? String != expectedValue else { return }
+
+        toggle.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)
+        ).tap()
+        expectation(
+            for: NSPredicate(format: "value == %@", expectedValue),
+            evaluatedWith: toggle
+        )
         waitForExpectations(timeout: 3)
     }
 

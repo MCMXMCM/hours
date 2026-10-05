@@ -287,8 +287,8 @@ struct MonthOfficeDaysSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
-                    if let rank = day.rank {
-                        Text(rank.displayName)
+                    if let rank = day.rankLabel {
+                        Text(rank)
                             .font(
                                 .custom(
                                     "EBGaramond-Regular",
@@ -303,7 +303,7 @@ struct MonthOfficeDaysSheet: View {
                             )
                     }
 
-                    Text(day.titleLatin)
+                    Text(ObservanceTitle.latin(day.titleLatin))
                         .font(
                             .custom(
                                 "EBGaramond-Regular",
@@ -416,8 +416,8 @@ struct MonthOfficeDaysSheet: View {
             date(for: day).formatted(
                 .dateTime.weekday(.wide).month(.wide).day()
             ),
-            day.rank?.displayName,
-            day.titleLatin,
+            day.rankLabel,
+            ObservanceTitle.latin(day.titleLatin),
         ]
         .compactMap { $0 }
         .joined(separator: ", ")

@@ -1,10 +1,12 @@
 import HoursCore
 import SwiftUI
 import UIKit
+import WidgetKit
 
 struct HomeSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppTourCoordinator.self) private var tour
+    @Environment(AppModel.self) private var model
     @Binding var displayMode: AppDisplayMode
     @Binding var hourSelectionView: HourSelectionViewMode
     let isAtLocalTime: Bool
@@ -17,6 +19,7 @@ struct HomeSettingsView: View {
                     VStack(alignment: .leading, spacing: 28) {
                         automaticHourSelection
                         livePreviewSettings
+                        officeTraditionSettings
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 12)
@@ -78,6 +81,70 @@ struct HomeSettingsView: View {
         }
     }
 
+    private var officeTraditionSettings: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Rubrics")
+                    .font(.system(.title3, design: .serif))
+                Spacer()
+                if model.isChangingTradition {
+                    ProgressView().accessibilityLabel("Changing office tradition")
+                }
+            }
+            Picker("Rubrics", selection: Binding(
+                get: { model.officeTradition },
+                set: { tradition in
+                    Task {
+                        if await model.changeOfficeTradition(to: tradition) {
+                            WidgetCenter.shared.reloadAllTimelines()
+                        }
+                    }
+                }
+            )) {
+                ForEach(OfficeTradition.allCases) { tradition in
+                    Text(tradition.title).tag(tradition)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .disabled(model.isChangingTradition || tour.isActive)
+            .accessibilityIdentifier("office-tradition-picker")
+
+            // All options participate in layout so the tallest description
+            // determines the height at the current width and Dynamic Type size.
+            ZStack(alignment: .topLeading) {
+                ForEach(OfficeTradition.allCases) { tradition in
+                    officeTraditionDetails(tradition)
+                        .opacity(model.officeTradition == tradition ? 1 : 0)
+                        .accessibilityHidden(model.officeTradition != tradition)
+                        .allowsHitTesting(model.officeTradition == tradition)
+                }
+            }
+            if let error = model.traditionErrorMessage {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("office-tradition-error")
+            }
+        }
+    }
+
+    private func officeTraditionDetails(_ tradition: OfficeTradition) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(tradition.description)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            if tradition != .roman1960 {
+                Text("Source edition: Latin and English from Divinum Officium. Chant is included where it can be matched to the text; some passages are text-only. Independent liturgical and musical review is pending.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("office-source-edition-note")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
     private var aboutNavigationLink: some View {
         NavigationLink {
             AboutSettingsView(
@@ -99,7 +166,7 @@ struct HomeSettingsView: View {
         .buttonStyle(.plain)
         .accessibilityLabel("About Hours")
         .accessibilityHint(
-            "Shows the canonical hour schedule and contact information"
+            "Shows the canonical hour schedule, App Tour, chant guide, and contact information"
         )
         .accessibilityIdentifier("settings-about")
         .appTourTarget(.settingsAbout)
@@ -299,24 +366,31 @@ struct HomeSettingsView: View {
 }
 
 private struct AboutSettingsView: View {
-    private static let brandWidth: CGFloat = 232
-
     let onClose: () -> Void
     let onAppTour: () -> Void
     @Environment(AppTourCoordinator.self) private var tour
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var usesLargeLayout: Bool {
+        horizontalSizeClass == .regular
+            && (UIDevice.current.userInterfaceIdiom == .pad
+                || ProcessInfo.processInfo.isiOSAppOnMac)
+    }
+
+    private var brandWidth: CGFloat { usesLargeLayout ? 360 : 232 }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 36) {
-                VStack(spacing: 24) {
-                    HoursBrandView()
-                        .frame(width: Self.brandWidth)
+            VStack(alignment: .leading, spacing: usesLargeLayout ? 44 : 36) {
+                VStack(spacing: usesLargeLayout ? 32 : 24) {
+                    HoursBrandView(scale: brandWidth / 232)
+                        .frame(width: brandWidth)
 
                     AutomaticHourTable(
-                        textStyle: .subheadline,
-                        rowSpacing: 6
+                        textStyle: usesLargeLayout ? .title3 : .subheadline,
+                        rowSpacing: usesLargeLayout ? 10 : 6
                     )
-                    .frame(width: Self.brandWidth)
+                    .frame(width: brandWidth)
                     .accessibilityIdentifier(
                         "about-automatic-hour-table"
                     )
@@ -328,24 +402,24 @@ private struct AboutSettingsView: View {
                         onAppTour()
                     }
                 } label: {
-                    HStack(spacing: 14) {
+                    HStack(spacing: usesLargeLayout ? 20 : 14) {
                         Image(systemName: "sparkles.rectangle.stack")
-                            .font(.system(size: 21))
+                            .font(.system(size: usesLargeLayout ? 28 : 21))
                             .foregroundStyle(.secondary)
-                            .frame(width: 30)
+                            .frame(width: usesLargeLayout ? 40 : 30)
 
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: usesLargeLayout ? 6 : 2) {
                             Text("App Tour")
-                                .font(.body)
+                                .font(usesLargeLayout ? .title2 : .body)
                             Text("Replay the guided tour of Hours")
-                                .font(.caption)
+                                .font(usesLargeLayout ? .body : .caption)
                                 .foregroundStyle(.secondary)
                         }
 
                         Spacer(minLength: 8)
 
                         Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
+                            .font(usesLargeLayout ? .body.weight(.semibold) : .caption.weight(.semibold))
                             .foregroundStyle(.tertiary)
                     }
                     .contentShape(Rectangle())
@@ -357,11 +431,60 @@ private struct AboutSettingsView: View {
                 .accessibilityIdentifier("about-app-tour")
                 .appTourTarget(.aboutTour)
 
+                NavigationLink {
+                    ChantGuideView()
+                } label: {
+                    HStack(spacing: usesLargeLayout ? 20 : 14) {
+                        Image(systemName: "music.note.list")
+                            .font(.system(size: usesLargeLayout ? 28 : 21))
+                            .foregroundStyle(.secondary)
+                            .frame(width: usesLargeLayout ? 40 : 30)
+                        VStack(alignment: .leading, spacing: usesLargeLayout ? 6 : 2) {
+                            Text("Guide to Chant").font(usesLargeLayout ? .title2 : .body)
+                            Text("Learn to read, hear, and sing Gregorian chant")
+                                .font(usesLargeLayout ? .body : .caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right")
+                            .font(usesLargeLayout ? .body.weight(.semibold) : .caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("about-chant-guide")
+
+                NavigationLink {
+                    RubricsGuideView()
+                } label: {
+                    HStack(spacing: usesLargeLayout ? 20 : 14) {
+                        Image(systemName: "book.closed")
+                            .font(.system(size: usesLargeLayout ? 28 : 21))
+                            .foregroundStyle(.secondary)
+                            .frame(width: usesLargeLayout ? 40 : 30)
+                        VStack(alignment: .leading, spacing: usesLargeLayout ? 6 : 2) {
+                            Text("Rubrics").font(usesLargeLayout ? .title2 : .body)
+                            Text("The order of the Office, its psalms, and its chant")
+                                .font(usesLargeLayout ? .body : .caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right")
+                            .font(usesLargeLayout ? .body.weight(.semibold) : .caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("about-rubrics")
+
                 contactSection
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 36)
-            .padding(.bottom, 36)
+            .frame(maxWidth: usesLargeLayout ? 820 : .infinity)
+            .padding(.horizontal, usesLargeLayout ? 40 : 24)
+            .padding(.vertical, usesLargeLayout ? 48 : 36)
+            .frame(maxWidth: .infinity)
         }
         .background(Color.hoursBackground)
         .navigationTitle("About")
@@ -378,19 +501,20 @@ private struct AboutSettingsView: View {
     }
 
     private var contactSection: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: usesLargeLayout ? 24 : 18) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Contact")
-                    .font(.headline)
+                    .font(usesLargeLayout ? .title2.weight(.semibold) : .headline)
 
                 Text(
                     "Have a question, found a bug, or have a suggestion?"
                 )
+                .font(usesLargeLayout ? .title3 : .body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             }
 
-            VStack(spacing: 16) {
+            VStack(spacing: usesLargeLayout ? 24 : 16) {
                 AboutLinkRow(
                     title: "Website",
                     value: "horarum.com",
@@ -398,7 +522,8 @@ private struct AboutSettingsView: View {
                     destination: URL(
                         string: "https://horarum.com"
                     )!,
-                    identifier: "about-website"
+                    identifier: "about-website",
+                    isExpanded: usesLargeLayout
                 )
 
                 AboutLinkRow(
@@ -408,7 +533,8 @@ private struct AboutSettingsView: View {
                     destination: URL(
                         string: "https://horarum.com/support"
                     )!,
-                    identifier: "about-contribute"
+                    identifier: "about-contribute",
+                    isExpanded: usesLargeLayout
                 )
 
                 AboutLinkRow(
@@ -418,7 +544,8 @@ private struct AboutSettingsView: View {
                     destination: URL(
                         string: "mailto:help@horarum.com"
                     )!,
-                    identifier: "about-email"
+                    identifier: "about-email",
+                    isExpanded: usesLargeLayout
                 )
 
                 AboutLinkRow(
@@ -428,7 +555,8 @@ private struct AboutSettingsView: View {
                     destination: URL(
                         string: "https://github.com/MCMXMCM/hours"
                     )!,
-                    identifier: "about-source-code"
+                    identifier: "about-source-code",
+                    isExpanded: usesLargeLayout
                 )
             }
         }
@@ -436,23 +564,25 @@ private struct AboutSettingsView: View {
 }
 
 private struct HoursBrandView: View {
+    var scale: CGFloat = 1
+
     var body: some View {
-        HStack(alignment: .bottom, spacing: 2) {
+        HStack(alignment: .bottom, spacing: 2 * scale) {
             Image("HoursSettingsIcon")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 104, height: 82)
+                .frame(width: 104 * scale, height: 82 * scale)
 
             Text("OURS")
                 .font(
                     .system(
-                        size: 49,
+                        size: 49 * scale,
                         weight: .light,
                         design: .serif
                     )
                 )
-                .tracking(-2)
-                .offset(y: 8)
+                .tracking(-2 * scale)
+                .offset(y: 8 * scale)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Hours")
@@ -466,29 +596,30 @@ private struct AboutLinkRow: View {
     let systemImage: String
     let destination: URL
     let identifier: String
+    var isExpanded = false
 
     var body: some View {
         Link(destination: destination) {
-            HStack(spacing: 14) {
+            HStack(spacing: isExpanded ? 20 : 14) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 21, weight: .regular))
+                    .font(.system(size: isExpanded ? 28 : 21, weight: .regular))
                     .foregroundStyle(.secondary)
-                    .frame(width: 30)
+                    .frame(width: isExpanded ? 40 : 30)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: isExpanded ? 6 : 2) {
                     Text(title)
-                        .font(.caption)
+                        .font(isExpanded ? .body : .caption)
                         .foregroundStyle(.secondary)
 
                     Text(value)
-                        .font(.body)
+                        .font(isExpanded ? .title2 : .body)
                         .foregroundStyle(.primary)
                 }
 
                 Spacer(minLength: 8)
 
                 Image(systemName: "arrow.up.right")
-                    .font(.subheadline)
+                    .font(isExpanded ? .body : .subheadline)
                     .foregroundStyle(.tertiary)
             }
             .contentShape(Rectangle())
@@ -512,8 +643,7 @@ private struct PreviewSelectionCard<Preview: View>: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 8) {
-                preview()
-                    .frame(height: SettingsPreviewLayout.previewHeight)
+                sizedPreview
                     .allowsHitTesting(false)
                     .clipShape(
                         RoundedRectangle(
@@ -537,11 +667,19 @@ private struct PreviewSelectionCard<Preview: View>: View {
 
                 VStack(spacing: 1) {
                     Text(title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(
+                            SettingsPreviewLayout.usesLargePreviews
+                                ? .headline
+                                : .subheadline.weight(.semibold)
+                        )
 
                     if let subtitle {
                         Text(subtitle)
-                            .font(.caption2)
+                            .font(
+                                SettingsPreviewLayout.usesLargePreviews
+                                    ? .caption
+                                    : .caption2
+                            )
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -568,9 +706,30 @@ private struct PreviewSelectionCard<Preview: View>: View {
         .accessibilityHint("Shows this style on the home screen")
         .accessibilityIdentifier(identifier)
     }
+
+    @ViewBuilder
+    private var sizedPreview: some View {
+        if SettingsPreviewLayout.usesLargePreviews {
+            preview()
+                .aspectRatio(
+                    SettingsPreviewLayout.homeWidth
+                        / SettingsPreviewLayout.wheelSourceHeight,
+                    contentMode: .fit
+                )
+        } else {
+            preview()
+                .frame(height: SettingsPreviewLayout.previewHeight)
+        }
+    }
 }
 
+@MainActor
 private enum SettingsPreviewLayout {
+    static var usesLargePreviews: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+            || ProcessInfo.processInfo.isiOSAppOnMac
+    }
+
     static let previewHeight: CGFloat = 156
     static let cardPadding: CGFloat = 6
     static let cardSpacing: CGFloat = 12
@@ -583,8 +742,12 @@ private enum SettingsPreviewLayout {
         previewHeight * homeWidth / wheelSourceHeight
     static let maximumCardWidth =
         maximumPreviewWidth + 2 * cardPadding
-    static let maximumRowWidth =
-        2 * maximumCardWidth + cardSpacing
+    static var maximumRowWidth: CGFloat {
+        // Grow both previews with the sheet, while keeping narrow windows usable.
+        usesLargePreviews
+            ? 900
+            : 2 * maximumCardWidth + cardSpacing
+    }
 }
 
 private struct CrossfadingHourDisplayPreview: View {

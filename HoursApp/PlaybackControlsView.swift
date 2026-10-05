@@ -4,9 +4,11 @@ import SwiftUI
 struct PlaybackControlsView: View {
     let score: ChantScore
     let onClose: () -> Void
+    var usesCompactPresentation = false
     @Environment(ChantPlaybackController.self) private var playback
     @Environment(AppTourCoordinator.self) private var tour
     @GestureState private var dismissalOffset: CGFloat = 0
+    @State private var showsOptions = false
 
     var body: some View {
         @Bindable var playback = playback
@@ -30,6 +32,16 @@ struct PlaybackControlsView: View {
                             .lineLimit(1)
                     }
                     Spacer()
+                    if usesCompactPresentation {
+                        Button { showsOptions = true } label: {
+                            Image(systemName: "slider.horizontal.3")
+                                .font(.title3)
+                                .frame(minWidth: 44, minHeight: 44)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Cantor guide options")
+                        .accessibilityIdentifier("cantor-options")
+                    }
                     Button {
                         playback.toggle(score: score)
                     } label: {
@@ -52,30 +64,32 @@ struct PlaybackControlsView: View {
                     .appTourTarget(.cantorClose)
                 }
 
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 14) {
-                        tempoControl(playback: playback, tempo: $playback.tempo)
-
-                        Divider().frame(height: 20)
-
-                        scholaPitchControl(scholaPitch: $playback.scholaPitch)
-                        registerControl(register: $playback.chantRegister)
-                        soundControl(sound: $playback.guideSound)
-                        loopControl(playback: playback, loopsPhrase: $playback.loopsPhrase)
-                    }
-
-                    VStack(spacing: 8) {
-                        HStack(spacing: 10) {
+                if !usesCompactPresentation {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 14) {
                             tempoControl(playback: playback, tempo: $playback.tempo)
-                        }
-                        HStack {
+
+                            Divider().frame(height: 20)
+
                             scholaPitchControl(scholaPitch: $playback.scholaPitch)
-                            Spacer(minLength: 12)
                             registerControl(register: $playback.chantRegister)
-                            Spacer(minLength: 12)
                             soundControl(sound: $playback.guideSound)
-                            Spacer(minLength: 12)
                             loopControl(playback: playback, loopsPhrase: $playback.loopsPhrase)
+                        }
+
+                        VStack(spacing: 8) {
+                            HStack(spacing: 10) {
+                                tempoControl(playback: playback, tempo: $playback.tempo)
+                            }
+                            HStack {
+                                scholaPitchControl(scholaPitch: $playback.scholaPitch)
+                                Spacer(minLength: 12)
+                                registerControl(register: $playback.chantRegister)
+                                Spacer(minLength: 12)
+                                soundControl(sound: $playback.guideSound)
+                                Spacer(minLength: 12)
+                                loopControl(playback: playback, loopsPhrase: $playback.loopsPhrase)
+                            }
                         }
                     }
                 }
@@ -104,6 +118,27 @@ struct PlaybackControlsView: View {
         .onChange(of: playback.loopsPhrase) { playback.restartIfPlaying(score: score) }
         .onChange(of: playback.scholaPitch) { _, pitch in
             tour.receive(.scholaPitchChanged(pitch))
+        }
+        .sheet(isPresented: $showsOptions) {
+            NavigationStack {
+                Form {
+                    Section("Tempo") {
+                        HStack { tempoControl(playback: playback, tempo: $playback.tempo) }
+                    }
+                    Section("Voice") {
+                        HStack { Text("Schola pitch"); Spacer(); scholaPitchControl(scholaPitch: $playback.scholaPitch) }
+                        HStack { Text("Register"); Spacer(); registerControl(register: $playback.chantRegister) }
+                        HStack { Text("Sound"); Spacer(); soundControl(sound: $playback.guideSound) }
+                    }
+                }
+                .navigationTitle("Cantor guide options")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showsOptions = false }
+                    }
+                }
+            }
         }
     }
 

@@ -51,6 +51,7 @@ public enum ContentDatabaseValidator {
     public static func validate(
         databaseURL: URL,
         expectedManifest: ContentManifest? = nil,
+        expectedTradition: OfficeTradition? = nil,
         validatesNotation: Bool = true
     ) throws {
         var database: OpaquePointer?
@@ -69,6 +70,7 @@ public enum ContentDatabaseValidator {
             throw ContentRepositoryError.databaseUnavailable(message)
         }
         defer { sqlite3_close(database) }
+        try SharedContentDatabase.prepare(database, at: databaseURL)
 
         let integrity = try textRows(database, sql: "PRAGMA quick_check")
         guard integrity == ["ok"] else {
@@ -100,7 +102,7 @@ public enum ContentDatabaseValidator {
             decoder: decoder,
             label: "manifest"
         )
-        guard ContentPackInstaller.supportedSchemaVersions.contains(
+        guard Set([1, 2, 3, 4]).contains(
             embeddedManifest.schemaVersion
         ) else {
             throw ContentRepositoryError.invalidContent(
@@ -110,7 +112,7 @@ public enum ContentDatabaseValidator {
         let requiredTables: Set<String>
         let requiredColumns: [String: [String]]
         switch embeddedManifest.schemaVersion {
-        case 3:
+        case 3, 4:
             requiredTables = searchOptimizedRequiredTables
             requiredColumns = searchOptimizedRequiredColumns
         case 2:
@@ -138,7 +140,8 @@ public enum ContentDatabaseValidator {
             }
         }
 
-        guard embeddedManifest.rubrics == "Rubrics 1960 - 1960" else {
+        guard let tradition = OfficeTradition(rubrics: embeddedManifest.rubrics),
+              expectedTradition == nil || tradition == expectedTradition else {
             throw ContentRepositoryError.invalidContent("Embedded manifest has incorrect rubrics.")
         }
         if let expectedManifest {
@@ -225,6 +228,7 @@ public enum ContentDatabaseValidator {
         var authoritativeOfficeCount = 0
         var unavailableOfficeCount = 0
         var legacyOfficeCount = 0
+        var sourceOfficeCount = 0
         let validateOffice: (String, OfficeDocument, Int) throws -> Void = {
             indexedHour, office, occurrenceCount in
             guard office.hour.rawValue == indexedHour else {
@@ -233,6 +237,18 @@ public enum ContentDatabaseValidator {
                 )
             }
             switch office.format {
+            case .sourceOrdered:
+                guard embeddedManifest.coverage.isSample,
+                      office.observance != nil,
+                      office.visibleContentDigest?.isEmpty == false,
+                      !office.sections.isEmpty,
+                      office.sections.allSatisfy({ !$0.latin.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+                    throw ContentRepositoryError.invalidContent(
+                        "An unreviewed source office must have ordered content and cannot claim release status."
+                    )
+                }
+                try VisibleContentDigest.validate(office)
+                sourceOfficeCount += occurrenceCount
             case .authoritativeOrdered:
                 authoritativeOfficeCount += occurrenceCount
                 guard office.observance != nil,
@@ -287,7 +303,7 @@ public enum ContentDatabaseValidator {
         let expectedAuthoritativeCount =
             embeddedManifest.coverage.authoritativeOfficeCount ?? officeCount
         guard authoritativeOfficeCount == expectedAuthoritativeCount,
-              authoritativeOfficeCount + unavailableOfficeCount + legacyOfficeCount
+              authoritativeOfficeCount + unavailableOfficeCount + legacyOfficeCount + sourceOfficeCount
                 == officeCount else {
             throw ContentRepositoryError.invalidContent(
                 "Authoritative and unavailable office counts do not match the manifest."
@@ -510,7 +526,7 @@ public enum ContentDatabaseValidator {
                     observance: header.observance,
                     sections: sections
                 )
-                if office.format == .authoritativeOrdered {
+                if office.format?.preservesSourceOrder == true {
                     try VisibleContentDigest.validate(office)
                 }
                 try body(

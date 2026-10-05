@@ -2,6 +2,7 @@
 import Foundation
 import HoursCore
 import Observation
+import Synchronization
 
 nonisolated enum ScholaPitch: Int, CaseIterable, Identifiable, Sendable, Hashable {
     case g = 0
@@ -67,6 +68,10 @@ nonisolated enum CantorGuideSound: String, CaseIterable, Identifiable, Sendable,
 @MainActor
 @Observable
 final class ChantPlaybackController {
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2.
+    // https://github.com/swiftlang/swift/issues/88036
+    nonisolated deinit {}
+
     static let defaultTempo = 1.0
     nonisolated static let scholaPitchKey = "cantorGuide.scholaPitch"
     nonisolated static let chantRegisterKey = "cantorGuide.register"
@@ -120,6 +125,10 @@ final class ChantPlaybackController {
     private let userDefaults: UserDefaults
     private var activeScore: ChantScore?
     private var activeStartEventID: String?
+    private var playsSingleNote = false
+    // A lesson can keep related examples on the same pitch reference.
+    // This is session state, never part of the persisted Office score format.
+    private var pitchReference: ChantScore?
     private var playbackID: UUID?
 
     private static let scheduledBufferWindow = 8
@@ -150,10 +159,13 @@ final class ChantPlaybackController {
         observeAudioLifecycle()
     }
 
-    func prepare(score: ChantScore) {
+    func prepare(score: ChantScore, pitchReference: ChantScore? = nil) {
         if preparedScoreID != score.id {
             stop()
+            activeStartEventID = nil
         }
+        self.pitchReference = pitchReference
+        errorMessage = nil
         activeScore = score
         preparedScoreID = score.id
     }
@@ -162,25 +174,39 @@ final class ChantPlaybackController {
         if isPlaying, preparedScoreID == score.id {
             stop()
         } else {
-            play(score: score, fromEventID: activeStartEventID)
+            play(score: score, fromEventID: preparedScoreID == score.id ? activeStartEventID : nil)
         }
     }
 
     func play(score: ChantScore, fromEventID: String? = nil) {
+        play(score: score, fromEventID: fromEventID, singleNote: false)
+    }
+
+    func playNote(score: ChantScore, eventID: String) {
+        play(score: score, fromEventID: eventID, singleNote: true)
+    }
+
+    private func play(score: ChantScore, fromEventID: String?, singleNote: Bool) {
+        if preparedScoreID != score.id {
+            pitchReference = nil
+        }
         playbackID = nil
         isPlaying = false
         currentEventID = nil
-        audioPlayer.stop()
         activeScore = score
         preparedScoreID = score.id
         activeStartEventID = fromEventID
+        playsSingleNote = singleNote
 
-        let selectedEvents = selectedEvents(in: score, fromEventID: fromEventID)
+        let selectedEvents = singleNote
+            ? score.timeline.events.filter { $0.id == fromEventID }
+            : selectedEvents(in: score, fromEventID: fromEventID)
         let timeline = CantorGuideSynthesizer.performance(
             for: selectedEvents,
             in: score
         )
         guard !timeline.isEmpty else {
+            audioPlayer.stop()
             errorMessage = "This chant has no playable notes."
             return
         }
@@ -189,14 +215,15 @@ final class ChantPlaybackController {
         errorMessage = nil
         let tempoAtStart = tempo
         let clefAtStart = GABCClef(gabc: score.gabc)
+        let reference = pitchReference ?? score
         let transpositionAtStart = CantorGuideSynthesizer.centeredTransposition(
-            for: score.timeline.events,
+            for: reference.timeline.events,
             targetOffset: targetDominantOffset,
-            clef: clefAtStart
+            clef: GABCClef(gabc: reference.gabc)
         )
         let registerAtStart = chantRegister
         let soundAtStart = guideSound
-        let loopsAtStart = loopsPhrase
+        let loopsAtStart = loopsPhrase && !singleNote
         let playbackID = UUID()
         self.playbackID = playbackID
 
@@ -238,16 +265,24 @@ final class ChantPlaybackController {
     }
 
     func restartIfPlaying(score: ChantScore) {
-        guard isPlaying else { return }
-        play(score: score, fromEventID: activeStartEventID)
+        guard isPlaying, preparedScoreID == score.id else { return }
+        play(score: score, fromEventID: activeStartEventID, singleNote: playsSingleNote)
     }
 
     private func restartAfterGuideSelectionChange() {
         guard isPlaying, let activeScore else { return }
-        play(score: activeScore, fromEventID: activeStartEventID)
+        play(score: activeScore, fromEventID: activeStartEventID, singleNote: playsSingleNote)
     }
 
     #if DEBUG
+    func audioEngineIsRunningForTesting() async -> Bool {
+        await audioPlayer.isRunningForTesting()
+    }
+
+    func audioEngineStartCountForTesting() async -> Int {
+        await audioPlayer.startCountForTesting()
+    }
+
     func simulateViewportFollow(
         score: ChantScore,
         fromEventID: String?
@@ -489,20 +524,41 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private let guideReverb = AVAudioUnitReverb()
+    // A flat EQ after the reverb stays in the render path when the reverb is
+    // fully dry, so the sample gate can still fade start and stop.
+    private let outputGate = AVAudioUnitEQ(numberOfBands: 1)
     private var format = AVAudioFormat(
         standardFormatWithSampleRate: 44_100,
         channels: 1
     )!
     private var isEngineConfigured = false
+    private var outputFade: ChantPlaybackFade?
+    private var activeSound: CantorGuideSound?
     private var harpRenderer: SampledHarpRenderer?
     private var organRenderer: ModeledOrganRenderer?
     private var pitchPipeRenderer: PitchPipeRenderer?
+    #if DEBUG
+    private var engineStartCount = 0
+    #endif
 
     init() {
         engine.attach(player)
         engine.attach(guideReverb)
+        engine.attach(outputGate)
         guideReverb.loadFactoryPreset(.mediumRoom)
         guideReverb.wetDryMix = 0
+        let band = outputGate.bands[0]
+        band.filterType = .parametric
+        band.frequency = 1_000
+        band.bandwidth = 2
+        band.gain = 0
+        band.bypass = false
+        outputGate.globalGain = 0
+    }
+
+    deinit {
+        engine.stop()
+        outputFade?.detach(from: outputGate.audioUnit)
     }
 
     func start(
@@ -519,31 +575,22 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
                 do {
                     try activateAudioSession()
                     try configureEngineIfNeeded()
-                    if !engine.isRunning {
+                    let engineWasRunning = engine.isRunning
+                    if engineWasRunning {
+                        // Keep RemoteIO awake across neume taps. Pausing the
+                        // engine here is what produced the hard start click.
+                        fadeToSilence()
+                        guideReverb.reset()
+                    } else {
                         try engine.start()
+                        #if DEBUG
+                        engineStartCount += 1
+                        #endif
+                        // RemoteIO can pop if the first audible sample lands in
+                        // the same I/O cycle that wakes the hardware.
+                        drainSilentOutput()
                     }
-                    harpRenderer = nil
-                    organRenderer = nil
-                    pitchPipeRenderer = nil
-                    guideReverb.reset()
-                    switch sound {
-                    case .harp:
-                        guard let soundBankURL = HarpSoundBank.bundledURL else {
-                            throw CantorGuideAudioError.soundBankUnavailable
-                        }
-                        guideReverb.wetDryMix = HarpSoundBank.reverbWetDryMix
-                        harpRenderer = try SampledHarpRenderer(
-                            soundBankURL: soundBankURL,
-                            format: format
-                        )
-                    case .organ:
-                        guideReverb.wetDryMix =
-                            ModeledOrgan.reverbWetDryMix
-                        organRenderer = ModeledOrganRenderer(format: format)
-                    case .simpleTone:
-                        guideReverb.wetDryMix = 0
-                        pitchPipeRenderer = PitchPipeRenderer(format: format)
-                    }
+                    try prepareRenderer(for: sound, resetReverb: !engineWasRunning)
                     for (position, event) in events.enumerated() {
                         try scheduleImmediately(
                             event: event,
@@ -559,8 +606,14 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
                         }
                     }
                     player.play()
+                    outputFade?.setAudible(true)
                     continuation.resume()
                 } catch {
+                    fadeToSilence()
+                    player.pause()
+                    engine.pause()
+                    outputFade?.forceSilent()
+                    clearRenderers()
                     continuation.resume(throwing: error)
                 }
             }
@@ -596,26 +649,112 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
             // AVAudioPlayerNode.stop() synchronously unschedules buffers and
             // can invert priority with its user-interactive render thread.
             // The next start interrupts this paused buffer queue instead.
-            player.pause()
-            harpRenderer = nil
-            organRenderer = nil
-            pitchPipeRenderer = nil
+            fadeOutBeforePausing()
+            // Silence the hardware as well as the player while idle, retaining
+            // the prepared graph for the next start without a teardown.
+            engine.pause()
+            outputFade?.forceSilent()
+            clearRenderers()
         }
     }
 
+    #if DEBUG
+    func isRunningForTesting() async -> Bool {
+        await withCheckedContinuation { continuation in
+            queue.async { [self] in
+                continuation.resume(returning: engine.isRunning)
+            }
+        }
+    }
+
+    func startCountForTesting() async -> Int {
+        await withCheckedContinuation { continuation in
+            queue.async { [self] in
+                continuation.resume(returning: engineStartCount)
+            }
+        }
+    }
+    #endif
+
     func invalidate() {
         queue.async(qos: .default, flags: .enforceQoS) { [self] in
-            player.pause()
-            harpRenderer = nil
-            organRenderer = nil
-            pitchPipeRenderer = nil
+            fadeOutBeforePausing()
+            clearRenderers()
             engine.stop()
+            outputFade?.forceSilent()
+            outputFade?.detach(from: outputGate.audioUnit)
+            outputFade = nil
             if isEngineConfigured {
                 engine.disconnectNodeOutput(player)
                 engine.disconnectNodeOutput(guideReverb)
+                engine.disconnectNodeOutput(outputGate)
             }
             engine.reset()
             isEngineConfigured = false
+        }
+    }
+
+    private func fadeOutBeforePausing() {
+        fadeToSilence()
+        // Keep a cycle of zeros in the hardware buffer so pause does not
+        // cut a residual I/O callback.
+        drainSilentOutput()
+        player.pause()
+    }
+
+    private func fadeToSilence() {
+        guard let outputFade else { return }
+        outputFade.setAudible(false)
+        // Wait only on the audio-control queue. The render callback fades
+        // every sample, including the reverb, before we alter the graph.
+        // Bound the wait in case an interruption has stopped rendering.
+        let deadline = DispatchTime.now() + .milliseconds(250)
+        while engine.isRunning,
+              !outputFade.isSilent,
+              DispatchTime.now() < deadline {
+            Thread.sleep(forTimeInterval: 0.001)
+        }
+    }
+
+    private func drainSilentOutput() {
+        guard engine.isRunning else { return }
+        Thread.sleep(forTimeInterval: 0.012)
+    }
+
+    private func clearRenderers() {
+        harpRenderer = nil
+        organRenderer = nil
+        pitchPipeRenderer = nil
+        activeSound = nil
+    }
+
+    private func prepareRenderer(
+        for sound: CantorGuideSound,
+        resetReverb: Bool
+    ) throws {
+        if activeSound != sound {
+            clearRenderers()
+            switch sound {
+            case .harp:
+                guard let soundBankURL = HarpSoundBank.bundledURL else {
+                    throw CantorGuideAudioError.soundBankUnavailable
+                }
+                guideReverb.wetDryMix = HarpSoundBank.reverbWetDryMix
+                harpRenderer = try SampledHarpRenderer(
+                    soundBankURL: soundBankURL,
+                    format: format
+                )
+            case .organ:
+                guideReverb.wetDryMix = ModeledOrgan.reverbWetDryMix
+                organRenderer = ModeledOrganRenderer(format: format)
+            case .simpleTone:
+                guideReverb.wetDryMix = 0
+                pitchPipeRenderer = PitchPipeRenderer(format: format)
+            }
+            activeSound = sound
+            guideReverb.reset()
+        } else if resetReverb {
+            guideReverb.reset()
         }
     }
 
@@ -681,7 +820,11 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
 
         format = deviceFormat
         engine.connect(player, to: guideReverb, format: format)
-        engine.connect(guideReverb, to: engine.mainMixerNode, format: format)
+        engine.connect(guideReverb, to: outputGate, format: format)
+        engine.connect(outputGate, to: engine.mainMixerNode, format: format)
+        let fade = ChantPlaybackFade(sampleRate: format.sampleRate)
+        try fade.attach(to: outputGate.audioUnit)
+        outputFade = fade
         engine.prepare()
         isEngineConfigured = true
     }
@@ -690,6 +833,122 @@ private nonisolated final class ChantAudioPlayer: @unchecked Sendable {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playback, mode: .default)
         try session.setActive(true)
+    }
+}
+
+/// A sample-by-sample gate after the reverb prevents abrupt stops and effect
+/// resets from cutting a nonzero waveform. Only the render thread owns position
+/// while the engine is running; the control queue communicates through atomics,
+/// never a render-thread lock.
+nonisolated final class ChantPlaybackFade: @unchecked Sendable {
+    private let command = Atomic<UInt64>(0)
+    private let acknowledgedSilence = Atomic<UInt64>(0)
+    private let fadeFrames: Int
+    private var position = 0
+
+    init(sampleRate: Double) {
+        fadeFrames = max(1, Int(sampleRate * 0.020))
+    }
+
+    var isSilent: Bool {
+        let current = command.load(ordering: .acquiring)
+        return current & 1 == 0
+            && acknowledgedSilence.load(ordering: .acquiring) == current
+    }
+
+    func setAudible(_ value: Bool) {
+        // Each request has its own acknowledgement so an older render callback
+        // cannot acknowledge a subsequent stop during rapid taps.
+        let next = (command.load(ordering: .relaxed) & ~1) &+ 2
+        command.store(next | (value ? 1 : 0), ordering: .releasing)
+    }
+
+    /// Call only after the render thread has stopped. The next start then
+    /// fades in from true silence instead of jumping in at the old gain.
+    func forceSilent() {
+        let next = (command.load(ordering: .relaxed) & ~1) &+ 2
+        command.store(next, ordering: .releasing)
+        position = 0
+        acknowledgedSilence.store(next, ordering: .releasing)
+    }
+
+    func attach(to audioUnit: AudioUnit) throws {
+        let status = AudioUnitAddRenderNotify(
+            audioUnit, Self.renderCallback, Unmanaged.passUnretained(self).toOpaque()
+        )
+        guard status == noErr else {
+            throw CantorGuideAudioError.outputUnavailable
+        }
+    }
+
+    func detach(from audioUnit: AudioUnit) {
+        AudioUnitRemoveRenderNotify(
+            audioUnit, Self.renderCallback, Unmanaged.passUnretained(self).toOpaque()
+        )
+    }
+
+    private static let renderCallback: AURenderCallback = {
+        context, flags, _, _, frameCount, data in
+        guard flags.pointee.contains(.unitRenderAction_PostRender),
+              !flags.pointee.contains(.unitRenderAction_PostRenderError),
+              let data else { return noErr }
+        let fade = Unmanaged<ChantPlaybackFade>.fromOpaque(context)
+            .takeUnretainedValue()
+        fade.process(data, frameCount: Int(frameCount))
+        return noErr
+    }
+
+    func process(_ data: UnsafeMutablePointer<AudioBufferList>, frameCount: Int) {
+        let current = command.load(ordering: .acquiring)
+        let shouldPlay = current & 1 != 0
+        let buffers = UnsafeMutableAudioBufferListPointer(data)
+        if !shouldPlay && position == 0 {
+            silence(buffers)
+            acknowledgedSilence.store(current, ordering: .releasing)
+            return
+        }
+        if shouldPlay && position == fadeFrames { return }
+        var lastGain: Float = 1
+        for frame in 0..<frameCount {
+            let gain = Float(0.5 - 0.5 * cos(.pi * Double(position) / Double(fadeFrames)))
+            lastGain = gain
+            apply(gain, at: frame, frameCount: frameCount, in: buffers)
+            position = shouldPlay
+                ? min(fadeFrames, position + 1)
+                : max(0, position - 1)
+        }
+        // Acknowledge only after a whole sample at zero has been emitted.
+        if !shouldPlay && lastGain == 0 {
+            acknowledgedSilence.store(current, ordering: .releasing)
+        }
+    }
+
+    private func silence(_ buffers: UnsafeMutableAudioBufferListPointer) {
+        for buffer in buffers {
+            if let samples = buffer.mData, buffer.mDataByteSize > 0 {
+                memset(samples, 0, Int(buffer.mDataByteSize))
+            }
+        }
+    }
+
+    private func apply(
+        _ gain: Float,
+        at frame: Int,
+        frameCount: Int,
+        in buffers: UnsafeMutableAudioBufferListPointer
+    ) {
+        guard frameCount > 0 else { return }
+        for buffer in buffers {
+            guard let samples = buffer.mData?.assumingMemoryBound(to: Float.self) else {
+                continue
+            }
+            let sampleCount = Int(buffer.mDataByteSize) / MemoryLayout<Float>.size
+            let channelsInBuffer = max(1, sampleCount / frameCount)
+            guard frame < sampleCount / channelsInBuffer else { continue }
+            for channel in 0..<channelsInBuffer {
+                samples[frame * channelsInBuffer + channel] *= gain
+            }
+        }
     }
 }
 
@@ -1501,6 +1760,12 @@ nonisolated enum CantorGuideSynthesizer {
             return max(baseline, 2)
         }
 
+        // In a salicus it is the marked note itself that is broadened.
+        // The preceding-note rule belongs to the quilisma, not the salicus.
+        if semantic?.isSalicusPulse == true {
+            return max(baseline, 1.8)
+        }
+
         if index + 1 < events.count {
             let next = events[index + 1]
             let nextSemantic = notesByEventID[next.id]
@@ -1508,8 +1773,7 @@ nonisolated enum CantorGuideSynthesizer {
             let nextIsQuilisma = nextSemantic?.note.shape == .quilisma
                 || next.modifiers.contains(.quilisma)
             if nextHasDoubleMora
-                || nextIsQuilisma
-                || nextSemantic?.isSalicusPulse == true {
+                || nextIsQuilisma {
                 return max(baseline, 1.8)
             }
         }

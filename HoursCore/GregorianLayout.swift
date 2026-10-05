@@ -3,6 +3,15 @@ import CoreText
 import Foundation
 
 public struct GregorianLayoutMetrics: Hashable, Sendable {
+    public static let minimumNotationScale = 0.6
+    public static let maximumNotationScale = 1.6
+    public static let notationScaleRange =
+        minimumNotationScale...maximumNotationScale
+
+    public static func clampedNotationScale(_ scale: Double) -> Double {
+        max(minimumNotationScale, min(maximumNotationScale, scale))
+    }
+
     public var notationScale: Double
     public var lyricScale: Double
 
@@ -293,8 +302,18 @@ public struct GregorianEngravingLayoutEngine: Sendable {
         metrics: GregorianLayoutMetrics = GregorianLayoutMetrics(),
         openingLabel: String? = nil
     ) -> GregorianLayout {
-        let notationScale = CGFloat(max(0.8, min(1.6, metrics.notationScale)))
-        let lyricScale = CGFloat(max(0.8, min(2.2, metrics.lyricScale)))
+        let notationScale = CGFloat(
+            GregorianLayoutMetrics.clampedNotationScale(
+                metrics.notationScale
+            )
+        )
+        let lyricScale = max(
+            0.5,
+            min(
+                3.5,
+                CGFloat(metrics.lyricScale) * notationScale
+            )
+        )
         let width = max(240, requestedWidth)
         let glyphScale = notationScale / 16
         let staffStep = 100 * glyphScale // one GABC pitch step / half staff-space
@@ -364,7 +383,7 @@ public struct GregorianEngravingLayoutEngine: Sendable {
         var lyrics: [GregorianPlacedLyric] = []
         var initials: [GregorianPlacedInitial] = []
         var events: [GregorianEventPlacement] = []
-        var rawHours: [RawNeumePlacement] = []
+        var rawNeumes: [RawNeumePlacement] = []
         var activeClef = GregorianClef(kind: .c, line: 4)
 
         for (lineIndex, lineUnits) in lines.enumerated() {
@@ -454,12 +473,15 @@ public struct GregorianEngravingLayoutEngine: Sendable {
             let visibleGaps = gapAdjustments.indices.filter {
                 lineUnits[$0].width > 0 && lineUnits[$0 + 1].width > 0
             }
-            if naturalWidth > availableWidth, !visibleGaps.isEmpty {
+            let condensibleGaps = visibleGaps.filter {
+                !lineUnits[$0 + 1].showsInlineHyphenFromPrevious
+            }
+            if naturalWidth > availableWidth, !condensibleGaps.isEmpty {
                 let adjustment = max(
                     -2.5 * notationScale,
-                    (availableWidth - naturalWidth) / CGFloat(visibleGaps.count)
+                    (availableWidth - naturalWidth) / CGFloat(condensibleGaps.count)
                 )
-                for index in visibleGaps {
+                for index in condensibleGaps {
                     gapAdjustments[index] = adjustment
                 }
             }
@@ -554,7 +576,7 @@ public struct GregorianEngravingLayoutEngine: Sendable {
                             )
                         )
                     }
-                    rawHours.append(
+                    rawNeumes.append(
                         RawNeumePlacement(
                             neume: neume,
                             inkFrame: composition.inkFrame,
@@ -594,7 +616,7 @@ public struct GregorianEngravingLayoutEngine: Sendable {
             )
         )
         strokes = mergeLedgerLines(strokes, scale: notationScale)
-        let neumes = makeHitFrames(rawHours, width: width, scale: notationScale)
+        let neumes = makeHitFrames(rawNeumes, width: width, scale: notationScale)
         return GregorianLayout(
             size: CGSize(width: width, height: max(64, contentHeight)),
             staffs: staffs,
@@ -637,14 +659,63 @@ public struct GregorianEngravingLayoutEngine: Sendable {
         let hyphenText = "-"
         let hyphenFontSize = lyricFontSize * 0.72
         let hyphenWidth = measureLyric(hyphenText, fontSize: hyphenFontSize)
+        let minimumInlineHyphenGap = hyphenWidth - notationScale
+        let minimumUnreservedHyphenGap = hyphenWidth + 1.5 * notationScale
         let lineEndClearance = max(1, 1.5 * notationScale)
         var hyphens: [GregorianPlacedLyric] = []
+
+        func boundaryWordHasMultipleSyllables(
+            _ previous: Syllable,
+            _ next: Syllable
+        ) -> Bool {
+            let left = previous.unit.lyricText
+                .split(whereSeparator: \.isWhitespace)
+                .last
+                .map { String($0.filter(\.isLetter)) } ?? ""
+            let right = next.unit.lyricText
+                .split(whereSeparator: \.isWhitespace)
+                .first
+                .map { String($0.filter(\.isLetter)) } ?? ""
+            let folded = (left + right)
+                .folding(
+                    options: [.diacriticInsensitive, .caseInsensitive],
+                    locale: Locale(identifier: "la")
+                )
+                .lowercased()
+                .replacingOccurrences(of: "æ", with: "ae")
+                .replacingOccurrences(of: "œ", with: "oe")
+            let letters = Array(folded)
+            let vowels: Set<Character> = ["a", "e", "i", "o", "u", "y"]
+            let diphthongs: Set<String> = ["ae", "au", "oe"]
+            var nuclei = 0
+            var index = 0
+            while index < letters.count {
+                let letter = letters[index]
+                guard vowels.contains(letter) else {
+                    index += 1
+                    continue
+                }
+                if letter == "u", index > 0, letters[index - 1] == "q" {
+                    index += 1
+                    continue
+                }
+                nuclei += 1
+                if index + 1 < letters.count,
+                   diphthongs.contains(String([letter, letters[index + 1]])) {
+                    index += 2
+                } else {
+                    index += 1
+                }
+            }
+            return nuclei > 1
+        }
 
         func shouldHyphenate(_ previous: Syllable, _ next: Syllable) -> Bool {
             next.unit.hyphenatesFromPrevious
                 && previous.neume.syllableID != next.neume.syllableID
                 && !previous.unit.lyricText.hasSuffix("-")
                 && !next.unit.lyricText.hasPrefix("-")
+                && boundaryWordHasMultipleSyllables(previous, next)
         }
 
         func makeHyphen(
@@ -675,21 +746,23 @@ public struct GregorianEngravingLayoutEngine: Sendable {
                 let gapStart = previous.lyric.origin.x + previous.lyric.width
                 let gapEnd = next.lyric.origin.x
                 let availableWidth = gapEnd - gapStart
-                // Line condensation may consume some of the reserved lane.
-                // Scale the small mark to the remaining lane instead of
-                // dropping the syllable boundary entirely.
-                guard availableWidth >= hyphenWidth * 0.6 else {
+                // The unit-building pass reserves a connector lane when the
+                // intrinsic musical spacing predicts one. Recheck the final
+                // placed lyrics as well: wide neumes can leave additional
+                // daylight even when the intrinsic pair looked compact.
+                let hasReservedLane = next.unit.showsInlineHyphenFromPrevious
+                guard hasReservedLane
+                        ? availableWidth >= minimumInlineHyphenGap
+                        : availableWidth >= minimumUnreservedHyphenGap else {
                     continue
                 }
-                let renderedWidth = min(hyphenWidth, availableWidth)
-                let renderedFontSize = hyphenFontSize * renderedWidth / hyphenWidth
                 hyphens.append(
                     makeHyphen(
                         between: previous,
                         and: next,
-                        originX: gapStart + (availableWidth - renderedWidth) / 2,
-                        renderedWidth: renderedWidth,
-                        renderedFontSize: renderedFontSize
+                        originX: gapStart + (availableWidth - hyphenWidth) / 2,
+                        renderedWidth: hyphenWidth,
+                        renderedFontSize: hyphenFontSize
                     )
                 )
             }
@@ -731,6 +804,7 @@ public struct GregorianEngravingLayoutEngine: Sendable {
         let lyricWidth: CGFloat
         let lyricFocus: CGFloat
         let hyphenatesFromPrevious: Bool
+        let showsInlineHyphenFromPrevious: Bool
         let breakPenalty: Int
         let forcesBreak: Bool
 
@@ -842,15 +916,34 @@ public struct GregorianEngravingLayoutEngine: Sendable {
         var previousWasLyricMark = false
         var previousLyricSyllableID: String?
         var previousLyricText: String?
+        var previousLyricNotationHalf: CGFloat?
+        var previousLyricRightExtent: CGFloat?
+        var interveningNotationWidth: CGFloat = 0
+        var interveningUnitCount = 0
         let automaticHyphenFontSize = lyricFontSize * 0.72
-        let automaticHyphenWidth = measureLyric("-", fontSize: automaticHyphenFontSize)
-        let automaticHyphenClearance = 0.75 * notationScale
+        let automaticHyphenWidth = measureLyric(
+            "-",
+            fontSize: automaticHyphenFontSize
+        )
+        // Exsurge starts with normal inter-syllabic notation spacing, then
+        // joins lyric fragments only when they would collide after modest
+        // condensation. Keep this collision test conservative with CoreText's
+        // EB Garamond metrics; the later line pass can still condense ordinary
+        // (non-connector) gaps further. A connector is retained when the
+        // musical spacing still leaves daylight between the fragments.
+        let interSyllabicSpacing = 7.8125 * notationScale
+        let condensedInterSyllabicSpacing = interSyllabicSpacing * 0.8
+        let lyricCollisionTolerance = 0.1 * notationScale
         return score.elements.map { element in
             switch element {
             case .clef:
                 previousWasAccidental = false
                 previousWasLyricMark = false
                 let width = hasEngravedContent ? 24 * notationScale : 0
+                if previousLyricText != nil {
+                    interveningNotationWidth += width
+                    interveningUnitCount += 1
+                }
                 return LayoutUnit(
                     element: element,
                     width: width,
@@ -860,6 +953,7 @@ public struct GregorianEngravingLayoutEngine: Sendable {
                     lyricWidth: 0,
                     lyricFocus: 0,
                     hyphenatesFromPrevious: false,
+                    showsInlineHyphenFromPrevious: false,
                     breakPenalty: 1_000,
                     forcesBreak: false
                 )
@@ -875,6 +969,10 @@ public struct GregorianEngravingLayoutEngine: Sendable {
                 let definition = GregorianGlyphCatalog.definition(for: kind.catalogName)
                 let width = definition.bounds.width * glyphScale * 0.9
                     + 4 * notationScale
+                if previousLyricText != nil {
+                    interveningNotationWidth += width
+                    interveningUnitCount += 1
+                }
                 return LayoutUnit(
                     element: element,
                     width: width,
@@ -884,6 +982,7 @@ public struct GregorianEngravingLayoutEngine: Sendable {
                     lyricWidth: 0,
                     lyricFocus: 0,
                     hyphenatesFromPrevious: false,
+                    showsInlineHyphenFromPrevious: false,
                     // Permit wrapping before an accidental, but never between
                     // the accidental and the neume it governs.
                     breakPenalty: 18,
@@ -894,6 +993,10 @@ public struct GregorianEngravingLayoutEngine: Sendable {
                 previousWasAccidental = false
                 previousWasLyricMark = false
                 let width = (division == .final ? 17 : 12) * notationScale
+                if previousLyricText != nil {
+                    interveningNotationWidth += width
+                    interveningUnitCount += 1
+                }
                 return LayoutUnit(
                     element: element,
                     width: width,
@@ -903,6 +1006,7 @@ public struct GregorianEngravingLayoutEngine: Sendable {
                     lyricWidth: 0,
                     lyricFocus: 0,
                     hyphenatesFromPrevious: false,
+                    showsInlineHyphenFromPrevious: false,
                     // A division belongs at the end of a phrase, not at the
                     // beginning of the next staff. The following word offers
                     // the usable break point after the bar.
@@ -921,6 +1025,7 @@ public struct GregorianEngravingLayoutEngine: Sendable {
                     lyricWidth: 0,
                     lyricFocus: 0,
                     hyphenatesFromPrevious: false,
+                    showsInlineHyphenFromPrevious: false,
                     breakPenalty: 0,
                     forcesBreak: true
                 )
@@ -935,15 +1040,21 @@ public struct GregorianEngravingLayoutEngine: Sendable {
                 )
                 let leadingPadding = (mark.startsWord ? 5 : 2) * notationScale
                 let trailingPadding = 5 * notationScale
+                let width = leadingPadding + lyric.width + trailingPadding
+                if previousLyricText != nil {
+                    interveningNotationWidth += width
+                    interveningUnitCount += 1
+                }
                 return LayoutUnit(
                     element: element,
-                    width: leadingPadding + lyric.width + trailingPadding,
+                    width: width,
                     anchorOffset: leadingPadding + lyric.focus,
                     notationWidth: 0,
                     lyricText: mark.text,
                     lyricWidth: lyric.width,
                     lyricFocus: lyric.focus,
                     hyphenatesFromPrevious: false,
+                    showsInlineHyphenFromPrevious: false,
                     // A note-less rubric belongs between the neighboring
                     // syllables and should not begin a staff by itself.
                     breakPenalty: 1_000,
@@ -980,12 +1091,57 @@ public struct GregorianEngravingLayoutEngine: Sendable {
                 let leftExtent = max(notationHalf, lyric.focus)
                 let rightExtent = max(notationHalf, lyric.width - lyric.focus)
                 let leadingPadding: CGFloat
+                let showsInlineHyphenFromPrevious: Bool
                 if neume.startsWord {
                     leadingPadding = 5 * notationScale
-                } else if hyphenatesFromPrevious {
-                    leadingPadding = automaticHyphenWidth + automaticHyphenClearance * 2
+                    showsInlineHyphenFromPrevious = false
                 } else {
-                    leadingPadding = 0
+                    let condensedNaturalDistance = (
+                        previousLyricNotationHalf.map {
+                            $0
+                                + condensedInterSyllabicSpacing
+                                + interveningNotationWidth
+                                + notationHalf
+                        }
+                    )
+                    let lyricTouchDistance = previousLyricRightExtent.map {
+                        $0 + leftExtent
+                    }
+                    let needsConnector: Bool
+                    if hyphenatesFromPrevious,
+                       let condensedNaturalDistance,
+                       let lyricTouchDistance {
+                        needsConnector = condensedNaturalDistance
+                            - lyricTouchDistance
+                            > lyricCollisionTolerance
+                            || interveningUnitCount > 0
+                    } else {
+                        needsConnector = false
+                    }
+                    showsInlineHyphenFromPrevious = needsConnector
+                    if needsConnector,
+                       let previousNotationHalf = previousLyricNotationHalf,
+                       let previousRightExtent = previousLyricRightExtent {
+                        let naturalDistance = previousNotationHalf
+                            + interSyllabicSpacing
+                            + interveningNotationWidth
+                            + notationHalf
+                        let naturalGap = naturalDistance
+                            - previousRightExtent
+                            - leftExtent
+                        // Line fitting may condense every intervening unit
+                        // boundary. Reserve that allowance as part of the
+                        // connector lane so melismas do not squeeze the
+                        // hyphen back out after it has been selected.
+                        leadingPadding = max(
+                            automaticHyphenWidth
+                                + 2.5 * notationScale
+                                    * CGFloat(interveningUnitCount),
+                            naturalGap
+                        )
+                    } else {
+                        leadingPadding = 0
+                    }
                 }
                 let trailingPadding: CGFloat = 0
                 let contentWidth = leadingPadding + leftExtent + rightExtent + trailingPadding
@@ -996,6 +1152,13 @@ public struct GregorianEngravingLayoutEngine: Sendable {
                 if !lyricText.isEmpty {
                     previousLyricSyllableID = neume.syllableID
                     previousLyricText = lyricText
+                    previousLyricNotationHalf = notationHalf
+                    previousLyricRightExtent = rightExtent
+                    interveningNotationWidth = 0
+                    interveningUnitCount = 0
+                } else if previousLyricText != nil {
+                    interveningNotationWidth += width
+                    interveningUnitCount += 1
                 }
                 return LayoutUnit(
                     element: element,
@@ -1006,6 +1169,7 @@ public struct GregorianEngravingLayoutEngine: Sendable {
                     lyricWidth: lyric.width,
                     lyricFocus: lyric.focus,
                     hyphenatesFromPrevious: hyphenatesFromPrevious,
+                    showsInlineHyphenFromPrevious: showsInlineHyphenFromPrevious,
                     // Chant may wrap between syllables when that produces a
                     // fuller staff (for example "pró-" / "ximos").
                     breakPenalty: followsUnbreakableElement ? 1_000 : 18,

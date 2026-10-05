@@ -519,6 +519,109 @@ final class AppTourCoordinatorTests: XCTestCase {
         XCTAssertEqual(tour.frame(for: .hourSelector), wheelFrame)
     }
 
+    func testTourTargetFrameUsesCenteredIPadHostCoordinates() throws {
+        let hostFrame = CGRect(
+            x: 158,
+            y: 45,
+            width: 538,
+            height: 864
+        )
+        let toolbarTargetFrame = CGRect(
+            x: 218,
+            y: 60,
+            width: 44,
+            height: 44
+        )
+
+        let localFrame = try XCTUnwrap(
+            AppTourGeometry.localTargetFrame(
+                toolbarTargetFrame,
+                in: hostFrame,
+                padding: CGSize(width: 5, height: 5),
+                offset: .zero
+            )
+        )
+
+        XCTAssertEqual(
+            localFrame,
+            CGRect(x: 55, y: 10, width: 54, height: 54)
+        )
+    }
+
+    func testTourTargetOutsideOverlayHostIsIgnored() {
+        let localFrame = AppTourGeometry.localTargetFrame(
+            CGRect(x: 700, y: 60, width: 44, height: 44),
+            in: CGRect(x: 158, y: 45, width: 538, height: 864),
+            padding: CGSize(width: 5, height: 5),
+            offset: .zero
+        )
+
+        XCTAssertNil(localFrame)
+    }
+
+    func testIPadNavigationBackFrameMatchesToolbarButton() {
+        let frame = AppTourGeometry.navigationBackFrame(
+            in: CGRect(x: 0, y: 0, width: 820, height: 1_180),
+            usesIPadToolbarMetrics: true,
+            usesModalToolbarMetrics: false
+        )
+
+        XCTAssertEqual(
+            frame,
+            CGRect(x: 10, y: 32, width: 44, height: 44)
+        )
+    }
+
+    func testIPadModalNavigationBackFrameMatchesToolbarButton() {
+        let frame = AppTourGeometry.navigationBackFrame(
+            in: CGRect(x: 110, y: 196, width: 600, height: 788),
+            usesIPadToolbarMetrics: true,
+            usesModalToolbarMetrics: true
+        )
+
+        XCTAssertEqual(
+            frame,
+            CGRect(x: 10, y: 10, width: 44, height: 44)
+        )
+    }
+
+    func testIPhoneCompactCalendarCloseRestoresSheetOrigin() throws {
+        let frame = try XCTUnwrap(
+            AppTourGeometry.localCalendarCloseFrame(
+                CGRect(
+                    x: 324.5,
+                    y: 430.5,
+                    width: 42.25,
+                    height: 42.25
+                ),
+                in: CGRect(x: 8, y: 415, width: 386, height: 451),
+                padding: CGSize(width: 5, height: 5),
+                offset: .zero,
+                correctsIPhoneCompactSheetOrigin: true
+            )
+        )
+
+        XCTAssertEqual(frame.minX, 325.5, accuracy: 0.001)
+        XCTAssertEqual(frame.midX, 351.625, accuracy: 0.001)
+    }
+
+    func testExpandedCalendarCloseDoesNotShiftHorizontally() throws {
+        let frame = try XCTUnwrap(
+            AppTourGeometry.localCalendarCloseFrame(
+                CGRect(x: 338, y: 78, width: 44, height: 44),
+                in: CGRect(x: 0, y: 62, width: 402, height: 812),
+                padding: CGSize(width: 5, height: 5),
+                offset: .zero,
+                correctsIPhoneCompactSheetOrigin: true
+            )
+        )
+
+        XCTAssertEqual(
+            frame,
+            CGRect(x: 333, y: 11, width: 54, height: 54)
+        )
+    }
+
     func testInterruptedTourRestoresPersistentValuesBeforeRelaunch() throws {
         let original = snapshot(
             day: LocalDay(year: 2026, month: 8, day: 20),

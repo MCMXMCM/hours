@@ -6,6 +6,7 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(ChantPlaybackController.self) private var playback
     @Environment(AppTourCoordinator.self) private var tour
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(
         HoursSharedPreferences.appearanceModeKey,
         store: HoursSharedPreferences.defaults
@@ -48,7 +49,7 @@ struct RootView: View {
                 for: appearanceHour
             )
         )
-        .onChange(of: model.office?.id) {
+        .onChange(of: model.office?.id, initial: true) {
             playback.stop()
             restoreReaderIfNeeded()
         }
@@ -65,6 +66,11 @@ struct RootView: View {
         .onChange(of: displayMode) {
             WidgetCenter.shared.reloadAllTimelines()
         }
+        .onChange(of: model.officeTradition) {
+            playback.stop()
+            showsReader = false
+            WidgetCenter.shared.reloadAllTimelines()
+        }
         .onChange(
             of: model.selectedHour,
             initial: true
@@ -76,6 +82,12 @@ struct RootView: View {
         .onChange(of: hourSelectionView) { _, mode in
             if mode != .wheel {
                 displayedHour = model.selectedHour
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task {
+                await model.refreshAfterBecomingActive()
             }
         }
         .onChange(
@@ -120,10 +132,12 @@ struct RootView: View {
                 displayMode: displayMode,
                 restoredScrollOffset:
                     model.restoredReaderScrollOffset(for: office),
-                onScrollOffsetChange: { offset in
+                restoredScrollAnchor: model.restoredReaderScrollAnchor(for: office),
+                onScrollOffsetChange: { offset, anchor in
                     model.updateReaderScrollOffset(
                         offset,
-                        for: office
+                        for: office,
+                        anchor: anchor
                     )
                 }
             )

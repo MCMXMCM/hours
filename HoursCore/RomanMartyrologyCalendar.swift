@@ -21,9 +21,9 @@ public enum RomanMartyrologyCalendar {
         "July", "August", "September", "October", "November", "December"
     ]
 
-    /// Reproduces the pinned 1960-rubrics source's ecclesiastical lunar
-    /// proclamation. The historical table is used through 2199; the source's
-    /// continuous synodic-month calculation is used after that boundary.
+    /// The ecclesiastical age of the Moon proclaimed in the Martyrology, from
+    /// the Gregorian epact table through 2199. The pinned source's continuous
+    /// synodic-month calculation is used after that boundary.
     public static func lunarDay(for day: LocalDay) -> Int {
         if (1900..<2200).contains(day.year) {
             return gregorianTableLunarDay(for: day)
@@ -97,22 +97,27 @@ public enum RomanMartyrologyCalendar {
             lunarMonths.insert(30, at: 0)
         }
 
+        // The bissextile day is counted with February 24, so the Moon's age
+        // is repeated on the 25th and the later days of February follow it.
         var calculationDay = input.day
-        if isLeapYear(input.year), input.month == 2, input.day >= 24, input.day == 29 {
-            calculationDay = 24
+        if isLeapYear(input.year), input.month == 2, input.day >= 25 {
+            calculationDay = input.day - 1
         }
         let calculationDate = LocalDay(
             year: input.year,
             month: input.month,
             day: calculationDay
         )
-        let ordinal = ordinalDay(calculationDate)
-        // The pinned source uses Perl localtime in this interval (zero-based)
-        // and its own date routine outside it (one-based). Preserve that
-        // behavior so native parity is exact rather than merely approximate.
-        let sourceOrdinal = (1970..<2038).contains(input.year)
-            ? ordinal - 1
-            : ordinal
+        // Zero-based, as the pinned source computes it from Perl localtime
+        // between 1970 and 2037. Its one-based fallback outside that interval
+        // proclaims every day one day too old, so it is not reproduced.
+        let sourceOrdinal = ordinalDay(calculationDate) - 1
+        // After the saltus lunae the last lunation of the nineteenth year has
+        // 29 days, so January 1 of the following first year is its 29th day,
+        // not the 30th which the source's table yields (for example, 2033).
+        if goldenNumber == 0, sourceOrdinal == 0 {
+            return 29
+        }
 
         var boundary = -epacts[goldenNumber] - 1
         var index = 0

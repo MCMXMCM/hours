@@ -9,7 +9,12 @@ license solely because a project or edition was consulted.
 
 - **Divinum Officium** — MIT, pinned at
   `79a596eeb68268c35334f25122af7ffc376934d5`. Hours distributes calendar and
-  office-text data from this source, including English translations. Its MIT
+  office-text data from this source, including English translations. The
+  separate Roman 1954 source edition also incorporates its
+  Latin-gabc transcriptions and generated psalmody. Original book and transcriber
+  headers are retained in the GABC, with exact source hashes and transformation
+  notices in each score.
+  Its MIT
   grant is bundled at
   `HoursApp/Resources/Divinum-Officium-LICENSE.txt`.
 - **Exsurge (bbloomf maintained fork)** — MIT, pinned at
@@ -26,13 +31,12 @@ license solely because a project or edition was consulted.
   dedication are bundled at
   `HoursApp/Resources/ConcertHarp-LICENSE.txt`.
 - **Chant transcriptions** — Each score records its own collection, source URL,
-  source identifier, license, and checksum. GregoBase transcriptions are CC0.
-  The bundled development corpus contains 1,547 Nocturnale Romanum
+  source identifier, license, and checksum. GregoBase transcriptions are CC0,
+  and scores generated with Chant Tools are under the Unlicense. The Roman 1960
+  corpus contains 1,725 Nocturnale Romanum and 16 Vesperale Romanum
   transcriptions under GPL-3.0-only. Their exact editable GABC, provenance
-  manifest, modification notice, and license are included under
-  `Content/Nocturnale-Romanum`, `NOTICE.md`, and `LICENSE`. The installed
-  scored corpus is development-only and must not be submitted as a release
-  corpus.
+  manifests, modification notices, and license are included under `Content`,
+  `NOTICE.md`, and `LICENSE`.
 
 The Latin prayers in the development fixture are public-domain liturgical
 text. Its editorial GABC exists only to exercise the implementation and is
@@ -49,9 +53,9 @@ runtime dependencies and their code or publications are not bundled in Hours:
   underlying Divinum Officium source; chant payloads retain their own source
   licenses.
 - **Exsurge (original)** — MIT, pinned at
-  `f828578b2fc4f501697414080d4241a322ae3cc0`. A copy is retained in
-  `Tools/ReferenceRenderer` for offline visual regression, not in the
-  production rendering path.
+  `f828578b2fc4f501697414080d4241a322ae3cc0`. Used for offline visual
+  regression during development, not in the production rendering path; it is
+  not part of this repository.
 - **jgabc / Chant Tools** — Unlicense, pinned at
   `dff87490026adf21a97cac019a83b8611f0c2e71`. Used as a development generator
   and reference for reviewed psalmody, lesson, and chapter tones; its

@@ -37,6 +37,24 @@
       "url": "https://github.com/Nocturnale-Romanum/nocturnale-romanum",
       "revision": "84ce1514306be54bf4e693c9e8aa3bfd5e5aa3f2",
       "license": "GPL-3.0-only"
+    },
+    {
+      "name": "Vesperale Romanum",
+      "url": "https://github.com/MRoth1910/Vesperale-Romanum",
+      "revision": "823532191af5591d02afdf47eefa04eaef54f98f",
+      "license": "GPL-3.0-only"
+    },
+    {
+      "name": "Antiphonale Romanum (xmarteo)",
+      "url": "https://github.com/xmarteo/Antiphonale_Romanum",
+      "revision": "988498498631e5463ea5ef638f23118bf23ebc54",
+      "license": "GPL-3.0-only"
+    },
+    {
+      "name": "Lauds notated",
+      "url": "https://github.com/jamcmull/lauds-notated",
+      "revision": "de0a9e0cabbbc34b273c6cf6c8065751df29677f",
+      "license": "Unlicense"
     }
   ]
 }

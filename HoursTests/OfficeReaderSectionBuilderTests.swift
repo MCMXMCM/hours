@@ -5,6 +5,22 @@ import XCTest
 
 @MainActor
 final class OfficeReaderSectionBuilderTests: XCTestCase {
+    func testDistinctEnglishOmitsEquivalentDisplayedText() {
+        XCTAssertNil(
+            OfficeBilingualText.distinctEnglish(
+                " 1 PET 5:8-9 ",
+                from: "1 Pet 5:8-9"
+            )
+        )
+        XCTAssertEqual(
+            OfficeBilingualText.distinctEnglish(
+                "Blessing:",
+                from: "Benedictio:"
+            ),
+            "Blessing:"
+        )
+    }
+
     func testSearchResultUsesSemanticTitlesInsteadOfInheritedSourceHeadings() {
         let context = LiturgicalUsageContext(
             firstDate: LocalDay(year: 1962, month: 6, day: 1),
@@ -48,6 +64,118 @@ final class OfficeReaderSectionBuilderTests: XCTestCase {
         XCTAssertEqual(SearchResultPresentation.title(for: confiteor), "Confiteor")
         XCTAssertEqual(SearchResultPresentation.title(for: hymn), "Hymn")
         XCTAssertEqual(SearchResultPresentation.title(for: incipit), "Incipit")
+    }
+
+    func testOutlineSheetRowIDsDoNotCollideWithReaderSectionIDs() {
+        let entries = [
+            OfficeReaderOutlineEntry(id: "hymn", title: "Hymnus"),
+            OfficeReaderOutlineEntry(
+                id: "canticle",
+                title: "Canticum: Nunc dimittis"
+            ),
+        ]
+        let rowIDs = entries.map {
+            OfficeReaderSectionJump.outlineRowID(for: $0.id)
+        }
+
+        XCTAssertEqual(Set(rowIDs).count, rowIDs.count)
+        for entry in entries {
+            XCTAssertFalse(
+                rowIDs.contains(entry.id),
+                "Sheet rows must not reuse \(entry.id); ScrollViewReader matches the first view with that ID, so a still-presented Hymnus row wins over a lazy, unrealized hymn."
+            )
+        }
+    }
+
+    func testBundledCollectOutsideTheCatalogTakesTheChantedFrameOnce() async throws {
+        // St Anthony on a Friday (17 January 2025) has no 2026 counterpart:
+        // its collect takes the chanted frame of a collect of the same class.
+        let databaseURL = try XCTUnwrap(
+            Bundle.main.url(forResource: "base-office", withExtension: "sqlite", subdirectory: "Resources")
+                ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite")
+        )
+        let repository = try SQLiteContentRepository(databaseURL: databaseURL)
+        let office = try await repository.office(on: LocalDay(year: 2025, month: 1, day: 17), hour: .vespers)
+        let displayed = OfficeReaderSectionBuilder.displaySections(from: office.sections, format: office.format)
+        let collect = try XCTUnwrap(displayed.firstIndex { $0.title == "Oratio" })
+        let part = Array(displayed[collect...])
+        XCTAssertNotNil(part.first?.chant, "The versicle is sung")
+        XCTAssertTrue(part.contains { $0.chant == nil && $0.latin.hasPrefix("Intercéssio nos, quǽsumus, Dómine, beáti Antónii") })
+        XCTAssertEqual(
+            part.filter { $0.chant == nil && $0.latin.contains("Dómine, exáudi oratiónem meam") }.count, 0,
+            "The versicle's words are shown once, in its score"
+        )
+        XCTAssertTrue(part.contains { $0.title == "Conclusio" && $0.chant != nil })
+    }
+
+    func testBundledCommemorationFollowsTheScoredCollectAndPrecedesTheConclusion() async throws {
+        let databaseURL = try XCTUnwrap(
+            Bundle.main.url(
+                forResource: "base-office",
+                withExtension: "sqlite",
+                subdirectory: "Resources"
+            ) ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite")
+        )
+        let repository = try SQLiteContentRepository(databaseURL: databaseURL)
+        let office = try await repository.office(
+            on: LocalDay(year: 2029, month: 9, day: 21),
+            hour: .vespers
+        )
+        let displayed = OfficeReaderSectionBuilder.displaySections(
+            from: office.sections,
+            format: office.format
+        )
+        // The reader shows a part's first line as its heading.
+        func index(_ matches: (OfficeSection) -> Bool) throws -> Int {
+            try XCTUnwrap(displayed.firstIndex(where: matches))
+        }
+        let collect = try index { $0.latin.contains("Beáti Apóstoli et Evangelístæ Matthǽi") }
+        let commemoration = try index {
+            "\($0.title)\n\($0.latin)".contains("Commemoratio Feria Sexta Quattuor Temporum Septembris")
+        }
+        let conclusion = try index { $0.title == "Conclusio" }
+        XCTAssertLessThan(collect, commemoration)
+        XCTAssertLessThan(commemoration, conclusion)
+        XCTAssertTrue(
+            displayed.contains { $0.title == "Oratio" && $0.chant != nil },
+            "The collect keeps its scored versicles"
+        )
+    }
+
+    func testBundledSeptember5ComplineHymnusOutlineTargetsTheHymn() async throws {
+        let databaseURL = try XCTUnwrap(
+            Bundle.main.url(
+                forResource: "base-office",
+                withExtension: "sqlite",
+                subdirectory: "Resources"
+            ) ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite")
+        )
+        let repository = try SQLiteContentRepository(databaseURL: databaseURL)
+        let office = try await repository.office(
+            on: LocalDay(year: 2026, month: 9, day: 5),
+            hour: .compline
+        )
+        let displayed = OfficeReaderSectionBuilder.displaySections(
+            from: office.sections,
+            format: office.format
+        )
+        let outline = OfficeReaderOutlineBuilder.entries(from: displayed)
+        let hymnus = try XCTUnwrap(
+            outline.first { $0.title == "Hymnus" }
+        )
+        let nuncDimittis = try XCTUnwrap(
+            outline.first { $0.title.localizedCaseInsensitiveContains("Nunc") }
+        )
+        let hymnusSection = try XCTUnwrap(
+            displayed.first { $0.id == hymnus.id }
+        )
+
+        XCTAssertNotEqual(hymnus.id, nuncDimittis.id)
+        XCTAssertEqual(hymnusSection.kind, .hymn)
+        XCTAssertNotEqual(
+            OfficeReaderSectionJump.outlineRowID(for: hymnus.id),
+            hymnus.id
+        )
     }
 
     func testOutlineContainsOnlyVisibleSectionHeadingsInOrder() {
@@ -178,6 +306,23 @@ final class OfficeReaderSectionBuilderTests: XCTestCase {
             result.map(\.title),
             ["Lectio brevis", "", "", ""]
         )
+    }
+
+    func testAuthoritativeMatinsLessonTranslationUsesLatinOrdinal() {
+        let result = OfficeReaderSectionBuilder.displaySections(
+            from: [
+                section(
+                    id: "lesson-1",
+                    kind: .rubric,
+                    title: "Pater",
+                    latin: "Lectio 1",
+                    english: "Reading 2"
+                )
+            ],
+            format: .authoritativeOrdered
+        )
+
+        XCTAssertEqual(result.first?.english, "Reading 1")
     }
 
     func testAuthoritativeMatchingTextIsFoldedIntoChantWithoutRepeatingLatin() {
@@ -348,7 +493,7 @@ final class OfficeReaderSectionBuilderTests: XCTestCase {
         XCTAssertEqual(result[0].english, "How good is God")
     }
 
-    func testScoredPsalmDoesNotRepeatASeparatelyScoredAntiphonTranslation() {
+    func testAuthoritativeScoredPsalmRestoresVerseMislabeledAsAntiphon() {
         let antiphonEnglish = "Ant. The angel of the Lord * shall encamp round about them."
         let antiphon = section(
             id: "antiphon",
@@ -381,8 +526,9 @@ final class OfficeReaderSectionBuilderTests: XCTestCase {
             chant: score(id: "antiphon-repeat-score")
         )
 
-        let result = OfficeReaderSectionBuilder.sections(
-            from: [antiphon, psalm, repeatedAntiphon]
+        let result = OfficeReaderSectionBuilder.displaySections(
+            from: [antiphon, psalm, repeatedAntiphon],
+            format: .authoritativeOrdered
         )
 
         XCTAssertEqual(result[0].english, antiphonEnglish)
@@ -391,10 +537,271 @@ final class OfficeReaderSectionBuilderTests: XCTestCase {
             """
             33:7 This poor man cried, and the Lord heard him.
 
+            33:8 The angel of the Lord * shall encamp round about them.
+
             33:9 O taste, and see that the Lord is sweet.
             """
         )
         XCTAssertEqual(result[2].english, antiphonEnglish)
+    }
+
+    func testBundledSeptember2ComplineRestoresPsalm33Verse8() async throws {
+        let databaseURL = try XCTUnwrap(
+            Bundle.main.url(
+                forResource: "base-office",
+                withExtension: "sqlite",
+                subdirectory: "Resources"
+            ) ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite")
+        )
+        let repository = try SQLiteContentRepository(databaseURL: databaseURL)
+        let office = try await repository.office(
+            on: LocalDay(year: 2026, month: 9, day: 2),
+            hour: .compline
+        )
+        let displayed = OfficeReaderSectionBuilder.displaySections(
+            from: office.sections,
+            format: office.format
+        )
+        let psalm = try XCTUnwrap(
+            displayed.first(where: {
+                $0.english?.contains("33:7 This poor man cried") == true
+            })
+        )
+
+        XCTAssertTrue(
+            psalm.english?.localizedCaseInsensitiveContains(
+                "33:8 The angel of the Lord"
+            ) == true
+        )
+        XCTAssertFalse(
+            psalm.english?.contains("\n\nAnt. The angel of the Lord") == true
+        )
+    }
+
+    func testBundledSeptember18ComplinePreservesChantAlignmentAndCompleteScriptureReferences() async throws {
+        let databaseURL = try XCTUnwrap(
+            Bundle.main.url(
+                forResource: "base-office",
+                withExtension: "sqlite",
+                subdirectory: "Resources"
+            ) ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite")
+        )
+        let repository = try SQLiteContentRepository(databaseURL: databaseURL)
+        let office = try await repository.office(
+            on: LocalDay(year: 2026, month: 9, day: 18),
+            hour: .compline
+        )
+        let displayed = OfficeReaderSectionBuilder.displaySections(
+            from: office.sections,
+            format: office.format
+        )
+        let firstHalf = try XCTUnwrap(
+            displayed.first(where: {
+                $0.english?.contains("76:7 And I meditated in the night") == true
+            })
+        )
+        let secondHalf = try XCTUnwrap(
+            displayed.first(where: {
+                $0.english?.contains("76:14 Thy way, O God, is in the holy place") == true
+            })
+        )
+
+        XCTAssertTrue(
+            firstHalf.english?.contains(
+                "76:8 Will God then cast off for ever"
+            ) == true
+        )
+        XCTAssertFalse(
+            firstHalf.english?.contains("\n\nAnt. I have cried") == true
+        )
+        XCTAssertTrue(
+            secondHalf.english?.contains(
+                "76:15 Thou hast made thy power known among the nations"
+            ) == true
+        )
+        XCTAssertTrue(
+            secondHalf.english?.contains(
+                "* 76:16 with thy arm thou hast redeemed thy people"
+            ) == true
+        )
+        let psalm85 = try XCTUnwrap(
+            displayed.first(where: {
+                $0.english?.contains("85:3 Have mercy on me, O Lord") == true
+            })
+        )
+        XCTAssertTrue(
+            psalm85.english?.contains(
+                "* 85:4 Give joy to the soul of thy servant"
+            ) == true
+        )
+        let full = PsalmTextFormatter.scriptureParagraphs(from: try XCTUnwrap(secondHalf.english))
+        let references = full.components(separatedBy: "\n\n").compactMap {
+            PsalmTextFormatter.scriptureVerseNumber(from: $0)
+        }
+        XCTAssertEqual(references, Array(14...21))
+        let compact = OfficeReaderSectionBuilder.displaySections(
+            from: office.sections, format: office.format, usesCompactPsalmody: true
+        )
+        let continuation = try XCTUnwrap(compact.first {
+            $0.id == secondHalf.id + "-compact-continuation"
+        })
+        let lines = PsalmTextFormatter.lines(latin: continuation.latin, english: continuation.english, startsAfterScoredVerse: true)
+        XCTAssertTrue(lines.allSatisfy { $0.english != nil })
+        XCTAssertTrue(lines.contains { $0.english?.contains("with thy arm thou hast redeemed thy people") == true })
+        XCTAssertFalse(lines.contains { $0.english?.contains("76:") == true })
+    }
+
+    func testBundledPsalmTranslationsKeepHolyWeekAndDeadOfficeEndingsSeparate() async throws {
+        let url = try XCTUnwrap(Bundle.main.url(forResource: "base-office", withExtension: "sqlite", subdirectory: "Resources") ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite"))
+        let repository = try SQLiteContentRepository(databaseURL: url)
+        for day in [3, 4] {
+            let office = try await repository.office(on: LocalDay(year: 2026, month: 4, day: day), hour: .matins)
+            let psalms = office.sections.filter { $0.kind == .psalm && ["Psalmus 26", "Psalmus 39"].contains($0.title) }
+            XCTAssertFalse(psalms.isEmpty)
+            for psalm in psalms {
+                XCTAssertNotNil(psalm.english)
+                XCTAssertFalse(psalm.english?.contains("Eternal rest") == true, "Holy Week must not inherit the Dead Office's ending")
+                XCTAssertFalse(psalm.english?.contains("Glory be to the Father") == true)
+            }
+        }
+        let dead = try await repository.office(on: LocalDay(year: 2026, month: 11, day: 2), hour: .matins)
+        let psalm24 = try XCTUnwrap(dead.sections.first { $0.title == "Psalmus 24" && $0.english?.contains("24:1 ") == true })
+        XCTAssertTrue(psalm24.english?.contains("24:7 The sins of my youth") == true)
+        XCTAssertTrue(psalm24.english?.contains("24:7 According to thy mercy") == true)
+        XCTAssertTrue(psalm24.english?.contains("Eternal rest") == true)
+        XCTAssertFalse(psalm24.english?.contains("Ant.") == true)
+        var validatedScores = Set<String>()
+        for hour in OfficeHour.allCases {
+            let office = try await repository.office(on: LocalDay(year: 2026, month: 11, day: 2), hour: hour)
+            for section in office.sections {
+                guard let chant = section.chant, chant.id.hasPrefix("reference-requiem-") else { continue }
+                let parsed = try GregorianScoreParser.parse(gabc: chant.gabc, timeline: chant.timeline)
+                XCTAssertEqual(parsed.eventIDs, chant.timeline.events.map(\.id))
+                validatedScores.insert(chant.id)
+            }
+        }
+        XCTAssertFalse(validatedScores.isEmpty)
+        let fullPsalm24 = try XCTUnwrap(psalm24.chant)
+        XCTAssertFalse(fullPsalm24.timeline.events.map(\.syllable).joined().contains("Glória"))
+        let compact = OfficeReaderSectionBuilder.displaySections(from: [psalm24], format: .authoritativeOrdered, usesCompactPsalmody: true)
+        XCTAssertEqual(compact.count, 2, "The corrected score and English must align in compact mode")
+    }
+
+    func testFullEnglishUsesScriptureBoundariesAndCompactEnglishKeepsChantDivisions() {
+        let english = """
+        76:14 Thy way, O God, is in the holy place: who is the great God like our God? * 76:15 Thou art the God that dost wonders.
+
+        76:15 Thou hast made thy power known among the nations: * 76:16 with thy arm thou hast redeemed thy people, the children of Jacob and of Joseph.
+
+        76:17 The waters saw thee, O God, the waters saw thee: * and they were afraid, and the depths were troubled.
+
+        76:18 Great was the noise of the waters: * the clouds sent out a sound.
+
+        76:18 For thy arrows pass: * 76:19 the voice of thy thunder in a wheel.
+
+        76:19 Thy lightnings enlightened the world: * the earth shook and trembled.
+
+        Glory be to the Father, and to the Son, * and to the Holy Ghost.
+        """
+        let full = PsalmTextFormatter.scriptureParagraphs(from: english)
+        let paragraphs = full.components(separatedBy: "\n\n")
+        XCTAssertEqual(paragraphs.count, 7)
+        XCTAssertTrue(paragraphs[1].hasPrefix("76:15 Thou art the God that dost wonders. Thou hast made"))
+        XCTAssertTrue(paragraphs[2].hasPrefix("76:16 With thy arm"))
+        XCTAssertTrue(paragraphs[4].hasSuffix("For thy arrows pass:"))
+        XCTAssertTrue(paragraphs[5].hasPrefix("76:19 The voice of thy thunder in a wheel. Thy lightnings"))
+        XCTAssertTrue(paragraphs[6].hasPrefix("Glory be"))
+        XCTAssertEqual(PsalmTextFormatter.scriptureParagraphs(from: full), full)
+        let chantEnglish = PsalmTextFormatter.strippingVersePrefix(
+            from: english.components(separatedBy: "\n\n")[1]
+        )
+        XCTAssertEqual(chantEnglish, "Thou hast made thy power known among the nations: * with thy arm thou hast redeemed thy people, the children of Jacob and of Joseph.")
+    }
+
+    func testFullEnglishDoesNotInventBoundariesFromAnAsteriskOrGap() {
+        let text = "76:15 Unverified first half: * unverified second half.\n\n76:17 The waters saw thee."
+        XCTAssertFalse(PsalmTextFormatter.scriptureParagraphs(from: text).contains("76:16"))
+    }
+
+    func testBundledSeptember19ComplinePsalm87VerseFiveAndSix() async throws {
+        let url = try XCTUnwrap(Bundle.main.url(forResource: "base-office", withExtension: "sqlite", subdirectory: "Resources") ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite"))
+        let repository = try SQLiteContentRepository(databaseURL: url)
+        let office = try await repository.office(on: LocalDay(year: 2026, month: 9, day: 19), hour: .compline)
+        let psalm = try XCTUnwrap(office.sections.first {
+            $0.kind == .psalm && $0.english?.contains("87:5 I am counted") == true
+        })
+        let english = try XCTUnwrap(psalm.english)
+        let full = PsalmTextFormatter.scriptureParagraphs(from: english)
+        let paragraphs = full.components(separatedBy: "\n\n")
+        XCTAssertEqual(paragraphs.filter { $0.hasPrefix("87:5 ") }, [
+            "87:5 I am counted among them that go down to the pit: I am become as a man without help,"
+        ])
+        XCTAssertEqual(paragraphs.filter { $0.hasPrefix("87:6 ") }, [
+            "87:6 Free among the dead. Like the slain sleeping in the sepulchres, whom thou rememberest no more: and they are cast off from thy hand."
+        ])
+        XCTAssertEqual(PsalmTextFormatter.scriptureParagraphs(from: full), full)
+
+        let compact = OfficeReaderSectionBuilder.displaySections(
+            from: [psalm], format: office.format, usesCompactPsalmody: true
+        )
+        let continuation = try XCTUnwrap(compact.first { $0.id == psalm.id + "-compact-continuation" })
+        let lines = PsalmTextFormatter.lines(latin: continuation.latin, english: continuation.english, startsAfterScoredVerse: true)
+        XCTAssertTrue(lines.allSatisfy { $0.english != nil })
+        XCTAssertTrue(lines.contains {
+            $0.english == "I am counted among them that go down to the pit: * I am become as a man without help, free among the dead."
+        })
+        XCTAssertFalse(lines.contains { $0.english?.contains("87:") == true })
+    }
+
+    func testDisplaySectionsPreservesSourceBoundariesWhenThePrintedNumberSkips() {
+        let psalm = section(
+            id: "psalm-76",
+            kind: .psalm,
+            title: "Psalmus 76 (14,21)",
+            latin: "Notam fecísti in pópulis virtútem tuam.",
+            english: [
+                "76:15 Thou hast made thy power known among the nations: * with thy arm thou hast redeemed thy people, the children of Jacob and of Joseph.",
+                "76:17 The waters saw thee, O God."
+            ].joined(separator: "\n\n")
+        )
+        let displayed = OfficeReaderSectionBuilder.displaySections(
+            from: [psalm],
+            format: .authoritativeOrdered
+        )
+
+        XCTAssertEqual(displayed[0].english, psalm.english)
+        XCTAssertFalse(displayed[0].english?.contains("76:16") == true)
+        XCTAssertTrue(
+            displayed[0].english?.contains("76:17 The waters saw thee") == true
+        )
+    }
+
+    func testDisplaySectionsRemovesAntiphonInsertedBetweenConsecutivePsalmVerses() {
+        let psalm = section(
+            id: "psalm-76",
+            kind: .psalm,
+            title: "Psalmus 76 (2,13)",
+            latin: "Voce mea ad Dóminum clamávi.",
+            english: [
+                "76:2 I cried to the Lord with my voice; * to God with my voice, and he gave ear to me.",
+                "Ant. I have cried to the Lord with my voice, do not forget to show mercy, O God.",
+                "76:3 In the day of my trouble I sought God."
+            ].joined(separator: "\n\n")
+        )
+        let displayed = OfficeReaderSectionBuilder.displaySections(
+            from: [psalm],
+            format: .authoritativeOrdered
+        )
+
+        XCTAssertTrue(
+            displayed[0].english?.contains("76:2 I cried to the Lord") == true
+        )
+        XCTAssertTrue(
+            displayed[0].english?.contains("76:3 In the day of my trouble") == true
+        )
+        XCTAssertFalse(
+            displayed[0].english?.contains("\n\nAnt. I have cried") == true
+        )
     }
 
     func testCompactPsalmScoresAreInterleavedWithTheirPsalmText() {
@@ -666,6 +1073,161 @@ final class OfficeReaderSectionBuilderTests: XCTestCase {
         XCTAssertFalse(lines[1].latin.contains("79:11"))
     }
 
+    func testPsalmTextFormatterUsesExplicitScoredVerseOrdinals() {
+        let lines = PsalmTextFormatter.lines(
+            latin: """
+            2. Miserére mei, * et exáudi oratiónem meam.
+
+            3. Fílii hóminum, † úsquequo gravi corde? * quǽritis mendácium?
+            """,
+            english: """
+            4:2 Have mercy on me: * and hear my prayer.
+
+            4:3 O ye sons of men, how long will you be dull of heart?
+            """,
+            startsAfterScoredVerse: true
+        )
+
+        XCTAssertEqual(lines.map(\.number), [2, 3])
+        XCTAssertEqual(
+            lines[0].latin,
+            "Miserére mei, * et exáudi oratiónem meam."
+        )
+        XCTAssertTrue(lines[1].latin.contains("†"))
+        XCTAssertEqual(
+            lines[0].english,
+            "Have mercy on me: * and hear my prayer."
+        )
+    }
+
+    func testCompactPsalmodyKeepsOnlyFirstScoredVerse() throws {
+        let score = scoredPsalmody(
+            id: "psalm-score",
+            gabc: threeVerseGABC
+        )
+        let psalm = section(
+            id: "psalm",
+            kind: .psalm,
+            title: "Psalmus 4",
+            latin: "Prima pars, áltera pars.",
+            english: """
+            4:1 First part, * another part.
+
+            4:2 Second part, * another part.
+
+            4:3 Third part, * another part.
+            """,
+            chant: score
+        )
+
+        let full = OfficeReaderSectionBuilder.displaySections(
+            from: [psalm],
+            format: .authoritativeOrdered
+        )
+        XCTAssertEqual(full, [psalm])
+
+        let compact = OfficeReaderSectionBuilder.displaySections(
+            from: [psalm],
+            format: .authoritativeOrdered,
+            usesCompactPsalmody: true
+        )
+
+        XCTAssertEqual(compact.count, 2)
+        XCTAssertEqual(compact[0].id, "psalm")
+        XCTAssertEqual(compact[0].latin, "Prima pars * áltera pars.")
+        XCTAssertEqual(compact[0].english, "First part, * another part.")
+        XCTAssertEqual(compact[0].chant?.timeline.events.count, 4)
+        XCTAssertTrue(compact[0].chant?.gabc.contains("1. Prima") == true)
+        XCTAssertFalse(compact[0].chant?.gabc.contains("2. Secúnda") == true)
+        XCTAssertEqual(compact[1].id, "psalm-compact-continuation")
+        XCTAssertNil(compact[1].chant)
+
+        let lines = PsalmTextFormatter.lines(
+            latin: compact[1].latin,
+            english: compact[1].english,
+            startsAfterScoredVerse: true
+        )
+        XCTAssertEqual(lines.map(\.number), [2, 3])
+        XCTAssertTrue(lines[0].latin.contains("†"))
+        XCTAssertTrue(lines.allSatisfy { $0.latin.contains("*") })
+
+        let compactScore = try XCTUnwrap(compact[0].chant)
+        let parsed = try GregorianScoreParser.parse(
+            gabc: compactScore.gabc,
+            timeline: compactScore.timeline
+        )
+        XCTAssertEqual(parsed.eventIDs, compactScore.timeline.events.map(\.id))
+    }
+
+    func testCompactPsalmodyIncludesCanticles() {
+        let canticle = section(
+            id: "canticle",
+            kind: .canticle,
+            title: "Canticum Simeonis",
+            latin: "Prima pars, áltera pars.",
+            english: """
+            2:29 First part, * another part.
+
+            2:30 Second part, * another part.
+
+            2:31 Third part, * another part.
+            """,
+            chant: scoredPsalmody(
+                id: "canticle-score",
+                gabc: threeVerseGABC
+            )
+        )
+
+        let compact = OfficeReaderSectionBuilder.displaySections(
+            from: [canticle],
+            format: .authoritativeOrdered,
+            usesCompactPsalmody: true
+        )
+
+        XCTAssertEqual(compact.map(\.id), [
+            "canticle",
+            "canticle-compact-continuation",
+        ])
+        XCTAssertEqual(compact[1].kind, .canticle)
+        XCTAssertNil(compact[1].chant)
+    }
+
+    func testCompactPsalmodyLeavesSingleVerseAndMismatchedTranslationsIntact() {
+        let singleVerseScore = scoredPsalmody(
+            id: "single",
+            gabc: "name: Antiphona; %% (c4) Mi(f)se(g)ré(h)re.(g.) (::)",
+            noteCount: 4
+        )
+        let antiphon = section(
+            id: "antiphon",
+            kind: .psalm,
+            title: "Psalmus 4",
+            latin: "Miserére",
+            english: "Have mercy",
+            chant: singleVerseScore
+        )
+        let mismatched = section(
+            id: "mismatched",
+            kind: .psalm,
+            title: "Psalmus 4",
+            latin: "Prima pars",
+            english: "Only one paragraph",
+            chant: scoredPsalmody(id: "mismatched-score", gabc: threeVerseGABC)
+        )
+
+        let compact = OfficeReaderSectionBuilder.displaySections(
+            from: [antiphon, mismatched],
+            format: .authoritativeOrdered,
+            usesCompactPsalmody: true
+        )
+
+        XCTAssertEqual(compact.map(\.id), ["antiphon", "mismatched"])
+        XCTAssertEqual(compact.map { $0.chant?.id }, ["single", "mismatched-score"])
+        XCTAssertEqual(compact[0].latin, antiphon.latin)
+        XCTAssertEqual(compact[1].latin, mismatched.latin)
+        XCTAssertEqual(compact[1].english, mismatched.english)
+    }
+
     func testPsalmTextFormatterEmphasizesCadenceSyllablesAroundMediant() {
         let verses = [
             (
@@ -702,6 +1264,370 @@ final class OfficeReaderSectionBuilderTests: XCTestCase {
                 .emphasizedSyllableRanges(in: "Miserére mei.")
                 .isEmpty
         )
+    }
+
+    func testBundledAugust29ComplineCompactsEveryScoredPsalmodySection()
+        async throws {
+        let databaseURL = try XCTUnwrap(
+            Bundle.main.url(
+                forResource: "base-office",
+                withExtension: "sqlite",
+                subdirectory: "Resources"
+            ) ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite")
+        )
+        let repository = try SQLiteContentRepository(databaseURL: databaseURL)
+        let office = try await repository.office(
+            on: LocalDay(year: 2026, month: 8, day: 29),
+            hour: .compline
+        )
+        let compact = OfficeReaderSectionBuilder.displaySections(
+            from: office.sections,
+            format: office.format,
+            usesCompactPsalmody: true
+        )
+        let originals = Dictionary(
+            uniqueKeysWithValues: office.sections.map { ($0.id, $0) }
+        )
+
+        let compactedIDs = [
+            "2026-08-29-compline-section-20",
+            "2026-08-29-compline-section-21",
+            "2026-08-29-compline-section-22",
+            "2026-08-29-compline-section-33",
+        ]
+        for id in compactedIDs {
+            let scoreSection = try XCTUnwrap(
+                compact.first(where: { $0.id == id })
+            )
+            let continuation = try XCTUnwrap(
+                compact.first(where: {
+                    $0.id == "\(id)-compact-continuation"
+                })
+            )
+            XCTAssertNotNil(scoreSection.chant, id)
+            XCTAssertNil(continuation.chant, id)
+            XCTAssertFalse(continuation.latin.isEmpty, id)
+            XCTAssertLessThan(
+                try XCTUnwrap(scoreSection.chant).timeline.events.count,
+                try XCTUnwrap(originals[id]?.chant).timeline.events.count,
+                id
+            )
+        }
+
+        let psalm87 = try XCTUnwrap(
+            compact.first(where: {
+                $0.id == "2026-08-29-compline-section-20-compact-continuation"
+            })
+        )
+        XCTAssertTrue(psalm87.english?.contains("Amen.") == true)
+
+        let psalm102FirstHalf = try XCTUnwrap(
+            compact.first(where: {
+                $0.id == "2026-08-29-compline-section-21-compact-continuation"
+            })
+        )
+        let psalm102FirstHalfLines = PsalmTextFormatter.lines(
+            latin: psalm102FirstHalf.latin,
+            english: psalm102FirstHalf.english,
+            startsAfterScoredVerse: true
+        )
+        let secondVerse = try XCTUnwrap(psalm102FirstHalfLines.first)
+        XCTAssertEqual(
+            secondVerse.emphasizedRanges.map {
+                String(secondVerse.latin[$0])
+            },
+            ["Dó", "ó", "e"]
+        )
+        XCTAssertFalse(
+            secondVerse.latin.contains(PsalmTextFormatter.emphasisStartMarker)
+        )
+
+        let psalm102 = try XCTUnwrap(
+            compact.first(where: {
+                $0.id == "2026-08-29-compline-section-22-compact-continuation"
+            })
+        )
+        let lines = PsalmTextFormatter.lines(
+            latin: psalm102.latin,
+            english: psalm102.english,
+            startsAfterScoredVerse: true
+        )
+        XCTAssertEqual(lines.first?.number, 2)
+        XCTAssertTrue(
+            lines.first?.english?.hasPrefix("He remembereth that we are dust")
+                == true
+        )
+        XCTAssertEqual(lines.dropFirst().first?.number, 3)
+        XCTAssertTrue(
+            lines.dropFirst().first?.english?.hasPrefix("For the spirit")
+                == true
+        )
+    }
+
+    func testBundledAugustComplineCompactsPsalmsAndNuncDimittis() async throws {
+        let databaseURL = try XCTUnwrap(
+            Bundle.main.url(
+                forResource: "base-office",
+                withExtension: "sqlite",
+                subdirectory: "Resources"
+            ) ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite")
+        )
+        let repository = try SQLiteContentRepository(databaseURL: databaseURL)
+        let office = try await repository.office(
+            on: LocalDay(year: 2026, month: 8, day: 30),
+            hour: .compline
+        )
+        let compact = OfficeReaderSectionBuilder.displaySections(
+            from: office.sections,
+            format: office.format,
+            usesCompactPsalmody: true
+        )
+        let originalByID = Dictionary(
+            uniqueKeysWithValues: office.sections.map { ($0.id, $0) }
+        )
+        let compactedIDs = [
+            "2026-08-30-compline-section-20",
+            "2026-08-30-compline-section-21",
+            "2026-08-30-compline-section-22",
+            "2026-08-30-compline-section-33",
+        ]
+
+        for id in compactedIDs {
+            let original = try XCTUnwrap(originalByID[id])
+            let scoreSection = try XCTUnwrap(
+                compact.first(where: { $0.id == id })
+            )
+            let continuation = try XCTUnwrap(
+                compact.first(where: {
+                    $0.id == "\(id)-compact-continuation"
+                })
+            )
+            let originalScore = try XCTUnwrap(original.chant)
+            let compactScore = try XCTUnwrap(scoreSection.chant)
+
+            XCTAssertLessThan(
+                compactScore.timeline.events.count,
+                originalScore.timeline.events.count,
+                id
+            )
+            XCTAssertFalse(scoreSection.latin.hasSuffix("2."), id)
+            XCTAssertFalse(continuation.latin.isEmpty, id)
+            XCTAssertNil(continuation.chant, id)
+            XCTAssertNotNil(continuation.english, id)
+            let continuationLines = PsalmTextFormatter.lines(
+                latin: continuation.latin,
+                english: continuation.english,
+                startsAfterScoredVerse: true
+            )
+            XCTAssertEqual(continuationLines.first?.number, 2, id)
+            XCTAssertFalse(
+                continuationLines.first?.latin.hasSuffix("3.") == true,
+                id
+            )
+            XCTAssertNoThrow(
+                try GregorianScoreParser.parse(
+                    gabc: compactScore.gabc,
+                    timeline: compactScore.timeline
+                ),
+                id
+            )
+        }
+
+        let antiphonID = "2026-08-30-compline-section-19"
+        let originalAntiphon = try XCTUnwrap(originalByID[antiphonID])
+        let displayedAntiphon = try XCTUnwrap(
+            compact.first(where: { $0.id == antiphonID })
+        )
+        XCTAssertEqual(displayedAntiphon.chant, originalAntiphon.chant)
+        XCTAssertFalse(
+            compact.contains(where: {
+                $0.id == "\(antiphonID)-compact-continuation"
+            })
+        )
+    }
+
+    func testBundledAugust30VespersCompactsPsalmWithAntiphonTranslation()
+        async throws {
+        let databaseURL = try XCTUnwrap(
+            Bundle.main.url(
+                forResource: "base-office",
+                withExtension: "sqlite",
+                subdirectory: "Resources"
+            ) ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite")
+        )
+        let repository = try SQLiteContentRepository(databaseURL: databaseURL)
+        let office = try await repository.office(
+            on: LocalDay(year: 2026, month: 8, day: 30),
+            hour: .vespers
+        )
+        let compact = OfficeReaderSectionBuilder.displaySections(
+            from: office.sections,
+            format: office.format,
+            usesCompactPsalmody: true
+        )
+        let psalm113ID = "2026-08-30-vespers-section-15"
+        let originalScore = try XCTUnwrap(
+            office.sections.first(where: { $0.id == psalm113ID })?.chant
+        )
+        let compactScore = try XCTUnwrap(
+            compact.first(where: { $0.id == psalm113ID })?.chant
+        )
+        let psalm113 = try XCTUnwrap(
+            compact.first(where: {
+                $0.id == "\(psalm113ID)-compact-continuation"
+            })
+        )
+        XCTAssertLessThan(
+            compactScore.timeline.events.count,
+            originalScore.timeline.events.count
+        )
+        XCTAssertNil(psalm113.chant)
+        XCTAssertFalse(psalm113.latin.isEmpty)
+        let psalm113Lines = PsalmTextFormatter.lines(
+            latin: psalm113.latin,
+            english: psalm113.english,
+            startsAfterScoredVerse: true
+        )
+        let verse11 = try XCTUnwrap(
+            psalm113Lines.first(where: { $0.number == 11 })
+        )
+        XCTAssertEqual(
+            verse11.english,
+            "But our God is in heaven: * he hath done all things whatsoever he would."
+        )
+    }
+
+    func testBundledAugust30CompactsEveryMultiVersePsalmodyAcrossAllHours()
+        async throws {
+        let databaseURL = try XCTUnwrap(
+            Bundle.main.url(
+                forResource: "base-office",
+                withExtension: "sqlite",
+                subdirectory: "Resources"
+            ) ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite")
+        )
+        let repository = try SQLiteContentRepository(databaseURL: databaseURL)
+        let date = LocalDay(year: 2026, month: 8, day: 30)
+        var failures: [String] = []
+
+        for hour in OfficeHour.allCases {
+            let office = try await repository.office(on: date, hour: hour)
+            let displayed = OfficeReaderSectionBuilder.displaySections(
+                from: office.sections,
+                format: office.format
+            )
+            let compact = OfficeReaderSectionBuilder.displaySections(
+                from: office.sections,
+                format: office.format,
+                usesCompactPsalmody: true
+            )
+
+            for section in displayed
+            where section.kind == .psalm || section.kind == .canticle {
+                guard let score = section.chant,
+                      try scoredVerseCount(in: score) > 1 else {
+                    continue
+                }
+                let continuationID = "\(section.id)-compact-continuation"
+                if !compact.contains(where: { $0.id == continuationID }) {
+                    failures.append(
+                        "\(hour.rawValue): \(section.id) \(section.title)"
+                    )
+                }
+            }
+        }
+
+        XCTAssertTrue(
+            failures.isEmpty,
+            "Multi-verse psalmody did not compact:\n\(failures.joined(separator: "\n"))"
+        )
+    }
+
+    func testReprintedHeadingsAndSourceNotesAppearOnce() {
+        let collect = OfficeSection(
+            id: "collect",
+            kind: .collect,
+            title: "Oratio",
+            titleEnglish: "Prayer",
+            rubric: "ex Proprio Sanctorum",
+            rubricEnglish: "from the Proper of Saints",
+            latin: "Oratio {ex Proprio Sanctorum}\n\nOrémus.",
+            english: "Prayer {from the Proper of Saints}\n\nLet us pray."
+        )
+        let conclusion = OfficeSection(
+            id: "conclusion",
+            kind: .conclusion,
+            title: "Oratio",
+            rubric: "ex Proprio de Tempore",
+            latin: "Oratio {ex Proprio de Tempore}\n\n℣. Benedicámus Dómino."
+        )
+        let displayed = OfficeReaderSectionBuilder.displaySections(
+            from: [collect, conclusion],
+            format: .authoritativeOrdered
+        )
+        XCTAssertEqual(displayed.map(\.latin), ["Orémus.", "℣. Benedicámus Dómino."])
+        XCTAssertEqual(displayed.first?.english, "Let us pray.")
+        XCTAssertEqual(displayed.first?.rubric, "ex Proprio Sanctorum")
+        // A repeated heading is shown once, but its section keeps its own note.
+        XCTAssertEqual(displayed.last?.title, "")
+        XCTAssertEqual(displayed.last?.rubric, "ex Proprio de Tempore")
+    }
+
+    func testMechanicalSourceHeadingsAreCorrected() {
+        func section(_ id: String, _ kind: OfficeSectionKind, _ title: String, _ latin: String, english: String? = nil) -> OfficeSection {
+            OfficeSection(id: id, kind: kind, title: title, titleEnglish: english, latin: latin)
+        }
+        let combined = "Capitulum Responsorium Versus"
+        // At Lauds the chapter is followed by the hymn, not a short responsory.
+        let lauds = OfficeReaderSectionBuilder.withCorrectedHeadings(in: [
+            section("chapter", .reading, combined, "Iac 1:12", english: "Chapter Responsory Verse"),
+            section("response", .responsory, combined, "R/"),
+            section("hymn", .hymn, "Hymnus", "Iam lucis orto sídere")
+        ])
+        XCTAssertEqual(lauds.map(\.title), ["Capitulum", "Capitulum", "Hymnus"])
+        XCTAssertEqual(lauds.first?.titleEnglish, "Chapter")
+        // At Terce the short responsory and its versicle keep the full heading.
+        let terce = OfficeReaderSectionBuilder.withCorrectedHeadings(in: [
+            section("chapter", .reading, combined, "Iac 1:12"),
+            section("versicle", .responsory, combined, "V/")
+        ])
+        XCTAssertEqual(terce.map(\.title), [combined, combined])
+        let others = OfficeReaderSectionBuilder.withCorrectedHeadings(in: [
+            section("psalm", .psalm, "Section 5", "Psalmus 27 [3]", english: "Section 5"),
+            section("lesson", .reading, "Lectio brevis", "Tu autem", english: "Start")
+        ])
+        XCTAssertEqual(others.map(\.title), ["", "Lectio brevis"])
+        XCTAssertNil(others.first?.titleEnglish)
+        XCTAssertEqual(others.last?.titleEnglish, "Short reading")
+    }
+
+    func testStandaloneDirectionsBecomeTheRubricOfWhatFollows() {
+        let direction = OfficeSection(id: "d", kind: .prayer, title: "Conclusio", latin: "secreto", english: "silently")
+        let prayer = OfficeSection(id: "p", kind: .prayer, title: "", latin: "Pater noster, qui es in cælis.")
+        let closing = OfficeSection(id: "c", kind: .prayer, title: "", latin: "Reliqua omittuntur, nisi Laudes separandæ sint.")
+        let shown = OfficeReaderSectionBuilder.showingDirectionsAsRubrics(in: [direction, prayer, closing])
+        XCTAssertEqual(shown.map(\.id), ["p", "c"])
+        XCTAssertEqual(shown.first?.rubric, "secreto")
+        XCTAssertEqual(shown.first?.rubricEnglish, "silently")
+        XCTAssertEqual(shown.first?.title, "Conclusio")
+        // A direction with nothing after it to govern is left as it is.
+        let trailing = OfficeReaderSectionBuilder.showingDirectionsAsRubrics(in: [prayer, direction])
+        XCTAssertEqual(trailing.map(\.id), ["p", "d"])
+    }
+
+    func testSignOfTheCrossPrintedAsAPlusSignIsShownAsACross() {
+        let opening = OfficeSection(
+            id: "opening",
+            kind: .opening,
+            title: "Incipit",
+            latin: "℣. Dómine, lábia \u{FE0E}+\u{FE0E} mea apéries.",
+            english: "℣. O Lord, \u{FE0E}+\u{FE0E} open thou my lips."
+        )
+        for format in [OfficeDocument.Format.sourceOrdered, .authoritativeOrdered] {
+            let displayed = OfficeReaderSectionBuilder.displaySections(from: [opening], format: format)
+            XCTAssertEqual(displayed.first?.latin, "℣. Dómine, lábia ✠ mea apéries.", "\(format)")
+            XCTAssertEqual(displayed.first?.english, "℣. O Lord, ✠ open thou my lips.", "\(format)")
+        }
     }
 
     func testComplineDoesNotMoveDeusInAdiutoriumAheadOfTheShortLesson() {
@@ -924,7 +1850,7 @@ final class OfficeReaderSectionBuilderTests: XCTestCase {
                 "Conclusio"
             ],
             .lauds: [
-                "Incipit", "Capitulum Responsorium Versus", "Hymnus",
+                "Incipit", "Capitulum", "Hymnus",
                 "Versus", "Canticum: Canticum Zachariæ", "Oratio",
                 "Conclusio"
             ],
@@ -945,7 +1871,7 @@ final class OfficeReaderSectionBuilderTests: XCTestCase {
                 "Oratio", "Conclusio"
             ],
             .vespers: [
-                "Incipit", "Capitulum Responsorium Versus", "Hymnus",
+                "Incipit", "Capitulum", "Hymnus",
                 "Versus", "Canticum: Canticum B. Mariæ Virginis", "Oratio",
                 "Conclusio"
             ],
@@ -1310,6 +2236,42 @@ final class OfficeReaderSectionBuilderTests: XCTestCase {
         )
     }
 
+    func testImportedGreetingUsesClericalTextFallbackWithSingleNewlines() {
+        let latin = "℣. Dómine, exáudi oratiónem meam.\n℟. Et clamor meus ad te véniat.\nOrémus."
+        let english = "℣. O Lord, hear my prayer.\n℟. And let my cry come unto thee.\nLet us pray."
+        XCTAssertEqual(OfficePrayerText.adjusted(latin, isPriestOrDeaconPresent: true),
+            "℣. Dóminus vobíscum.\n℟. Et cum spíritu tuo.\nOrémus.")
+        XCTAssertEqual(OfficePrayerText.adjusted(english, isPriestOrDeaconPresent: true),
+            "℣. The Lord be with you.\n℟. And with thy spirit.\nLet us pray.")
+        XCTAssertTrue(OfficePrayerText.requiresTextFallback(latin, isPriestOrDeaconPresent: true))
+        XCTAssertFalse(OfficePrayerText.requiresTextFallback(latin, isPriestOrDeaconPresent: false))
+        XCTAssertFalse(OfficePrayerText.requiresTextFallback("℣. Dómine, exáudi oratiónem meam.", isPriestOrDeaconPresent: true))
+    }
+
+    func testDeadOfficeRetainsRequiredVersicleBeforeClericalGreeting() {
+        let latin = "℣. Dómine, exáudi oratiónem meam.\n℟. Et clamor meus ad te véniat.\nsecunda Domine, exaudi omittitur"
+        let english = "℣. O Lord, hear my prayer.\n℟. And let my cry come unto thee.\nskip second O Lord, hear my prayer"
+        let adjusted = OfficePrayerText.adjusted(latin, isPriestOrDeaconPresent: true)
+        XCTAssertTrue(adjusted.hasPrefix("℣. Dómine, exáudi oratiónem meam."))
+        XCTAssertTrue(adjusted.hasSuffix("℣. Dóminus vobíscum.\n\n℟. Et cum spíritu tuo."))
+        let translated = OfficePrayerText.adjusted(english, isPriestOrDeaconPresent: true)
+        XCTAssertTrue(translated.hasPrefix("℣. O Lord, hear my prayer."))
+        XCTAssertTrue(translated.hasSuffix("℣. The Lord be with you.\n\n℟. And with thy spirit."))
+        XCTAssertEqual(OfficePrayerText.adjusted(latin, isPriestOrDeaconPresent: false), latin)
+    }
+
+    func testOlderSourcePackKeepsDeadOfficeVersicleAndGreetingTogether() {
+        let source = [
+            section(id: "versicle", title: "Oratio", latin: "℣. Dómine, exáudi oratiónem meam.\n℟. Et clamor meus ad te véniat.", english: "℣. O Lord, hear my prayer.\n℟. And let my cry come unto thee."),
+            section(id: "direction", title: "", latin: "secunda Domine, exaudi omittitur", english: "skip second O Lord, hear my prayer")
+        ]
+        let displayed = OfficeReaderSectionBuilder.displaySections(from: source, format: .sourceOrdered)
+        XCTAssertEqual(displayed.count, 1)
+        let adjusted = OfficePrayerText.adjusted(displayed[0].latin, isPriestOrDeaconPresent: true)
+        XCTAssertTrue(adjusted.hasPrefix("℣. Dómine, exáudi oratiónem meam."))
+        XCTAssertTrue(adjusted.contains("Dóminus vobíscum."))
+    }
+
     private func section(
         id: String,
         kind: OfficeSectionKind = .opening,
@@ -1432,5 +2394,68 @@ final class OfficeReaderSectionBuilderTests: XCTestCase {
             ),
             timeline: ChantTimeline(events: [])
         )
+    }
+
+    private var threeVerseGABC: String {
+        """
+        name: Psalmody; %% (c4) 1. Prima(f) pars(g.) *(:) \
+        áltera(h) pars.(g.) (::) 2. Secúnda(f) pars(g.) †(,) *(:) \
+        áltera(h) pars.(g.) (::) 3. Tértia(f) pars(g.) *(:) \
+        áltera(h) pars.(g.) (::)
+        """
+    }
+
+    private func scoredPsalmody(
+        id: String,
+        gabc: String,
+        noteCount: Int = 12
+    ) -> ChantScore {
+        ChantScore(
+            id: id,
+            incipit: "Prima pars",
+            gabc: gabc,
+            mode: "8g",
+            reviewStatus: .humanReviewed,
+            provenance: ChantProvenance(
+                collection: "Test",
+                sourceBook: "Test",
+                license: "CC0-1.0",
+                snapshot: "test"
+            ),
+            timeline: ChantTimeline(
+                events: (0..<noteCount).map { index in
+                    ChantEvent(
+                        id: "\(id)-note-\(index)",
+                        phraseID: "\(id)-phrase-\(index / 4)",
+                        syllableID: "\(id)-syllable-\(index)",
+                        syllable: "syllable",
+                        relativePitch: 0
+                    )
+                }
+            )
+        )
+    }
+
+    private func scoredVerseCount(in score: ChantScore) throws -> Int {
+        let parsed = try GregorianScoreParser.parse(
+            gabc: score.gabc,
+            timeline: score.timeline
+        )
+        var count = 0
+        var current: [GregorianNotationElement] = []
+
+        for element in parsed.elements {
+            current.append(element)
+            if case .division(.final) = element {
+                if !GregorianScore(elements: current).lyricText.isEmpty {
+                    count += 1
+                }
+                current.removeAll(keepingCapacity: true)
+            }
+        }
+        if !GregorianScore(elements: current).lyricText.isEmpty {
+            count += 1
+        }
+        return count
     }
 }

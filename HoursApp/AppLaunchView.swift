@@ -36,6 +36,7 @@ struct AppLaunchView: View {
             }
         ) {
             AppTourWelcomeView()
+                .environment(tour)
         }
     }
 
@@ -68,8 +69,15 @@ struct AppLaunchView: View {
             phase = .visible
         }
 
-        try? await Task.sleep(for: .milliseconds(680))
-        guard !Task.isCancelled else { return }
+        do {
+            try await Task.sleep(for: .milliseconds(680))
+        } catch {
+            // SwiftUI can restart this task during appearance changes. Never
+            // leave the retained splash state covering an otherwise ready app.
+            phase = .complete
+            tour.launchAnimationCompleted()
+            return
+        }
 
         withAnimation(.easeInOut(duration: 0.34)) {
             phase = .complete

@@ -3,6 +3,25 @@ import XCTest
 @testable import HoursCore
 
 final class ContentPackInstallerTests: XCTestCase {
+    func testSignedRomanPackCannotReplaceRoman1954Pack() throws {
+        let source = try ContentDatabaseTestFixture.makeDatabase()
+        defer { try? FileManager.default.removeItem(at: source.deletingLastPathComponent()) }
+        let pack = try Data(contentsOf: source)
+        let key = Curve25519.Signing.PrivateKey()
+        let hash = SHA256.hash(data: pack).map { String(format: "%02x", $0) }.joined()
+        let unsigned = manifest(hash: hash, signature: "")
+        let signed = manifest(hash: hash, signature: try key.signature(for: unsigned.signingPayload).base64EncodedString())
+        let destination = source.deletingLastPathComponent().appendingPathComponent("roman1954.sqlite")
+        let prior = Data("existing Roman1954 pack".utf8)
+        try prior.write(to: destination)
+        XCTAssertThrowsError(try ContentPackInstaller().install(pack: pack, manifest: signed,
+            publicKey: key.publicKey.rawRepresentation, currentAppVersion: "0.1.0", destination: destination,
+            expectedTradition: .roman1954)) { error in
+            XCTAssertEqual(error as? ContentPackError, .incorrectTradition)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), prior)
+    }
+
     func testValidSignedSQLiteCorpusInstalls() throws {
         let source = try ContentDatabaseTestFixture.makeDatabase()
         let pack = try Data(contentsOf: source)

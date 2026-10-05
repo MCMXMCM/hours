@@ -258,6 +258,7 @@ struct AppTourReaderSnapshot: Codable, Equatable {
     let day: LocalDay
     let hour: OfficeHour
     let scrollOffset: Double
+    var scrollAnchor: OfficeReaderScrollAnchor? = nil
 }
 
 struct AppModelTourState: Equatable {
@@ -385,6 +386,12 @@ enum AppTourPersistence {
             )
         }
 
+        if let anchor = snapshot.reader?.scrollAnchor,
+           let data = try? JSONEncoder().encode(anchor) {
+            standardDefaults.set(data, forKey: AppModel.readerScrollAnchorKey)
+        } else {
+            standardDefaults.removeObject(forKey: AppModel.readerScrollAnchorKey)
+        }
         if let reader = snapshot.reader {
             standardDefaults.set(
                 true,
@@ -418,6 +425,10 @@ enum AppTourPersistence {
 @MainActor
 @Observable
 final class AppTourCoordinator {
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2.
+    // https://github.com/swiftlang/swift/issues/88036
+    nonisolated deinit {}
+
     private(set) var isWelcomePresented = false
     private(set) var isActive = false
     private(set) var isTransitioning = false

@@ -2,12 +2,14 @@ import HoursCore
 import Observation
 import OSLog
 import SwiftUI
+import UIKit
 
 struct OfficeReaderView: View {
     let office: OfficeDocument
     let displayMode: AppDisplayMode
     let restoredScrollOffset: Double?
-    let onScrollOffsetChange: (Double) -> Void
+    let restoredScrollAnchor: OfficeReaderScrollAnchor?
+    let onScrollOffsetChange: (Double, OfficeReaderScrollAnchor?) -> Void
 
     @Environment(AppModel.self) private var model
     @Environment(ChantPlaybackController.self) private var playback
@@ -17,25 +19,36 @@ struct OfficeReaderView: View {
     @State private var selectedScore: ChantScore?
     @State private var selectedScoreSectionID: String?
     @State private var showsSections = false
+    @State private var pendingSectionJumpID: String?
     @State private var showsOptions = false
+    @State private var isPreparingPrint = false
+    @State private var printErrorMessage: String?
     @State private var cantorTracking = CantorGuideTrackingState()
     @State private var presentation: OfficeReaderPresentation?
     @State private var preparedScores: PreparedOfficeScores?
-    @State private var scrollPosition = ScrollPosition(edge: .top)
-    @State private var hasAppliedInitialScroll = false
     @State private var transientState = OfficeReaderTransientState()
 
     private static let topAnchorID = "office-reader-top"
+
+    private var readerScale: CGFloat {
+        CGFloat(
+            GregorianLayoutMetrics.clampedNotationScale(
+                model.notationScale
+            )
+        )
+    }
 
     init(
         office: OfficeDocument,
         displayMode: AppDisplayMode,
         restoredScrollOffset: Double? = nil,
-        onScrollOffsetChange: @escaping (Double) -> Void = { _ in }
+        restoredScrollAnchor: OfficeReaderScrollAnchor? = nil,
+        onScrollOffsetChange: @escaping (Double, OfficeReaderScrollAnchor?) -> Void = { _, _ in }
     ) {
         self.office = office
         self.displayMode = displayMode
         self.restoredScrollOffset = restoredScrollOffset
+        self.restoredScrollAnchor = restoredScrollAnchor
         self.onScrollOffsetChange = onScrollOffsetChange
     }
 
@@ -66,9 +79,15 @@ struct OfficeReaderView: View {
                        preparedScores.key == preparationKey {
                         ScrollViewReader { proxy in
                         ScrollView {
-                            VStack(spacing: 0) {
+                            LazyVStack(spacing: 0) {
                                 officeHeader
                                     .id(Self.topAnchorID)
+                                    .background {
+                                        OfficeReaderScrollViewAccessor { scrollView, view in
+                                            transientState.scrollView = scrollView
+                                            transientState.registerSectionView(view, for: Self.topAnchorID)
+                                        }
+                                    }
 
                                 ForEach(
                                     Array(sections.enumerated()),
@@ -79,7 +98,10 @@ struct OfficeReaderView: View {
                                         isFollowedByContinuation: sections.indices.contains(index + 1)
                                             && sections[index + 1].title.isEmpty,
                                         showsEnglish: model.showsEnglish,
+                                        usesCompactPsalmody:
+                                            model.usesCompactPsalmody,
                                         isPriestOrDeaconPresent: model.isPriestOrDeaconPresent,
+                                        contentScale: readerScale,
                                         scorePreparation: section.chant.flatMap {
                                             preparedScores.scores[$0.id]
                                         },
@@ -92,6 +114,8 @@ struct OfficeReaderView: View {
                                         isAppTourFirstChant:
                                             section.id == firstChantSectionID,
                                         onTapEvent: { score, eventID in
+                                            transientState.sectionJumpToken = nil
+                                            transientState.protectedAnchor = nil
                                             if tour.step == .tapFirstNeume {
                                                 playback.scholaPitch = .a
                                             }
@@ -131,48 +155,63 @@ struct OfficeReaderView: View {
                                         }
                                     )
                                     .id(section.id)
+                                    .background {
+                                        OfficeReaderScrollViewAccessor { scrollView, view in
+                                            transientState.scrollView = scrollView
+                                            transientState.registerSectionView(view, for: section.id)
+                                        }
+                                    }
+                                }
+                            }
+                            .background {
+                                OfficeReaderScrollViewAccessor { scrollView, _ in
+                                    transientState.scrollView = scrollView
                                 }
                             }
                             .frame(maxWidth: 820)
                             .frame(maxWidth: .infinity)
                             .padding(.bottom, 100)
                         }
-                        .scrollPosition($scrollPosition)
-                        .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                            max(0, geometry.visibleRect.minY)
-                        } action: { _, offset in
-                            transientState.latestScrollOffset = offset
+                        .accessibilityIdentifier("office-reader-scroll")
+                        .onScrollGeometryChange(
+                            for: OfficeReaderScrollGeometry.self
+                        ) { geometry in
+                            OfficeReaderScrollGeometry(geometry)
+                        } action: { _, scrollGeometry in
+                            // Ignore geometry produced while iOS hides or snapshots
+                            // the scene. It must not replace the reading position.
+                            guard scenePhase == .active else { return }
+                            transientState.latestScrollOffset = scrollGeometry.offset
+                            transientState.maximumScrollOffset = scrollGeometry.maximumOffset
+                            transientState.latestScrollAnchor = OfficeReaderScrollRestoration.anchor(
+                                in: transientState.sectionFrames
+                            )
+                            transientState.hasScrollGeometry = true
                         }
                         .onScrollPhaseChange { _, phase in
-                            guard phase == .idle else { return }
-                            saveScrollOffset()
-                        }
-                        .task {
-                            await Task.yield()
-                            if let testScoreID = Self.uiTestScoreID,
-                               let testSection = sections.first(where: {
-                                   $0.chant?.id == testScoreID
-                               }) {
-                                proxy.scrollTo(testSection.id, anchor: .top)
-                            } else if let testSectionID = Self.uiTestSectionID {
-                                proxy.scrollTo(testSectionID, anchor: .top)
-                            } else if let restoredScrollOffset {
-                                transientState.latestScrollOffset = CGFloat(
-                                    restoredScrollOffset
-                                )
-                                scrollPosition.scrollTo(
-                                    y: restoredScrollOffset
-                                )
-                            } else {
-                                proxy.scrollTo(Self.topAnchorID, anchor: .top)
+                            if phase == .tracking || phase == .interacting {
+                                transientState.sectionJumpToken = nil
+                                transientState.protectedAnchor = nil
+                                transientState.userInterruptedRestoration = true
+                                transientState.hasAppliedInitialScroll = true
                             }
-                            await Task.yield()
-                            hasAppliedInitialScroll = true
+                            if phase == .animating {
+                                transientState.sectionJumpToken = nil
+                                transientState.protectedAnchor = nil
+                            }
+                            guard phase == .idle, scenePhase == .active else { return }
+                            // Let section frames catch up with the final scroll geometry.
+                            DispatchQueue.main.async { saveScrollOffset() }
+                        }
+                        .task(id: scenePhase) {
+                            guard scenePhase == .active else { return }
+                            await restoreScrollPosition(sections: sections, using: proxy)
                         }
                         .task(id: tour.step) {
                             guard tour.step == .tapFirstNeume,
                                   let firstChantSectionID else { return }
                             await Task.yield()
+                            transientState.protectedAnchor = nil
                             withAnimation(.easeInOut(duration: 0.3)) {
                                 proxy.scrollTo(
                                     firstChantSectionID,
@@ -217,27 +256,32 @@ struct OfficeReaderView: View {
                             .easeInOut(duration: 0.2),
                             value: selectedScoreSectionID
                         )
-                        .sheet(isPresented: $showsSections) {
+                        .sheet(
+                            isPresented: $showsSections,
+                            onDismiss: {
+                                jumpToPendingSection(using: proxy)
+                            }
+                        ) {
                             OfficeSectionsSheet(
                                 entries: presentation.outlineEntries,
                                 onSelect: { entry in
-                                    withAnimation(
-                                        .easeInOut(duration: 0.3)
-                                    ) {
-                                        proxy.scrollTo(
-                                            entry.id,
-                                            anchor: .top
-                                        )
-                                    }
+                                    pendingSectionJumpID = entry.id
                                     tour.receive(
                                         .readerSectionSelected(entry.title)
                                     )
                                     showsSections = false
                                 }
                             )
-                            .presentationDetents([.medium, .large])
+                            .modifier(
+                                AdaptiveSheetPresentation(
+                                    phoneDetents: [.medium, .large]
+                                )
+                            )
                             .presentationDragIndicator(.visible)
                             .appTourOverlayHost(.reader)
+                            .environment(model)
+                            .environment(playback)
+                            .environment(tour)
                         }
                     }
                     } else {
@@ -283,13 +327,42 @@ struct OfficeReaderView: View {
                 tour.receive(.readerOptionsClosed)
             }
         ) {
-            PrayerOptionsView {
+            PrayerOptionsView(
+                isPreparingPrint: isPreparingPrint,
+                isPrintingAvailable: OfficePrintPresenter.isPrintingAvailable,
+                onPrint: printCurrentOffice
+            ) {
                 showsOptions = false
             }
-                .presentationDetents([.large])
+                .modifier(
+                    AdaptiveSheetPresentation(phoneDetents: [.large])
+                )
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.hoursBackground)
                 .appTourOverlayHost(.reader)
+                .environment(model)
+                .environment(playback)
+                .environment(tour)
+                .alert(
+                    "Unable to Print",
+                    isPresented: Binding(
+                        get: { printErrorMessage != nil },
+                        set: { isPresented in
+                            if !isPresented {
+                                printErrorMessage = nil
+                            }
+                        }
+                    )
+                ) {
+                    Button("OK") {
+                        printErrorMessage = nil
+                    }
+                } message: {
+                    Text(
+                        printErrorMessage
+                            ?? "The print job could not be prepared."
+                    )
+                }
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -336,18 +409,29 @@ struct OfficeReaderView: View {
             }
         }
         .onDisappear {
+            transientState.sectionJumpToken = nil
+            transientState.protectedAnchor = nil
             playback.stop()
         }
-        .task(id: office.id) {
+        .task(
+            id: OfficeReaderPresentationKey(
+                officeID: office.id,
+                usesCompactPsalmody: model.usesCompactPsalmody
+            )
+        ) {
             guard office.format != .contentUnavailable else { return }
             presentation = nil
             preparedScores = nil
 
             let office = office
+            let usesCompactPsalmody = model.usesCompactPsalmody
             let preparationTask = Task.detached(
                 priority: .userInitiated
             ) {
-                try OfficeReaderPresentation.prepare(office: office)
+                try OfficeReaderPresentation.prepare(
+                    office: office,
+                    usesCompactPsalmody: usesCompactPsalmody
+                )
             }
             do {
                 let prepared = try await withTaskCancellationHandler {
@@ -366,7 +450,15 @@ struct OfficeReaderView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase != .active else { return }
+            transientState.sectionJumpToken = nil
+            transientState.protectedAnchor = nil
             saveScrollOffset()
+        }
+        .onChange(of: model.isPriestOrDeaconPresent) { _, _ in
+            closeCantorGuide()
+        }
+        .onChange(of: model.usesCompactPsalmody) { _, _ in
+            closeCantorGuide()
         }
     }
 
@@ -443,6 +535,66 @@ struct OfficeReaderView: View {
         }
     }
 
+    private func jumpToPendingSection(using proxy: ScrollViewProxy) {
+        guard let sectionID = pendingSectionJumpID else { return }
+        pendingSectionJumpID = nil
+        transientState.protectedAnchor = nil
+        transientState.userInterruptedRestoration = true
+        transientState.hasAppliedInitialScroll = true
+        let token = UUID()
+        transientState.sectionJumpToken = token
+        Task { @MainActor in
+            await Task.yield()
+            guard transientState.sectionJumpToken == token else { return }
+            // First materialize the destination. An animated jump continues
+            // writing its estimated offset after the lazy sections have grown.
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) { proxy.scrollTo(sectionID, anchor: .top) }
+            var settledPasses = 0
+            for _ in 0..<30 {
+                do { try await Task.sleep(for: .milliseconds(50)) }
+                catch { return }
+                guard transientState.sectionJumpToken == token,
+                      scenePhase == .active,
+                      let scrollView = transientState.scrollView,
+                      !scrollView.isTracking, !scrollView.isDragging,
+                      !scrollView.isDecelerating else { return }
+                guard let frame = transientState.sectionFrames[sectionID] else {
+                    withTransaction(transaction) { proxy.scrollTo(sectionID, anchor: .top) }
+                    continue
+                }
+                let current = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
+                let maximum = max(0, scrollView.contentSize.height
+                    + scrollView.adjustedContentInset.top + scrollView.adjustedContentInset.bottom
+                    - scrollView.bounds.height)
+                let target = OfficeReaderScrollRestoration.offset(
+                    Double(current + frame.minY), maximumOffset: maximum
+                )
+                if abs(target - current) <= 1 {
+                    settledPasses += 1
+                    if settledPasses >= 3 {
+                        saveScrollOffset()
+                        transientState.protectedAnchor = OfficeReaderScrollAnchor(
+                            sectionID: sectionID, viewportY: Double(frame.minY)
+                        )
+                        transientState.sectionJumpToken = nil
+                        return
+                    }
+                } else {
+                    settledPasses = 0
+                    scrollView.setContentOffset(
+                        CGPoint(x: scrollView.contentOffset.x,
+                            y: target - scrollView.adjustedContentInset.top), animated: false
+                    )
+                }
+            }
+            if transientState.sectionJumpToken == token {
+                transientState.sectionJumpToken = nil
+            }
+        }
+    }
+
     private func closeCantorGuide() {
         playback.stop()
         selectedScore = nil
@@ -451,11 +603,128 @@ struct OfficeReaderView: View {
         tour.receive(.cantorGuideClosed)
     }
 
-    private func saveScrollOffset() {
-        guard hasAppliedInitialScroll else { return }
-        onScrollOffsetChange(
-            Double(transientState.latestScrollOffset)
+    private func printCurrentOffice() {
+        guard !isPreparingPrint, !tour.isActive else { return }
+        let snapshot = OfficePrintSnapshot(
+            office: office,
+            showsEnglish: model.showsEnglish,
+            usesCompactPsalmody: model.usesCompactPsalmody,
+            isPriestOrDeaconPresent: model.isPriestOrDeaconPresent,
+            readerScale: model.notationScale
         )
+        isPreparingPrint = true
+        Task { @MainActor in
+            defer { isPreparingPrint = false }
+            do {
+                try await OfficePrintPresenter.present(
+                    snapshot: snapshot
+                ) { errorMessage in
+                    printErrorMessage = errorMessage
+                }
+            } catch {
+                printErrorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func saveScrollOffset() {
+        guard transientState.hasAppliedInitialScroll, transientState.hasScrollGeometry else { return }
+        // Geometry and its section anchor are captured together while active;
+        // background snapshots may already have resized the native view.
+        let offset = Double(transientState.latestScrollOffset)
+        let anchor = scenePhase == .active
+            ? OfficeReaderScrollRestoration.anchor(in: transientState.sectionFrames)
+            : transientState.latestScrollAnchor
+        transientState.savedOffset = offset
+        transientState.savedAnchor = anchor
+        onScrollOffsetChange(offset, anchor)
+    }
+
+    private func restoreScrollPosition(
+        sections: [OfficeSection],
+        using proxy: ScrollViewProxy
+    ) async {
+        // This task also runs when score preparation recreates the ScrollView.
+        // Capture the last settled position before new layout can overwrite it.
+        let savedOffset = transientState.savedOffset ?? restoredScrollOffset ?? 0
+        let savedAnchor = transientState.savedAnchor ?? restoredScrollAnchor
+        transientState.protectedAnchor = nil
+        transientState.hasAppliedInitialScroll = false
+        transientState.userInterruptedRestoration = false
+        await Task.yield()
+        guard !Task.isCancelled else { return }
+
+        if let testScoreID = Self.uiTestScoreID,
+           let section = sections.first(where: { $0.chant?.id == testScoreID }) {
+            proxy.scrollTo(section.id, anchor: .top)
+            transientState.hasAppliedInitialScroll = true
+            return
+        } else if let testSectionID = Self.uiTestSectionID {
+            proxy.scrollTo(testSectionID, anchor: .top)
+            transientState.hasAppliedInitialScroll = true
+            return
+        }
+
+        let anchor = savedAnchor.flatMap { saved in
+            saved.sectionID == Self.topAnchorID || sections.contains(where: { $0.id == saved.sectionID })
+                ? saved : nil
+        }
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        if let anchor, transientState.sectionFrames[anchor.sectionID] == nil {
+            // Resolve the actual section first; a lazy stack's total height is
+            // only an estimate until the surrounding chant views are laid out.
+            withTransaction(transaction) { proxy.scrollTo(anchor.sectionID, anchor: .top) }
+        }
+
+        var settledPasses = 0
+        for _ in 0..<30 {
+            do { try await Task.sleep(for: .milliseconds(50)) }
+            catch { return }
+            guard !transientState.userInterruptedRestoration else { return }
+            guard scenePhase == .active, transientState.hasScrollGeometry,
+                  let scrollView = transientState.scrollView else { continue }
+            let currentOffset = max(0, scrollView.contentOffset.y + scrollView.adjustedContentInset.top)
+            // Read the native range alongside the native offset. SwiftUI's
+            // last geometry event may still describe the pre-layout range.
+            let maximum = max(0, scrollView.contentSize.height
+                + scrollView.adjustedContentInset.top + scrollView.adjustedContentInset.bottom
+                - scrollView.bounds.height)
+            let target: CGFloat
+            if let anchor {
+                guard let frame = transientState.sectionFrames[anchor.sectionID] else {
+                    withTransaction(transaction) { proxy.scrollTo(anchor.sectionID, anchor: .top) }
+                    continue
+                }
+                target = OfficeReaderScrollRestoration.offset(
+                    Double(currentOffset + frame.minY) - anchor.viewportY,
+                    maximumOffset: maximum
+                )
+            } else {
+                target = OfficeReaderScrollRestoration.offset(
+                    savedOffset,
+                    maximumOffset: maximum
+                )
+            }
+            if abs(target - currentOffset) <= 1 {
+                settledPasses += 1
+                if settledPasses >= 3 { break }
+            } else {
+                settledPasses = 0
+                // A saved point must never become a persistent bottom-edge
+                // request as the lazy content grows during restoration.
+                scrollView.setContentOffset(
+                    CGPoint(x: scrollView.contentOffset.x, y: target - scrollView.adjustedContentInset.top),
+                    animated: false
+                )
+            }
+        }
+        guard !Task.isCancelled else { return }
+        transientState.hasAppliedInitialScroll = true
+        if settledPasses >= 3 {
+            saveScrollOffset()
+            transientState.protectedAnchor = transientState.savedAnchor
+        }
     }
 
     private static var uiTestSectionID: String? {
@@ -532,7 +801,13 @@ struct OfficeReaderView: View {
     }
 
     private var officeHeader: some View {
-        VStack(spacing: 10) {
+        let observanceLatin = ObservanceTitle.latin(
+            office.observance?.titleLatin ?? office.contextLabel
+        )
+        let observanceEnglish = office.observance?.titleEnglish.map(
+            ObservanceTitle.english
+        )
+        return VStack(spacing: 10) {
             if model.isDevelopmentCorpus {
                 Text("DEVELOPMENT CORPUS")
                     .font(.system(.caption2, design: .rounded, weight: .semibold))
@@ -542,40 +817,82 @@ struct OfficeReaderView: View {
             }
 
             Text(
-                office.observance?.rank?.displayName
-                    ?? model.selectedDay?.rank?.displayName
+                office.observance?.rankLabel
+                    ?? model.selectedDay?.rankLabel
                     ?? office.hour.englishTitle
             )
-                .font(.custom("EBGaramond-Regular", size: 18, relativeTo: .body))
+                .font(
+                    .custom(
+                        "EBGaramond-Regular",
+                        size: 18 * readerScale,
+                        relativeTo: .body
+                    )
+                )
                 .foregroundStyle(Color(red: 0.68, green: 0.12, blue: 0.09))
+                .accessibilityIdentifier("office-rank-label")
+
+            if model.officeTradition != .roman1960 {
+                Text(model.officeTradition.title)
+                    .font(.system(.caption, design: .serif))
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("office-tradition-label")
+            }
 
             Text(office.titleLatin)
-                .font(.custom("EBGaramond-Regular", size: 43, relativeTo: .largeTitle))
+                .font(
+                    .custom(
+                        "EBGaramond-Regular",
+                        size: 43 * readerScale,
+                        relativeTo: .largeTitle
+                    )
+                )
                 .fontWeight(.semibold)
                 .multilineTextAlignment(.center)
-                .lineSpacing(-4)
+                .lineSpacing(-4 * readerScale)
                 .accessibilityIdentifier("office-reader-title")
 
             if model.showsEnglish,
-               let titleEnglish = office.titleEnglish,
-               !titleEnglish.isEmpty {
+               let titleEnglish = OfficeBilingualText.distinctEnglish(
+                office.titleEnglish,
+                from: office.titleLatin
+               ) {
                 Text(titleEnglish)
-                    .font(.custom("EBGaramond-Regular", size: 23, relativeTo: .title3))
+                    .font(
+                        .custom(
+                            "EBGaramond-Regular",
+                            size: 23 * readerScale,
+                            relativeTo: .title3
+                        )
+                    )
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
-            Text(office.observance?.titleLatin ?? office.contextLabel)
-                .font(.custom("EBGaramond-Regular", size: 19, relativeTo: .body))
+            Text(observanceLatin)
+                .font(
+                    .custom(
+                        "EBGaramond-Regular",
+                        size: 19 * readerScale,
+                        relativeTo: .body
+                    )
+                )
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
             if model.showsEnglish,
-               let titleEnglish = office.observance?.titleEnglish,
-               !titleEnglish.isEmpty {
+               let titleEnglish = OfficeBilingualText.distinctEnglish(
+                observanceEnglish,
+                from: observanceLatin
+               ) {
                 Text(titleEnglish)
-                    .font(.custom("EBGaramond-Regular", size: 18, relativeTo: .body))
+                    .font(
+                        .custom(
+                            "EBGaramond-Regular",
+                            size: 18 * readerScale,
+                            relativeTo: .body
+                        )
+                    )
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -586,6 +903,11 @@ struct OfficeReaderView: View {
         .padding(.bottom, 38)
         .frame(maxWidth: .infinity)
     }
+}
+
+private struct OfficeReaderPresentationKey: Hashable {
+    let officeID: String
+    let usesCompactPsalmody: Bool
 }
 
 nonisolated struct OfficeReaderPresentation: Sendable {
@@ -601,7 +923,8 @@ nonisolated struct OfficeReaderPresentation: Sendable {
     let outlineEntries: [OfficeReaderOutlineEntry]
 
     static func prepare(
-        office: OfficeDocument
+        office: OfficeDocument,
+        usesCompactPsalmody: Bool = false
     ) throws -> OfficeReaderPresentation {
         let interval = signposter.beginInterval(
             "ReaderPresentationPreparation"
@@ -616,7 +939,8 @@ nonisolated struct OfficeReaderPresentation: Sendable {
         try Task.checkCancellation()
         let sections = OfficeReaderSectionBuilder.displaySections(
             from: office.sections,
-            format: office.format
+            format: office.format,
+            usesCompactPsalmody: usesCompactPsalmody
         )
         try Task.checkCancellation()
 
@@ -646,13 +970,26 @@ nonisolated struct OfficeReaderPresentation: Sendable {
     }
 }
 
-private final class OfficeReaderTransientState {
-    var latestScrollOffset: CGFloat = 0
-}
-
 nonisolated struct OfficeReaderOutlineEntry: Equatable, Identifiable, Sendable {
     let id: String
     let title: String
+}
+
+nonisolated enum OfficeReaderSectionJump {
+    /// Sheet rows must not reuse reader section IDs. `ScrollViewReader`
+    /// matches the first view with that ID, and the still-presented outline
+    /// row is in the hierarchy before a lazy hymn has been realized.
+    static func outlineRowID(for sectionID: String) -> String {
+        "office-outline-row-\(sectionID)"
+    }
+}
+
+private struct OfficeSectionsSheetRow: Identifiable {
+    let entry: OfficeReaderOutlineEntry
+
+    var id: String {
+        OfficeReaderSectionJump.outlineRowID(for: entry.id)
+    }
 }
 
 nonisolated enum OfficeReaderOutlineBuilder {
@@ -724,7 +1061,8 @@ private struct OfficeSectionsSheet: View {
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
-                List(entries) { entry in
+                List(entries.map(OfficeSectionsSheetRow.init)) { row in
+                    let entry = row.entry
                     Button {
                         guard !tour.isActive
                                 || tour.step == .chooseOratio else {
@@ -756,7 +1094,7 @@ private struct OfficeSectionsSheet: View {
                             ? "tour-reader-oratio"
                             : "office-outline-jump-\(entry.id)"
                     )
-                    .id(entry.id)
+                    .id(row.id)
                     .appTourTarget(
                         .readerOratio,
                         when: Self.isOratio(entry.title)
@@ -770,7 +1108,12 @@ private struct OfficeSectionsSheet: View {
                           }) else { return }
                     await Task.yield()
                     withAnimation(.easeInOut(duration: 0.3)) {
-                        proxy.scrollTo(entry.id, anchor: .center)
+                        proxy.scrollTo(
+                            OfficeReaderSectionJump.outlineRowID(
+                                for: entry.id
+                            ),
+                            anchor: .center
+                        )
                     }
                 }
                 .navigationTitle("Office sections")
@@ -825,6 +1168,10 @@ enum CantorGuideHighlightScope {
 
 @Observable
 private final class CantorGuideTrackingState {
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2.
+    // https://github.com/swiftlang/swift/issues/88036
+    nonisolated deinit {}
+
     var automaticScrollTargetID: String?
     var cantorGuideFrame: CGRect?
     var latestActiveNeume: ActiveNeumeFrame?
@@ -873,21 +1220,252 @@ enum CantorGuideViewportTracking {
 nonisolated enum OfficeReaderSectionBuilder {
     static func displaySections(
         from source: [OfficeSection],
-        format: OfficeDocument.Format?
+        format: OfficeDocument.Format?,
+        usesCompactPsalmody: Bool = false
     ) -> [OfficeSection] {
+        if format == .sourceOrdered {
+            // Source imports are already in liturgical order. Never run the
+            // Roman reconstruction/correction heuristics over a source-ordered office:
+            // its antiphons, including those repeated between the strophes of a
+            // psalm, are printed in both languages and none is spurious.
+            let source = suppressingRepeatedHeadings(
+                SourceOfficeTextPresentation.sections(
+                    OfficePrayerText.groupingDeadOfficeGreeting(in: source)
+                )
+            )
+            return showingDirectionsAsRubrics(in: showingCrossSigns(in: usesCompactPsalmody
+                ? compactingPsalmody(in: source, usesSourceLineBreaks: true)
+                : source))
+        }
+        let presentationSource = format == .authoritativeOrdered
+            ? correctedSource(
+                source,
+                preservesUnnumberedAntiphons: true
+            )
+            : source
+        let source = withCorrectedHeadings(in: withoutPrintedHeadings(
+            in: correctingNumberedLessonTranslations(presentationSource)
+        ))
+        let displayed: [OfficeSection]
         if format == .authoritativeOrdered {
             // The authoritative corpus repeats a part's title on each atomic
             // prayer or score across every hour. Preserve its order, fold
             // prose that is actually covered by a score into that score, and
             // present one heading for the whole office part.
-            return suppressingRepeatedHeadings(
+            displayed = suppressingRepeatedHeadings(
                 interleavingTextWithNonPsalmChants(
                     source,
                     allowsTitleFallback: false
                 )
             )
+        } else {
+            displayed = sections(from: source)
         }
-        return sections(from: source)
+        let restored = restoringPsalmodyEnglish(in: displayed)
+        guard usesCompactPsalmody else { return showingDirectionsAsRubrics(in: showingCrossSigns(in: restored)) }
+        return showingDirectionsAsRubrics(in: showingCrossSigns(in: compactingPsalmody(in: restored)))
+    }
+
+    /// The ordered corpus repeats a part's heading, with its source note, as
+    /// the first line of the part's text ("Oratio {ex Proprio Sanctorum}").
+    /// The heading and the note are shown already, so that line is omitted; a
+    /// psalm-division counter ("Canticum Isaiæ [4]") is not part of a heading.
+    private static func withoutPrintedHeadings(in sections: [OfficeSection]) -> [OfficeSection] {
+        func withoutHeading(_ value: String?, heading: String?, note: String?) -> String? {
+            guard let value, let heading, !heading.isEmpty else { return value }
+            var parts = value.components(separatedBy: "\n\n")
+            let first = parts.first?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let printed = [heading] + (note.map { ["\(heading) {\($0)}", "\(heading) (\($0))"] } ?? [])
+            guard let first, printed.contains(first) else { return value }
+            parts.removeFirst()
+            return parts.joined(separator: "\n\n")
+        }
+        return sections.map { section in
+            let title = section.title.replacingOccurrences(
+                of: #"\s*\[\d+\]$"#,
+                with: "",
+                options: .regularExpression
+            )
+            let latin = withoutHeading(section.latin, heading: section.title, note: section.rubric)
+                ?? section.latin
+            let english = withoutHeading(
+                section.english,
+                heading: section.titleEnglish,
+                note: section.rubricEnglish
+            )
+            guard title != section.title || latin != section.latin || english != section.english else {
+                return section
+            }
+            return section.replacingPresentation(title: title, latin: latin, english: .some(english))
+        }
+    }
+
+    /// Headings the source supplies mechanically: a numbered "Section" where it
+    /// has none, "Capitulum Responsorium Versus" over a chapter that no short
+    /// responsory follows (Lauds and Vespers, where the hymn comes next), and
+    /// "Start" as the English of a short lesson or an opening.
+    static func withCorrectedHeadings(in sections: [OfficeSection]) -> [OfficeSection] {
+        // The chapter, its short responsory and versicle are consecutive parts
+        // under one heading; a run without the responsory's versicle is a
+        // chapter alone.
+        let combined = "Capitulum Responsorium Versus"
+        var chapterOnly = Set<Int>()
+        var start = 0
+        while start < sections.count {
+            guard sections[start].title == combined else { start += 1; continue }
+            var end = start
+            while end < sections.count, sections[end].title == combined { end += 1 }
+            let hasVersicle = sections[start..<end].contains {
+                $0.latin.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("V/") || $0.latin.contains("℣.")
+            }
+            if !hasVersicle { chapterOnly.formUnion(start..<end) }
+            start = end
+        }
+        return sections.enumerated().map { index, section in
+            if section.title.range(of: #"^Section \d+$"#, options: .regularExpression) != nil {
+                return section.replacingPresentation(title: "", titleEnglish: .some(nil))
+            }
+            if chapterOnly.contains(index) {
+                return section.replacingPresentation(title: "Capitulum", titleEnglish: .some("Chapter"))
+            }
+            if section.titleEnglish == "Start" {
+                switch section.title {
+                case "Lectio brevis":
+                    return section.replacingPresentation(titleEnglish: .some("Short reading"))
+                case "Incipit":
+                    return section.replacingPresentation(titleEnglish: .some("Beginning"))
+                default:
+                    break
+                }
+            }
+            return section
+        }
+    }
+
+    /// Directions printed in the source as a part of their own ("secreto",
+    /// "Sequens stropha dicitur flexis genibus.") govern the part that follows,
+    /// so they are shown as its rubric rather than as words to be said.
+    static func showingDirectionsAsRubrics(in sections: [OfficeSection]) -> [OfficeSection] {
+        let direction = #"^(?:secreto|flexis genibus|Sequens stropha dicitur flexis genibus\.|Et recto tono dicitur benedictio:|Deinde dicitur secreto|Deinde dicitur tantum Pater Noster secreto, nisi sequatur alia Hora\.)$"#
+        var result: [OfficeSection] = []
+        var pending: OfficeSection?
+        for section in sections {
+            if let held = pending {
+                pending = nil
+                if section.rubric == nil {
+                    let inheritsHeading = section.title.isEmpty && !held.title.isEmpty
+                    result.append(section.replacingPresentation(
+                        title: inheritsHeading ? held.title : nil,
+                        titleEnglish: inheritsHeading ? .some(held.titleEnglish) : nil,
+                        rubric: .some(held.latin.trimmingCharacters(in: .whitespacesAndNewlines)),
+                        rubricEnglish: .some(held.english?.trimmingCharacters(in: .whitespacesAndNewlines))
+                    ))
+                    continue
+                }
+                result.append(held)
+            }
+            if section.chant == nil, section.kind != .rubric,
+               section.latin.trimmingCharacters(in: .whitespacesAndNewlines)
+                .range(of: direction, options: [.regularExpression, .caseInsensitive]) != nil {
+                pending = section
+            } else {
+                result.append(section)
+            }
+        }
+        if let held = pending { result.append(held) }
+        return result
+    }
+
+    /// Some sources print the sign of the cross as a plus sign held in text
+    /// presentation ("lábia ︎+︎ mea"); show it as the cross it stands for.
+    private static func showingCrossSigns(in sections: [OfficeSection]) -> [OfficeSection] {
+        let plus = "\u{FE0E}+\u{FE0E}"
+        func crossed(_ value: String) -> String {
+            value.replacingOccurrences(of: plus, with: "✠", options: .literal)
+        }
+        return sections.map { section in
+            let latin = crossed(section.latin)
+            let english = section.english.map(crossed)
+            guard latin != section.latin || english != section.english else { return section }
+            return section.replacingPresentation(latin: latin, english: .some(english))
+        }
+    }
+
+    private static func restoringPsalmodyEnglish(
+        in source: [OfficeSection]
+    ) -> [OfficeSection] {
+        source.map { section in
+            guard section.kind == .psalm || section.kind == .canticle,
+                  let english = section.english else {
+                return section
+            }
+            let restored = removingEmbeddedAntiphonParagraphs(from: english)
+            guard restored != english else { return section }
+            return section.replacingPresentation(english: restored)
+        }
+    }
+
+    private static func removingEmbeddedAntiphonParagraphs(
+        from english: String
+    ) -> String {
+        let values = paragraphs(in: english)
+        guard values.count > 2 else { return english }
+        let retained = values.enumerated().compactMap { index, paragraph -> String? in
+            guard isAntiphonParagraph(paragraph),
+                  index > values.startIndex,
+                  index < values.index(before: values.endIndex),
+                  let previous = scriptureReference(in: values[index - 1]),
+                  let next = scriptureReference(in: values[index + 1]),
+                  previous.psalm == next.psalm,
+                  next.verse == previous.verse + 1 else {
+                return paragraph
+            }
+            return nil
+        }
+        return retained == values ? english : retained.joined(separator: "\n\n")
+    }
+
+    private static func correctingNumberedLessonTranslations(
+        _ source: [OfficeSection]
+    ) -> [OfficeSection] {
+        source.map { section in
+            let latinParts = section.latin
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .split(whereSeparator: \.isWhitespace)
+            guard latinParts.count == 2,
+                  latinParts[0].localizedCaseInsensitiveCompare("Lectio")
+                    == .orderedSame,
+                  let ordinal = Int(latinParts[1]),
+                  ordinal > 0 else {
+                return section
+            }
+
+            func corrected(_ value: String?) -> String? {
+                guard let value else { return nil }
+                let parts = value
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .split(whereSeparator: \.isWhitespace)
+                guard parts.count == 2,
+                      parts[0].localizedCaseInsensitiveCompare("Reading")
+                        == .orderedSame,
+                      Int(parts[1]) != nil else {
+                    return value
+                }
+                return "Reading \(ordinal)"
+            }
+
+            return OfficeSection(
+                id: section.id,
+                kind: section.kind,
+                title: section.title,
+                titleEnglish: corrected(section.titleEnglish),
+                rubric: section.rubric,
+                rubricEnglish: section.rubricEnglish,
+                latin: section.latin,
+                english: corrected(section.english),
+                chant: section.chant
+            )
+        }
     }
 
     static func sections(from source: [OfficeSection]) -> [OfficeSection] {
@@ -895,6 +1473,338 @@ nonisolated enum OfficeReaderSectionBuilder {
             interleavingCompactPsalmody(correctedSource(source))
         )
         return suppressingRepeatedHeadings(source)
+    }
+
+    private static func compactingPsalmody(
+        in sections: [OfficeSection],
+        usesSourceLineBreaks: Bool = false
+    ) -> [OfficeSection] {
+        sections.flatMap { section in
+            compactPsalmodySection(section, usesSourceLineBreaks: usesSourceLineBreaks) ?? [section]
+        }
+    }
+
+    private static func compactPsalmodySection(
+        _ section: OfficeSection,
+        usesSourceLineBreaks: Bool
+    ) -> [OfficeSection]? {
+        guard section.kind == .psalm || section.kind == .canticle,
+              let score = section.chant,
+              let parsed = try? GregorianScoreParser.parse(
+                  gabc: score.gabc,
+                  timeline: score.timeline
+              ) else {
+            return nil
+        }
+
+        let verseElements = scoredVerseElements(in: parsed)
+        guard verseElements.count > 1,
+              let compactGABC = firstVerseGABC(from: score.gabc) else {
+            return nil
+        }
+        let rawPointedVerseTexts = verseElements.map {
+            pointedLyricText(in: $0)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        let pointedVerseTexts = normalizingTrailingVerseOrdinals(
+            rawPointedVerseTexts
+        )
+        let verseTexts = pointedVerseTexts.map {
+            PsalmTextFormatter.removingEmphasisMarkers(from: $0)
+        }
+        guard verseTexts.allSatisfy({ !$0.isEmpty }) else { return nil }
+
+        let englishAlignment: PsalmodyEnglishAlignment?
+        if let english = section.english {
+            guard let alignment = aligningPsalmodyEnglish(
+                usesSourceLineBreaks
+                    ? english.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+                    : paragraphs(in: english),
+                with: verseTexts
+            ) else {
+                // Preserve the complete bilingual section when alignment is
+                // uncertain; compacting must never discard its translation.
+                return nil
+            }
+            englishAlignment = alignment
+        } else {
+            englishAlignment = nil
+        }
+
+        let firstVerse = GregorianScore(elements: verseElements[0])
+        let firstEventIDs = Set(firstVerse.eventIDs)
+        let firstEvents = score.timeline.events.filter {
+            firstEventIDs.contains($0.id)
+        }
+        guard firstEvents.map(\.id) == firstVerse.eventIDs else { return nil }
+        let compactTimeline = ChantTimeline(events: firstEvents)
+        guard let validatedCompactScore = try? GregorianScoreParser.parse(
+            gabc: compactGABC,
+            timeline: compactTimeline
+        ), validatedCompactScore.eventIDs == firstVerse.eventIDs else {
+            return nil
+        }
+
+        let firstLatin = PsalmTextFormatter.strippingVersePrefix(
+            from: verseTexts[0]
+        )
+        let compactScore = ChantScore(
+            id: "\(score.id)-compact-\(section.id)",
+            incipit: firstLatin,
+            gabc: compactGABC,
+            mode: score.mode,
+            reviewStatus: score.reviewStatus,
+            provenance: score.provenance,
+            timeline: compactTimeline
+        )
+        let firstSection = OfficeSection(
+            id: section.id,
+            kind: section.kind,
+            title: section.title,
+            titleEnglish: section.titleEnglish,
+            rubric: section.rubric,
+            rubricEnglish: section.rubricEnglish,
+            latin: firstLatin,
+            english: englishAlignment.flatMap { $0.verses[0] }.map {
+                PsalmTextFormatter.strippingVersePrefix(from: $0)
+            },
+            chant: compactScore
+        )
+        let continuation = OfficeSection(
+            id: "\(section.id)-compact-continuation",
+            kind: section.kind,
+            title: "",
+            latin: pointedVerseTexts.dropFirst().joined(separator: "\n\n"),
+            english: englishAlignment.map {
+                serializedPsalmodyEnglish(
+                    Array($0.verses.dropFirst()),
+                    trailing: $0.trailing
+                )
+            }
+        )
+        return [firstSection, continuation]
+    }
+
+    private struct PsalmodyEnglishAlignment {
+        let verses: [String?]
+        let trailing: [String]
+    }
+
+    private static func aligningPsalmodyEnglish(
+        _ english: [String],
+        with latin: [String]
+    ) -> PsalmodyEnglishAlignment? {
+        guard !latin.isEmpty else { return nil }
+        if english.count == latin.count {
+            return PsalmodyEnglishAlignment(
+                verses: english.map(Optional.some),
+                trailing: []
+            )
+        }
+
+        let latinDoxologyCount = latin.reversed().prefix {
+            isDoxologyParagraph($0)
+        }.count
+        guard latinDoxologyCount > 0 else { return nil }
+
+        let latinPsalmCount = latin.count - latinDoxologyCount
+        let trailingCount = english.reversed().prefix {
+            isSafePsalmodyPostlude($0)
+        }.count
+        let doxologyEnd = english.count - trailingCount
+        guard doxologyEnd >= latinDoxologyCount else { return nil }
+        let doxologyStart = doxologyEnd - latinDoxologyCount
+        let psalmEnglish = Array(english.prefix(doxologyStart))
+        let doxologyEnglish = Array(
+            english[doxologyStart..<doxologyEnd]
+        )
+        let trailing = Array(english.suffix(trailingCount))
+        guard doxologyEnglish.allSatisfy(isDoxologyParagraph) else {
+            return nil
+        }
+        let filteredPsalmEnglish = psalmEnglish.filter {
+            !isSafePsalmodyInterlude($0)
+        }
+        guard let psalmEnglish = aligningNumberedPsalmodyEnglish(
+            psalmEnglish,
+            count: latinPsalmCount
+        ) ?? aligningNumberedPsalmodyEnglish(
+            filteredPsalmEnglish,
+            count: latinPsalmCount
+        ) else {
+            return nil
+        }
+
+        return PsalmodyEnglishAlignment(
+            verses: psalmEnglish + doxologyEnglish.map(Optional.some),
+            trailing: trailing
+        )
+    }
+
+    private static func aligningNumberedPsalmodyEnglish(
+        _ english: [String],
+        count: Int
+    ) -> [String?]? {
+        // Biblical verse gaps do not locate missing chant lines. If the
+        // paragraph count cannot be verified, retain the full bilingual score.
+        guard english.count == count else { return nil }
+        return english.map(Optional.some)
+    }
+
+    private static func serializedPsalmodyEnglish(
+        _ verses: [String?],
+        trailing: [String]
+    ) -> String {
+        var paragraphs = verses.map {
+            $0 ?? PsalmTextFormatter.missingTranslationPlaceholder
+        }
+        if !trailing.isEmpty, let lastIndex = paragraphs.indices.last {
+            paragraphs[lastIndex] += "\n" + trailing.joined(separator: "\n")
+        }
+        return paragraphs.joined(separator: "\n\n")
+    }
+
+    private static func isDoxologyParagraph(_ value: String) -> Bool {
+        let value = PsalmTextFormatter.strippingVersePrefix(from: value)
+            .folding(
+                options: [.caseInsensitive, .diacriticInsensitive],
+                locale: Locale(identifier: "la")
+            )
+        return value.hasPrefix("gloria patri")
+            || value.hasPrefix("sicut erat")
+            || value.hasPrefix("glory be to the father")
+            || value.hasPrefix("as it was in the beginning")
+    }
+
+    private static func isSafePsalmodyPostlude(_ value: String) -> Bool {
+        let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.hasPrefix("℟.")
+            || value.hasPrefix("℣.")
+            || value.localizedCaseInsensitiveCompare("Amen.") == .orderedSame
+    }
+
+    private static func isSafePsalmodyInterlude(_ value: String) -> Bool {
+        let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return value == "ant."
+            || value.hasPrefix("ant. ")
+            || value.hasPrefix("℟.br. ")
+            || value.hasPrefix("℣.br. ")
+    }
+
+    private static func scoredVerseElements(
+        in score: GregorianScore
+    ) -> [[GregorianNotationElement]] {
+        var verses: [[GregorianNotationElement]] = []
+        var current: [GregorianNotationElement] = []
+
+        for element in score.elements {
+            current.append(element)
+            if case .division(.final) = element {
+                if !GregorianScore(elements: current).lyricText.isEmpty {
+                    verses.append(current)
+                }
+                current.removeAll(keepingCapacity: true)
+            }
+        }
+        if !GregorianScore(elements: current).lyricText.isEmpty {
+            verses.append(current)
+        }
+        return verses
+    }
+
+    private static func pointedLyricText(
+        in elements: [GregorianNotationElement]
+    ) -> String {
+        var result = ""
+        var separatesFollowingLyric = false
+
+        func append(
+            _ text: String,
+            style: GregorianLyricStyle,
+            startsWord: Bool,
+            isLyricMark: Bool
+        ) {
+            guard !text.isEmpty else { return }
+            if !result.isEmpty,
+               (startsWord || separatesFollowingLyric),
+               result.last?.isWhitespace != true {
+                result.append(" ")
+            }
+            if style == .accented {
+                result.append(PsalmTextFormatter.emphasisStartMarker)
+            }
+            result.append(text)
+            if style == .accented {
+                result.append(PsalmTextFormatter.emphasisEndMarker)
+            }
+            separatesFollowingLyric = isLyricMark
+        }
+
+        for element in elements {
+            switch element {
+            case .neume(let neume):
+                append(
+                    neume.lyric,
+                    style: neume.lyricStyle,
+                    startsWord: neume.startsWord,
+                    isLyricMark: false
+                )
+            case .lyricMark(let mark):
+                append(
+                    mark.text,
+                    style: mark.style,
+                    startsWord: mark.startsWord,
+                    isLyricMark: true
+                )
+            case .clef, .accidental, .division, .forcedBreak:
+                continue
+            @unknown default:
+                continue
+            }
+        }
+        return result
+    }
+
+    private static func firstVerseGABC(from gabc: String) -> String? {
+        guard let bodyMarker = gabc.range(of: "%%") else { return nil }
+        let body = gabc[bodyMarker.upperBound...]
+        guard let verseEnd = body.range(
+            of: #"\(\s*::\s*\)"#,
+            options: .regularExpression
+        ) else {
+            return nil
+        }
+        var firstVerse = String(gabc[..<verseEnd.upperBound])
+        if let trailingNextOrdinal = firstVerse.range(
+            of: #"\s+2\.\s*(?=\(\s*::\s*\)\s*$)"#,
+            options: .regularExpression
+        ) {
+            firstVerse.removeSubrange(trailingNextOrdinal)
+        }
+        return firstVerse
+    }
+
+    private static func normalizingTrailingVerseOrdinals(
+        _ verses: [String]
+    ) -> [String] {
+        guard verses.count > 1 else { return verses }
+        var result = verses
+
+        for index in result.indices.dropLast() {
+            let words = result[index].split(whereSeparator: \.isWhitespace)
+            guard let last = words.last,
+                  last.hasSuffix("."),
+                  Int(last.dropLast()) == index + 2 else {
+                continue
+            }
+            result[index] = words.dropLast().joined(separator: " ")
+            let ordinal = "\(index + 2)."
+            if !result[index + 1].hasPrefix("\(ordinal) ") {
+                result[index + 1] = "\(ordinal) \(result[index + 1])"
+            }
+        }
+        return result
     }
 
     private static func interleavingTextWithNonPsalmChants(
@@ -931,6 +1841,56 @@ nonisolated enum OfficeReaderSectionBuilder {
             }
         }
 
+        if !allowsTitleFallback {
+            // An ordered office already places every score. Fold a score into
+            // a text only where it replaces paragraphs which that text prints,
+            // with no other prayer between them, and give each paragraph to
+            // its nearest score. Otherwise a versicle repeating the opening of
+            // a chapter, an antiphon quoted in a lesson, or the Tu autem of
+            // one lesson would be moved to another place in the Hour.
+            for (textIndex, chantIndices) in chantIndicesByTextIndex {
+                let textParagraphs = paragraphs(in: source[textIndex].latin)
+                // Some imported offices print a conclusion again after the
+                // blessing. Such a text only repeats what the scores sing, so
+                // it may be folded into them wherever it stands.
+                let repeatsScores = text(
+                    source[textIndex],
+                    onlyRepeats: chantIndices.map { source[$0] }
+                )
+                var claimed: Set<Int> = []
+                var claimedWords: Set<[String]> = []
+                let retained = chantIndices
+                    .sorted { abs($0 - textIndex) < abs($1 - textIndex) }
+                    .filter { chantIndex in
+                        guard repeatsScores || !isSeparatedByPrayer(
+                            chantIndex,
+                            from: textIndex,
+                            in: source
+                        ) else { return false }
+                        let covered = textParagraphs.indices.filter {
+                            !claimed.contains($0)
+                                && score(
+                                    source[chantIndex],
+                                    coversParagraph: textParagraphs[$0]
+                                )
+                        }
+                        // A repeated antiphon may print the same words twice;
+                        // each occurrence remains available to its own score.
+                        var newlyClaimed = false
+                        for paragraph in covered {
+                            let words = normalizedLatinWords(textParagraphs[paragraph])
+                            guard claimedWords.insert(words).inserted else { continue }
+                            claimed.insert(paragraph)
+                            newlyClaimed = true
+                        }
+                        return newlyClaimed
+                    }
+                chantIndicesByTextIndex[textIndex] = retained.isEmpty
+                    ? nil
+                    : retained.sorted()
+            }
+        }
+
         var groupsByAnchor: [Int: (textIndex: Int, chantIndices: [Int])] = [:]
         var groupedIndices: Set<Int> = []
         for (textIndex, chantIndices) in chantIndicesByTextIndex {
@@ -956,6 +1916,58 @@ nonisolated enum OfficeReaderSectionBuilder {
         return result
     }
 
+    /// Whether a text opens with words the score sings, as Compline's
+    /// Deus in adiutórium does after the confession. A Glória Patri at the end
+    /// of a canticle does not make the opening score belong there.
+    private static func text(
+        _ text: OfficeSection,
+        opensWith chant: OfficeSection
+    ) -> Bool {
+        let heading = normalizedTitle(text.title)
+        guard let first = paragraphs(in: text.latin).first(where: {
+            normalizedTitle($0) != heading
+        }) else { return false }
+        return score(chant, coversParagraph: first)
+    }
+
+    /// Whether every paragraph of a text is sung by these scores, and every
+    /// score is contained in the text: the text then adds nothing to them.
+    private static func text(
+        _ text: OfficeSection,
+        onlyRepeats chants: [OfficeSection]
+    ) -> Bool {
+        let heading = normalizedTitle(text.title)
+        let textParagraphs = paragraphs(in: text.latin).filter {
+            normalizedTitle($0) != heading
+        }
+        let textWords = normalizedLatinWords(text.latin)
+        guard !textParagraphs.isEmpty, !chants.isEmpty else { return false }
+        return textParagraphs.allSatisfy { paragraph in
+            chants.contains { score($0, coversParagraph: paragraph) }
+        } && chants.allSatisfy { chant in
+            let words = scoredWords(in: chant)
+            return !words.isEmpty
+                && longestSharedRun(words, textWords) * 10 >= words.count * 7
+        }
+    }
+
+    /// Whether another printed prayer stands between a score and a text.
+    /// Rubrics and other scores do not separate them.
+    private static func isSeparatedByPrayer(
+        _ chantIndex: Int,
+        from textIndex: Int,
+        in source: [OfficeSection]
+    ) -> Bool {
+        let lower = min(chantIndex, textIndex) + 1
+        let upper = max(chantIndex, textIndex)
+        guard lower < upper else { return false }
+        return source[lower..<upper].contains {
+            $0.chant == nil
+                && $0.kind != .rubric
+                && !$0.latin.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
     private static func bestTextIndex(
         matching chant: OfficeSection,
         at chantIndex: Int,
@@ -966,16 +1978,12 @@ nonisolated enum OfficeReaderSectionBuilder {
         guard scoreWords.count >= 4 else { return nil }
 
         return candidates
-            .map {
-                (
-                    index: $0,
-                    run: longestSharedRun(
-                        scoreWords,
-                        normalizedLatinWords(source[$0].latin)
-                    )
-                )
+            .compactMap { index -> (index: Int, run: Int)? in
+                substantialSharedRun(
+                    scoreWords,
+                    normalizedLatinWords(source[index].latin)
+                ).map { (index: index, run: $0) }
             }
-            .filter { $0.run >= 4 }
             .max(by: {
                 if $0.run == $1.run {
                     return abs($0.index - chantIndex)
@@ -1263,7 +2271,7 @@ nonisolated enum OfficeReaderSectionBuilder {
             preparedChants.append(
                 chant.replacingPresentation(
                     title: title,
-                    rubric: nil,
+                    rubric: .some(nil),
                     english: english
                 )
             )
@@ -1302,7 +2310,7 @@ nonisolated enum OfficeReaderSectionBuilder {
                 chant.replacingPresentation(
                     id: "\(chant.id)-repeat-\(text.id)-\(paragraphIndex)",
                     title: "",
-                    rubric: nil,
+                    rubric: .some(nil),
                     english: english
                 )
             )
@@ -1316,7 +2324,7 @@ nonisolated enum OfficeReaderSectionBuilder {
             result.append(
                 text.replacingPresentation(
                     title: "",
-                    rubric: nil,
+                    rubric: .some(nil),
                     latin: remainingIndices.map { latinParagraphs[$0] }
                         .joined(separator: "\n\n"),
                     english: translationsAlign
@@ -1408,7 +2416,10 @@ nonisolated enum OfficeReaderSectionBuilder {
         return contentTargetID(for: chant, in: sections)
     }
 
-    private static func correctedSource(_ source: [OfficeSection]) -> [OfficeSection] {
+    private static func correctedSource(
+        _ source: [OfficeSection],
+        preservesUnnumberedAntiphons: Bool = false
+    ) -> [OfficeSection] {
         let standaloneAntiphonTranslations = Set(
             source.compactMap { section -> String? in
                 guard let english = section.english else { return nil }
@@ -1428,13 +2439,29 @@ nonisolated enum OfficeReaderSectionBuilder {
             }
             let values = paragraphs(in: english)
             guard values.count > 1 else { return section }
-            let retained = values.filter { paragraph in
-                !isAntiphonParagraph(paragraph)
-                    || !standaloneAntiphonTranslations.contains(
+            let retained = values.enumerated().compactMap { index, paragraph in
+                guard isAntiphonParagraph(paragraph),
+                      standaloneAntiphonTranslations.contains(
                         presentationTranslation(from: paragraph)
-                    )
+                      ) else {
+                    return paragraph
+                }
+                if index > values.startIndex,
+                   index < values.index(before: values.endIndex),
+                   let previous = scriptureReference(in: values[index - 1]),
+                   let next = scriptureReference(in: values[index + 1]),
+                   previous.psalm == next.psalm {
+                    if next.verse == previous.verse + 1 {
+                        return nil
+                    }
+                    if next.verse == previous.verse + 2 {
+                        return "\(previous.psalm):\(previous.verse + 1) "
+                            + presentationTranslation(from: paragraph)
+                    }
+                }
+                return preservesUnnumberedAntiphons ? paragraph : nil
             }
-            guard retained.count != values.count else { return section }
+            guard retained != values else { return section }
             return section.replacingPresentation(
                 english: .some(retained.joined(separator: "\n\n"))
             )
@@ -1469,7 +2496,8 @@ nonisolated enum OfficeReaderSectionBuilder {
            normalizedTitle(opening.title) == "incipit",
            let targetID = contentTargetID(for: opening, in: corrected),
            let targetIndexBeforeRemoval = corrected.firstIndex(where: { $0.id == targetID }),
-           targetIndexBeforeRemoval > 1 {
+           targetIndexBeforeRemoval > 1,
+           text(corrected[targetIndexBeforeRemoval], opensWith: opening) {
             corrected.removeFirst()
             if let targetIndex = corrected.firstIndex(where: { $0.id == targetID }) {
                 corrected.insert(opening, at: targetIndex)
@@ -1477,6 +2505,22 @@ nonisolated enum OfficeReaderSectionBuilder {
         }
 
         return corrected
+    }
+
+    private static func scriptureReference(
+        in value: String
+    ) -> (psalm: Int, verse: Int)? {
+        let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let separator = value.firstIndex(where: \.isWhitespace) else {
+            return nil
+        }
+        let parts = value[..<separator].split(separator: ":")
+        guard parts.count == 2,
+              let psalm = Int(parts[0]),
+              let verse = Int(parts[1]) else {
+            return nil
+        }
+        return (psalm, verse)
     }
 
     private static func contentTargetID(
@@ -1492,10 +2536,11 @@ nonisolated enum OfficeReaderSectionBuilder {
 
         var best: (id: String, run: Int)?
         for section in sections where section.chant == nil {
-            let run = longestSharedRun(scoredWords, normalizedLatinWords(section.latin))
-            if run >= 4, run > (best?.run ?? 3) {
-                best = (section.id, run)
-            }
+            guard let run = substantialSharedRun(
+                scoredWords,
+                normalizedLatinWords(section.latin)
+            ), run > (best?.run ?? 0) else { continue }
+            best = (section.id, run)
         }
         return best?.id
     }
@@ -1560,18 +2605,42 @@ nonisolated enum OfficeReaderSectionBuilder {
             .filter { $0.count > 1 }
     }
 
-    private static func longestSharedRun(_ left: [String], _ right: [String]) -> Int {
+    /// The shared word run between a score and a text, when it is long
+    /// enough to identify the one with the other: at least four words,
+    /// covering at least half of the score or of the text. A common formula
+    /// such as "in sǽcula sæculórum. Amen" or "Glória Patri" does not by
+    /// itself make a score part of another prayer.
+    static func substantialSharedRun(
+        _ scoreWords: [String],
+        _ textWords: [String]
+    ) -> Int? {
+        let run = longestSharedRun(scoreWords, textWords)
+        guard run >= 4,
+              run * 2 >= scoreWords.count || run * 2 >= textWords.count else {
+            return nil
+        }
+        return run
+    }
+
+    static func longestSharedRun(_ left: [String], _ right: [String]) -> Int {
+        guard !left.isEmpty, !right.isEmpty else { return 0 }
+        if left == right { return left.count }
+        let (scanned, indexed) = left.count >= right.count ? (left, right) : (right, left)
+        let positions = Dictionary(grouping: indexed.indices, by: { indexed[$0] })
+        var previous: [Int: Int] = [:]
         var longest = 0
-        for leftIndex in left.indices {
-            for rightIndex in right.indices {
-                var length = 0
-                while leftIndex + length < left.count,
-                      rightIndex + length < right.count,
-                      left[leftIndex + length] == right[rightIndex + length] {
-                    length += 1
-                }
+        for word in scanned {
+            // Only equal words can extend a contiguous run. Each length
+            // extends the preceding row and column, never the current row;
+            // mismatches therefore break a run rather than joining gaps.
+            var current: [Int: Int] = [:]
+            for index in positions[word] ?? [] {
+                let length = (previous[index - 1] ?? 0) + 1
+                current[index] = length
                 longest = max(longest, length)
             }
+            if longest == indexed.count { return longest }
+            previous = current
         }
         return longest
     }
@@ -1606,43 +2675,6 @@ nonisolated enum OfficeReaderSectionBuilder {
     }
 }
 
-enum OfficePrayerText {
-    private static let layLatinGreeting = """
-    ℣. Dómine, exáudi oratiónem meam.
-
-    ℟. Et clamor meus ad te véniat.
-    """
-    private static let clericalLatinGreeting = """
-    ℣. Dóminus vobíscum.
-
-    ℟. Et cum spíritu tuo.
-    """
-    private static let layEnglishGreeting = """
-    ℣. O Lord, hear my prayer.
-
-    ℟. And let my cry come unto thee.
-    """
-    private static let clericalEnglishGreeting = """
-    ℣. The Lord be with you.
-
-    ℟. And with thy spirit.
-    """
-
-    static func adjusted(_ text: String, isPriestOrDeaconPresent: Bool) -> String {
-        guard isPriestOrDeaconPresent else { return text }
-
-        return text
-            .replacingOccurrences(
-                of: layLatinGreeting,
-                with: clericalLatinGreeting
-            )
-            .replacingOccurrences(
-                of: layEnglishGreeting,
-                with: clericalEnglishGreeting
-            )
-    }
-}
-
 private extension OfficeSection {
     nonisolated func mergingTextMetadata(
         from textSection: OfficeSection
@@ -1660,11 +2692,13 @@ private extension OfficeSection {
         )
     }
 
+    /// A copy with some of its presentation replaced. An omitted argument keeps
+    /// the section's own value; pass `.some(nil)` to remove a rubric.
     nonisolated func replacingPresentation(
         id: String? = nil,
         title: String? = nil,
         titleEnglish: String?? = nil,
-        rubric: String? = nil,
+        rubric: String?? = nil,
         rubricEnglish: String?? = nil,
         latin: String? = nil,
         english: String?? = nil
@@ -1674,8 +2708,8 @@ private extension OfficeSection {
             kind: kind,
             title: title ?? self.title,
             titleEnglish: titleEnglish ?? (title == "" ? nil : self.titleEnglish),
-            rubric: rubric,
-            rubricEnglish: rubricEnglish ?? (rubric == nil ? nil : self.rubricEnglish),
+            rubric: rubric ?? self.rubric,
+            rubricEnglish: rubricEnglish ?? (rubric == .some(nil) ? nil : self.rubricEnglish),
             latin: latin ?? self.latin,
             english: english ?? self.english,
             chant: chant
@@ -1688,6 +2722,9 @@ private struct PrayerOptionsView: View {
     @Environment(AppModel.self) private var model
     @Environment(ChantPlaybackController.self) private var playback
     @Environment(AppTourCoordinator.self) private var tour
+    let isPreparingPrint: Bool
+    let isPrintingAvailable: Bool
+    let onPrint: () -> Void
     let onClose: () -> Void
 
     var body: some View {
@@ -1733,9 +2770,23 @@ private struct PrayerOptionsView: View {
                         }
                     )
 
+                    Toggle(
+                        "Compact psalmody",
+                        isOn: $model.usesCompactPsalmody
+                    )
+                    .padding(.vertical, 8)
+                    .accessibilityIdentifier("compact-psalmody-toggle")
+
+                    Text(
+                        "Show notation for the first verse, followed by "
+                            + "pointed text for the remaining verses."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Label("Neume size", systemImage: "textformat.size")
+                            Label("Reader size", systemImage: "textformat.size")
                             Spacer()
                             Text("\(Int((model.notationScale * 100).rounded()))%")
                                 .foregroundStyle(.secondary)
@@ -1744,14 +2795,14 @@ private struct PrayerOptionsView: View {
 
                         Slider(
                             value: $model.notationScale,
-                            in: 0.8...1.6,
+                            in: GregorianLayoutMetrics.notationScaleRange,
                             step: 0.1
                         )
-                        .accessibilityLabel("Neume size")
+                        .accessibilityLabel("Reader size")
                         .accessibilityIdentifier("neume-size-slider")
                     }
 
-                    Button("Reset neume size") {
+                    Button("Reset reader size") {
                         model.notationScale = AppModel.defaultNotationScale
                     }
                     .disabled(
@@ -1795,6 +2846,36 @@ private struct PrayerOptionsView: View {
                             + "The reciting tone is placed at the selected "
                             + "schola pitch and register."
                     )
+                }
+
+                Section {
+                    Button(action: onPrint) {
+                        HStack {
+                            Label("Print this hour", systemImage: "printer")
+                            Spacer()
+                            if isPreparingPrint {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                        }
+                    }
+                    .disabled(
+                        isPreparingPrint
+                            || !isPrintingAvailable
+                            || tour.isActive
+                    )
+                    .accessibilityIdentifier("prayer-print-hour")
+                } header: {
+                    Text("Printing")
+                } footer: {
+                    if !isPrintingAvailable {
+                        Text("Printing is unavailable on this device.")
+                    } else {
+                        Text(
+                            "Prints this hour using the current prayer "
+                                + "and display settings."
+                        )
+                    }
                 }
             }
             .navigationTitle("Prayer options")
@@ -1840,9 +2921,14 @@ struct PsalmTextLine: Identifiable, Equatable {
     let number: Int?
     let latin: String
     let english: String?
+    let emphasizedRanges: [Range<String.Index>]
 }
 
-enum PsalmTextFormatter {
+nonisolated enum PsalmTextFormatter {
+    nonisolated static let missingTranslationPlaceholder = "\u{2063}"
+    nonisolated static let emphasisStartMarker = "\u{F0000}"
+    nonisolated static let emphasisEndMarker = "\u{F0001}"
+
     private static let latinDiphthongs: Set<String> = [
         "ae", "au", "oe"
     ]
@@ -1862,23 +2948,85 @@ enum PsalmTextFormatter {
         var verseNumber = startsAfterScoredVerse ? 2 : 1
 
         return latinParagraphs.enumerated().map { index, paragraph in
-            let stripped = strippingScriptureReference(from: paragraph)
-            let isNumberedVerse = stripped != paragraph
-            let number = isNumberedVerse ? verseNumber : nil
-            if isNumberedVerse {
-                verseNumber += 1
+            let latinVerse = versePrefix(in: paragraph)
+            let pointedLatin = extractingEmphasis(from: latinVerse.text)
+            let number: Int?
+            if latinVerse.isNumbered {
+                number = latinVerse.explicitNumber ?? verseNumber
+                verseNumber = (number ?? verseNumber) + 1
+            } else {
+                number = nil
             }
             return PsalmTextLine(
                 id: index,
                 number: number,
-                latin: stripped,
+                latin: pointedLatin.text,
                 english: translationsAlign
-                    ? englishParagraphs.map {
-                        strippingScriptureReference(from: $0[index])
+                    ? englishParagraphs.flatMap { paragraphs in
+                        let paragraph = paragraphs[index]
+                        guard paragraph != missingTranslationPlaceholder else {
+                            return nil
+                        }
+                        return strippingVersePrefix(from: paragraph)
                     }
-                    : nil
+                    : nil,
+                emphasizedRanges: pointedLatin.ranges.isEmpty
+                    ? emphasizedSyllableRanges(in: pointedLatin.text)
+                    : pointedLatin.ranges
             )
         }
+    }
+
+    nonisolated static func removingEmphasisMarkers(
+        from value: String
+    ) -> String {
+        value
+            .replacingOccurrences(of: emphasisStartMarker, with: "")
+            .replacingOccurrences(of: emphasisEndMarker, with: "")
+    }
+
+    private static func extractingEmphasis(
+        from value: String
+    ) -> (text: String, ranges: [Range<String.Index>]) {
+        var text = ""
+        var rangeOffsets: [Range<Int>] = []
+        var rangeStart: Int?
+
+        for character in value {
+            if String(character) == emphasisStartMarker {
+                rangeStart = text.count
+            } else if String(character) == emphasisEndMarker {
+                if let rangeStart, rangeStart < text.count {
+                    rangeOffsets.append(rangeStart..<text.count)
+                }
+                rangeStart = nil
+            } else {
+                text.append(character)
+            }
+        }
+
+        let ranges = rangeOffsets.map { offset in
+            let lowerBound = text.index(text.startIndex, offsetBy: offset.lowerBound)
+            let upperBound = text.index(text.startIndex, offsetBy: offset.upperBound)
+            return lowerBound..<upperBound
+        }
+        return (text, ranges)
+    }
+
+    nonisolated static func scriptureVerseNumber(
+        from value: String
+    ) -> Int? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let separator = trimmed.firstIndex(where: \.isWhitespace) else {
+            return nil
+        }
+        let prefix = trimmed[..<separator]
+        let parts = prefix.split(separator: ":")
+        guard parts.count == 2,
+              parts.allSatisfy({ $0.allSatisfy(\.isNumber) }) else {
+            return nil
+        }
+        return Int(parts[1])
     }
 
     static func emphasizedSyllableRanges(
@@ -2043,25 +3191,126 @@ enum PsalmTextFormatter {
             .filter { !$0.isEmpty }
     }
 
+    /// The stored paragraphs follow chant divisions; explicit inline Scripture
+    /// references come from the compiler's checked Bible concordance. Full-score
+    /// translations follow those references instead, joining verse continuations.
+    /// Never infer a missing reference from a mediant or a numerical gap here.
+    nonisolated static func scriptureParagraphs(from value: String) -> String {
+        let reference = try! NSRegularExpression(pattern: #"\b[0-9]+:[0-9]+[a-z]?\s+"#)
+        var output: [(reference: String?, text: String)] = []
+        for line in value.components(separatedBy: .newlines) {
+            let line = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !line.isEmpty else { continue }
+            let nsLine = line as NSString
+            let matches = reference.matches(in: line, range: NSRange(location: 0, length: nsLine.length))
+            guard matches.first?.range.location == 0 else {
+                output.append((nil, line))
+                continue
+            }
+            for (index, match) in matches.enumerated() {
+                let label = nsLine.substring(with: match.range).trimmingCharacters(in: .whitespaces)
+                let start = NSMaxRange(match.range)
+                let end = index + 1 < matches.count ? matches[index + 1].range.location : nsLine.length
+                let text = nsLine.substring(with: NSRange(location: start, length: end - start))
+                    .replacingOccurrences(of: #"[†‡*]"#, with: "", options: .regularExpression)
+                    .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { continue }
+                if output.last?.reference == label {
+                    output[output.count - 1].text += " " + text
+                } else {
+                    output.append((label, text))
+                }
+            }
+        }
+        return output.map { item in
+            guard let reference = item.reference else { return item.text }
+            // A biblical verse may begin inside a chant line (87:6, for
+            // example). Capitalize its paragraph opening only after joining
+            // continuations, retaining the source's case everywhere else.
+            var text = item.text
+            if let firstLetter = text.firstIndex(where: { $0.isLetter }) {
+                text.replaceSubrange(firstLetter...firstLetter, with: text[firstLetter].uppercased())
+            }
+            return "\(reference) \(text)"
+        }.joined(separator: "\n\n")
+    }
+
+    private nonisolated static func removingScriptureReferences(from value: String) -> String {
+        value.replacingOccurrences(
+            of: #"\b[0-9]+:[0-9]+[a-z]?\s+"#,
+            with: "",
+            options: .regularExpression
+        )
+    }
+
     nonisolated static func strippingScriptureReference(
         from value: String
     ) -> String {
-        guard let separator = value.firstIndex(where: \.isWhitespace) else {
-            return value
+        let result = versePrefix(in: value)
+        return result.isScriptureReference ? removingScriptureReferences(from: result.text) : value
+    }
+
+    nonisolated static func strippingVersePrefix(
+        from value: String
+    ) -> String {
+        removingScriptureReferences(from: versePrefix(in: value).text)
+    }
+
+    private struct VersePrefix {
+        let text: String
+        let explicitNumber: Int?
+        let isNumbered: Bool
+        let isScriptureReference: Bool
+    }
+
+    private nonisolated static func versePrefix(
+        in value: String
+    ) -> VersePrefix {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let separator = trimmed.firstIndex(where: \.isWhitespace) else {
+            return VersePrefix(
+                text: trimmed,
+                explicitNumber: nil,
+                isNumbered: false,
+                isScriptureReference: false
+            )
         }
-        let prefix = value[..<separator]
-        let parts = prefix.split(separator: ":")
-        guard parts.count == 2,
-              parts.allSatisfy({ $0.allSatisfy(\.isNumber) })
-        else {
-            return value
-        }
-        return value[value.index(after: separator)...]
+        let prefix = trimmed[..<separator]
+        let remainder = trimmed[trimmed.index(after: separator)...]
             .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if prefix.hasSuffix("."),
+           let number = Int(prefix.dropLast()),
+           number > 0 {
+            return VersePrefix(
+                text: remainder,
+                explicitNumber: number,
+                isNumbered: true,
+                isScriptureReference: false
+            )
+        }
+
+        let scriptureParts = prefix.split(separator: ":")
+        if scriptureParts.count == 2,
+           scriptureParts.allSatisfy({ $0.allSatisfy(\.isNumber) }) {
+            return VersePrefix(
+                text: remainder,
+                explicitNumber: nil,
+                isNumbered: true,
+                isScriptureReference: true
+            )
+        }
+        return VersePrefix(
+            text: trimmed,
+            explicitNumber: nil,
+            isNumbered: false,
+            isScriptureReference: false
+        )
     }
 }
 
-private extension Character {
+nonisolated private extension Character {
     var isLatinVowel: Bool {
         ["a", "e", "i", "o", "u", "y", "æ", "œ"]
             .contains(unaccentedLowercase)
@@ -2077,7 +3326,7 @@ private extension Character {
     }
 }
 
-private extension Substring {
+nonisolated private extension Substring {
     var containsAcuteAccent: Bool {
         unicodeScalars.contains {
             $0.value == 0x0301
@@ -2091,6 +3340,7 @@ private struct PsalmTextSectionView: View {
     let section: OfficeSection
     let showsEnglish: Bool
     let isPriestOrDeaconPresent: Bool
+    let contentScale: CGFloat
 
     private var lines: [PsalmTextLine] {
         PsalmTextFormatter.lines(
@@ -2111,39 +3361,52 @@ private struct PsalmTextSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             ForEach(lines) { line in
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        if let number = line.number {
-                            Text("\(number).")
-                                .frame(width: 30, alignment: .trailing)
-                        }
+                HStack(alignment: .top, spacing: 7) {
+                    if let number = line.number {
+                        Text("\(number).")
+                            .font(
+                                .custom(
+                                    "EBGaramond-Regular",
+                                    size: 21 * contentScale,
+                                    relativeTo: .body
+                                )
+                            )
+                            .fixedSize(horizontal: true, vertical: false)
+                            .accessibilityHidden(true)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        let displayedLatin = line.number.map {
+                            "\($0). \(line.latin)"
+                        } ?? line.latin
                         SelectableTextView(
                             text: line.latin,
-                            fontSize: 21,
-                            lineSpacing: 3,
-                            emphasizedRanges:
-                                PsalmTextFormatter.emphasizedSyllableRanges(
-                                    in: line.latin
-                                ),
+                            fontSize: 21 * contentScale,
+                            lineSpacing: 3 * contentScale,
+                            emphasizedRanges: line.emphasizedRanges,
                             highlightsAsterisks: true
                         )
-                            .accessibilityIdentifier("selectable-prayer-text")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .font(.custom("EBGaramond-Regular", size: 21, relativeTo: .body))
+                        .accessibilityIdentifier("selectable-prayer-text")
+                        .accessibilityLabel(displayedLatin)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                    if showsEnglish, let english = line.english {
-                        SelectableTextView(
-                            text: english,
-                            fontSize: 18,
-                            isItalic: true,
-                            foreground: .secondary,
-                            lineSpacing: 3
-                        )
+                        if showsEnglish,
+                           let english = OfficeBilingualText.distinctEnglish(
+                            line.english,
+                            from: line.latin
+                           ) {
+                            SelectableTextView(
+                                text: english,
+                                fontSize: 18 * contentScale,
+                                isItalic: true,
+                                foreground: .secondary,
+                                lineSpacing: 3 * contentScale
+                            )
                             .accessibilityIdentifier("selectable-prayer-text")
-                            .padding(.leading, line.number == nil ? 0 : 40)
                             .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
@@ -2155,20 +3418,33 @@ private struct OfficeSectionView: View {
     let section: OfficeSection
     let isFollowedByContinuation: Bool
     let showsEnglish: Bool
+    let usesCompactPsalmody: Bool
     let isPriestOrDeaconPresent: Bool
+    let contentScale: CGFloat
     let scorePreparation: GregorianScorePreparation?
     let isCantorGuideScore: Bool
     let isAppTourFirstChant: Bool
     let onTapEvent: (ChantScore, String) -> Void
     let onActiveNeumeFrameChange: (ActiveNeumeFrame) -> Void
 
+    @ScaledMetric(relativeTo: .caption2)
+    private var sectionHeadingSize = 11.0
+    @ScaledMetric(relativeTo: .caption)
+    private var sectionTranslationHeadingSize = 12.0
+
     private var translationFont: Font {
         let base = Font.custom(
             "EBGaramond-Regular",
-            size: 19,
+            size: 19 * contentScale,
             relativeTo: .body
         )
         return section.chant == nil ? base : base.italic()
+    }
+
+    private var usesPointedPsalmodyLayout: Bool {
+        section.chant == nil
+            && (section.kind == .psalm
+                || usesCompactPsalmody && section.kind == .canticle)
     }
 
     var body: some View {
@@ -2179,7 +3455,7 @@ private struct OfficeSectionView: View {
                         .font(
                             .custom(
                                 "EBGaramond-Regular",
-                                size: 20,
+                                size: 20 * contentScale,
                                 relativeTo: .title3
                             )
                         )
@@ -2193,14 +3469,28 @@ private struct OfficeSectionView: View {
                 } else {
                     VStack(spacing: 5) {
                         Text(section.title.uppercased())
-                            .font(.system(.caption2, design: .rounded, weight: .semibold))
-                            .tracking(1.5)
+                            .font(
+                                .system(
+                                    size: sectionHeadingSize * contentScale,
+                                    weight: .semibold,
+                                    design: .rounded
+                                )
+                            )
+                            .tracking(1.5 * contentScale)
 
                         if showsEnglish,
-                           let titleEnglish = section.titleEnglish,
-                           !titleEnglish.isEmpty {
+                           let titleEnglish = OfficeBilingualText.distinctEnglish(
+                            section.titleEnglish,
+                            from: section.title
+                           ) {
                             Text(titleEnglish)
-                                .font(.system(.caption, design: .rounded))
+                                .font(
+                                    .system(
+                                        size: sectionTranslationHeadingSize
+                                            * contentScale,
+                                        design: .rounded
+                                    )
+                                )
                                 .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
@@ -2218,11 +3508,20 @@ private struct OfficeSectionView: View {
             if let rubric = section.userFacingRubric {
                 VStack(spacing: 8) {
                     Text(rubric)
-                        .font(.custom("EBGaramond-Regular", size: 17, relativeTo: .body).italic())
+                        .font(
+                            .custom(
+                                "EBGaramond-Regular",
+                                size: 17 * contentScale,
+                                relativeTo: .body
+                            )
+                            .italic()
+                        )
 
                     if showsEnglish,
-                       let rubricEnglish = section.rubricEnglish,
-                       !rubricEnglish.isEmpty {
+                       let rubricEnglish = OfficeBilingualText.distinctEnglish(
+                        section.rubricEnglish,
+                        from: rubric
+                       ) {
                         Text(rubricEnglish)
                             .font(translationFont.italic())
                             .foregroundStyle(.secondary)
@@ -2236,7 +3535,8 @@ private struct OfficeSectionView: View {
                 .padding(.bottom, 12)
             }
 
-            if let score = section.chant {
+            if let score = section.chant,
+               !OfficePrayerText.requiresTextFallback(section.latin, isPriestOrDeaconPresent: isPriestOrDeaconPresent) {
                 let preparation = scorePreparation
                     ?? .failed("The chant layout was not prepared.")
                 ZStack(alignment: .topLeading) {
@@ -2296,11 +3596,12 @@ private struct OfficeSectionView: View {
                         .appTourTarget(.readerFirstChant)
                     }
                 }
-            } else if section.kind == .psalm {
+            } else if usesPointedPsalmodyLayout {
                 PsalmTextSectionView(
                     section: section,
                     showsEnglish: showsEnglish,
-                    isPriestOrDeaconPresent: isPriestOrDeaconPresent
+                    isPriestOrDeaconPresent: isPriestOrDeaconPresent,
+                    contentScale: contentScale
                 )
             } else {
                 SelectableTextView(
@@ -2308,26 +3609,22 @@ private struct OfficeSectionView: View {
                         section.latin,
                         isPriestOrDeaconPresent: isPriestOrDeaconPresent
                     ),
-                    fontSize: 23,
-                    lineSpacing: 7
+                    fontSize: 23 * contentScale,
+                    lineSpacing: 7 * contentScale
                 )
                     .accessibilityIdentifier("selectable-prayer-text")
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
             }
 
-            if showsEnglish,
-               section.chant != nil || section.kind != .psalm,
-               let english = section.english {
+            if !usesPointedPsalmodyLayout,
+               let english = displayedEnglish {
                 SelectableTextView(
-                    text: OfficePrayerText.adjusted(
-                        english,
-                        isPriestOrDeaconPresent: isPriestOrDeaconPresent
-                    ),
-                    fontSize: 19,
+                    text: english,
+                    fontSize: 19 * contentScale,
                     isItalic: section.chant != nil,
                     foreground: .secondary,
-                    lineSpacing: 5
+                    lineSpacing: 5 * contentScale
                 )
                     .accessibilityIdentifier("selectable-prayer-text")
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -2338,10 +3635,27 @@ private struct OfficeSectionView: View {
         }
         .padding(
             .bottom,
-            isFollowedByContinuation ? 24 : section.kind == .psalm ? 34 : 52
+            isFollowedByContinuation
+                ? 24
+                : section.kind == .psalm || usesPointedPsalmodyLayout ? 34 : 52
         )
         .animation(.easeInOut(duration: 0.2), value: showsEnglish)
         .animation(.easeInOut(duration: 0.2), value: isPriestOrDeaconPresent)
+    }
+
+    private var displayedEnglish: String? {
+        guard showsEnglish,
+              let english = section.english else { return nil }
+        return OfficeBilingualText.distinctEnglish(
+            OfficePrayerText.adjusted(
+                section.kind == .psalm ? PsalmTextFormatter.scriptureParagraphs(from: english) : english,
+                isPriestOrDeaconPresent: isPriestOrDeaconPresent
+            ),
+            from: OfficePrayerText.adjusted(
+                section.latin,
+                isPriestOrDeaconPresent: isPriestOrDeaconPresent
+            )
+        )
     }
 }
 

@@ -9,6 +9,7 @@ public enum ContentPackError: LocalizedError, Equatable {
     case invalidSignature
     case invalidDatabase(String)
     case missingPackURL
+    case incorrectTradition
 
     public var errorDescription: String? {
         switch self {
@@ -26,6 +27,8 @@ public enum ContentPackError: LocalizedError, Equatable {
             "The downloaded content pack is not a valid office corpus. \(detail)"
         case .missingPackURL:
             "The content manifest does not contain a pack URL."
+        case .incorrectTradition:
+            "The content pack belongs to a different office tradition."
         }
     }
 }
@@ -77,6 +80,7 @@ public struct ContentPackInstaller: Sendable {
         publicKey: Data,
         currentAppVersion: String,
         destination: URL,
+        expectedTradition: OfficeTradition = .roman1960,
         fileManager: FileManager = .default
     ) throws {
         try verify(
@@ -85,6 +89,10 @@ public struct ContentPackInstaller: Sendable {
             publicKey: publicKey,
             currentAppVersion: currentAppVersion
         )
+
+        guard manifest.rubrics == expectedTradition.rubrics else {
+            throw ContentPackError.incorrectTradition
+        }
 
         let directory = destination.deletingLastPathComponent()
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -96,7 +104,8 @@ public struct ContentPackInstaller: Sendable {
             do {
                 try ContentDatabaseValidator.validate(
                     databaseURL: staged,
-                    expectedManifest: manifest
+                    expectedManifest: manifest,
+                    expectedTradition: expectedTradition
                 )
             } catch {
                 throw ContentPackError.invalidDatabase(error.localizedDescription)

@@ -89,7 +89,9 @@ private struct HoursTimelineProvider: TimelineProvider {
     private static func loadCalendarSnapshot()
         -> HoursLiturgicalCalendarSnapshot? {
         do {
-            return try HoursLiturgicalCalendarSnapshotStore.shared.load()
+            return try HoursLiturgicalCalendarSnapshotStore.shared.load(
+                expectedTradition: HoursSharedPreferences.officeTradition
+            )
         } catch {
             let message = error.localizedDescription
             logger.error(
@@ -142,6 +144,7 @@ private struct HoursWidgetView: View {
 
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.widgetFamily) private var family
+    @Environment(\.redactionReasons) private var redactionReasons
 
     var body: some View {
         Group {
@@ -162,7 +165,6 @@ private struct HoursWidgetView: View {
             accessibilityLabel
         )
         .accessibilityValue(entry.hour.customaryTimeRange)
-        .unredacted()
     }
 
     private var smallLayout: some View {
@@ -233,15 +235,15 @@ private struct HoursWidgetView: View {
         horizontalPadding: CGFloat
     ) -> some View {
         VStack(spacing: 1) {
-            if let rank = entry.liturgicalDay?.rank {
-                Text(rank.displayName)
+            if let rank = entry.liturgicalDay?.rankLabel {
+                Text(rank)
                     .font(.system(size: rankSize, design: .serif))
                     .foregroundStyle(palette.accent)
                     .lineLimit(1)
             }
 
             if let title = entry.liturgicalDay?.titleLatin {
-                Text(title)
+                Text(ObservanceTitle.latin(title))
                     .font(.system(size: titleSize, design: .serif))
                     .multilineTextAlignment(.center)
                     .lineSpacing(-1)
@@ -255,9 +257,12 @@ private struct HoursWidgetView: View {
     }
 
     private var accessibilityLabel: String {
-        [
-            entry.liturgicalDay?.rank?.displayName,
-            entry.liturgicalDay?.titleLatin,
+        let liturgicalDay = redactionReasons.contains(.placeholder)
+            ? nil
+            : entry.liturgicalDay
+        return [
+            liturgicalDay?.rankLabel,
+            liturgicalDay.map { ObservanceTitle.latin($0.titleLatin) },
             "Current canonical hour, \(entry.hour.englishTitle)",
         ]
         .compactMap { $0 }
@@ -294,11 +299,8 @@ private struct WidgetPalette: Equatable {
 
     init(colorScheme: ColorScheme) {
         isDark = colorScheme == .dark
-        accent = Color(
-            red: colorScheme == .dark ? 0.95 : 0.68,
-            green: colorScheme == .dark ? 0.45 : 0.12,
-            blue: colorScheme == .dark ? 0.38 : 0.09
-        )
+        // Match the current-hour lettering in the pre-rendered wheel assets.
+        accent = Color(.sRGB, red: 173 / 255, green: 31 / 255, blue: 23 / 255)
 
         if colorScheme == .dark {
             background = .black
@@ -328,12 +330,16 @@ private struct CanonicalHourWidgetWheel: View {
     let usesMediumLabelRing: Bool
 
     var body: some View {
+        // Pre-rendered from the app's approved tapestry by Tools/WidgetArtwork.
+        // Keeping one image per state avoids runtime drawing in WidgetKit.
         Image(assetName)
             .resizable()
             .interpolation(.high)
             .antialiased(true)
             .widgetAccentedRenderingMode(.desaturated)
             .scaledToFit()
+            // Only the wheel opts out: a placeholder's sample feast must stay redacted.
+            .unredacted()
             .accessibilityHidden(true)
     }
 

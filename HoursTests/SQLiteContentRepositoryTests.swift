@@ -89,7 +89,7 @@ final class SQLiteContentRepositoryTests: XCTestCase {
         ) ?? bundle.url(forResource: "base-office", withExtension: "sqlite")
         let repository = try SQLiteContentRepository(databaseURL: try XCTUnwrap(url))
         let schemaVersion = await repository.contentSchemaVersion()
-        XCTAssertEqual(schemaVersion, 3)
+        XCTAssertEqual(schemaVersion, 4)
 
         var rawDatabase: OpaquePointer?
         XCTAssertEqual(sqlite3_open_v2(url!.path, &rawDatabase, SQLITE_OPEN_READONLY, nil), SQLITE_OK)
@@ -485,10 +485,16 @@ final class SQLiteContentRepositoryTests: XCTestCase {
             limit: 50
         )
 
-        let psalm735Hits = hits.filter { $0.snippet.hasPrefix("73:5 ") }
-        XCTAssertEqual(psalm735Hits.count, 1)
-        XCTAssertEqual(psalm735Hits.first?.kind, .psalm)
-        XCTAssertTrue(psalm735Hits.first?.hasScoredRealizations == true)
+        // Scored resources label this passage by its Douay–Rheims verses
+        // ("73:4 They have set up their ensigns for signs, * 73:5 and they
+        // knew not"); unscored ones keep the source's line label (73:5).
+        // Both are one passage, shown once, with its notation.
+        let passageHits = hits.filter {
+            $0.snippet.contains("They have set up their ensigns for signs")
+        }
+        XCTAssertEqual(passageHits.count, 1)
+        XCTAssertEqual(passageHits.first?.kind, .psalm)
+        XCTAssertTrue(passageHits.first?.hasScoredRealizations == true)
     }
 }
 

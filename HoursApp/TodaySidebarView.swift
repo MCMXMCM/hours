@@ -1,5 +1,6 @@
 import HoursCore
 import SwiftUI
+import UIKit
 
 struct TodaySidebarView: View {
     @Binding var displayMode: AppDisplayMode
@@ -9,7 +10,9 @@ struct TodaySidebarView: View {
     let onOpenSearchOffice: (LiturgicalUsageContext) -> Void
 
     @Environment(AppModel.self) private var model
+    @Environment(ChantPlaybackController.self) private var playback
     @Environment(AppTourCoordinator.self) private var tour
+    @Environment(\.self) private var environment
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var wheelSettledHour = OfficeHour.current()
@@ -34,8 +37,8 @@ struct TodaySidebarView: View {
                 .ignoresSafeArea()
             }
 
-            if model.isLoading && model.selectedDay == nil {
-                ProgressView()
+            if model.selectedDay == nil {
+                unloadedDayState
             } else {
                 GeometryReader { geometry in
                     if hourSelectionView == .sunDial {
@@ -60,7 +63,8 @@ struct TodaySidebarView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.primary.opacity(0.86))
+                .foregroundStyle(toolbarForeground)
+                .tint(toolbarForeground)
                 .accessibilityLabel("Search prayers and readings")
                 .accessibilityIdentifier("home-search")
                 .appTourTarget(.searchButton)
@@ -77,7 +81,8 @@ struct TodaySidebarView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.primary.opacity(0.86))
+                .foregroundStyle(toolbarForeground)
+                .tint(toolbarForeground)
                 .accessibilityLabel("Settings")
                 .accessibilityIdentifier("home-settings")
                 .accessibilityHint("Choose display and hour selection options")
@@ -91,10 +96,13 @@ struct TodaySidebarView: View {
             onDismiss: calendarDidDismiss
         ) {
             monthDaysSheet
-                .presentationDetents([.medium, .large])
+                .modifier(AdaptiveSheetPresentation(phoneDetents: [.medium, .large]))
                 .presentationDragIndicator(.visible)
                 .presentationContentInteraction(.scrolls)
                 .appTourOverlayHost(.calendar)
+                .environment(model)
+                .environment(playback)
+                .environment(tour)
         }
         .sheet(
             isPresented: $showsSettings,
@@ -108,18 +116,25 @@ struct TodaySidebarView: View {
                 onAutomaticHourSelectionChanged:
                     setAutomaticHourSelection
             )
-            .presentationDetents([.large])
+            .modifier(AdaptiveSheetPresentation(phoneDetents: [.large]))
             .presentationBackground(Color.hoursBackground)
             .appTourOverlayHost(.settings)
+            .environment(model)
+            .environment(playback)
+            .environment(tour)
         }
         .sheet(
             isPresented: $showsSearch,
             onDismiss: searchDidDismiss
         ) {
             PrayerSearchView(onOpenOffice: onOpenSearchOffice)
+                .id(model.officeTradition)
                 .presentationDetents([.large])
                 .presentationBackground(Color.hoursBackground)
                 .appTourOverlayHost(.search)
+                .environment(model)
+                .environment(playback)
+                .environment(tour)
         }
         .onAppear {
             guard !appeared else { return }
@@ -140,6 +155,33 @@ struct TodaySidebarView: View {
             guard let office = model.office,
                   !model.isLoading else { return }
             tour.receive(.officeLoaded(office.hour))
+        }
+    }
+
+    private var toolbarForeground: Color {
+        // Resolve against the home screen before entering the transparent
+        // toolbar, whose automatic appearance can differ from the sky beneath it.
+        Color(Color.hoursPrimaryText.resolve(in: environment))
+    }
+
+    @ViewBuilder
+    private var unloadedDayState: some View {
+        if let errorMessage = model.errorMessage {
+            ContentUnavailableView {
+                Label("Office unavailable", systemImage: "book.closed")
+            } description: {
+                Text(errorMessage)
+            } actions: {
+                Button("Try Again") {
+                    Task {
+                        await model.refreshAfterBecomingActive()
+                    }
+                }
+            }
+            .accessibilityIdentifier("home-load-error")
+        } else {
+            ProgressView()
+                .accessibilityIdentifier("home-loading")
         }
     }
 
@@ -428,17 +470,28 @@ struct TodaySidebarView: View {
         )
 
         return VStack(spacing: 10) {
-            if let rank = presentation.rank {
-                Text(rank.displayName)
-                    .font(
-                        .custom(
-                            "EBGaramond-Regular",
-                            size: 18,
-                            relativeTo: .body
-                        )
-                    )
-                    .foregroundStyle(Color(red: 0.68, green: 0.12, blue: 0.09))
-                    .accessibilityIdentifier("liturgical-rank")
+            if model.officeTradition != .roman1960 || presentation.rankDisplayName != nil {
+                VStack(spacing: 4) {
+                    if let rank = presentation.rankDisplayName {
+                        Text(rank)
+                            .font(
+                                .custom(
+                                    "EBGaramond-Regular",
+                                    size: 18,
+                                    relativeTo: .body
+                                )
+                            )
+                            .foregroundStyle(Color(red: 0.68, green: 0.12, blue: 0.09))
+                            .accessibilityIdentifier("liturgical-rank")
+                    }
+                    if model.officeTradition != .roman1960 {
+                        Text(model.officeTradition.title)
+                            .font(.system(.caption, design: .serif))
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
+                            .accessibilityIdentifier("home-office-tradition")
+                    }
+                }
             }
 
             Text(presentation.titleLatin)
@@ -501,7 +554,7 @@ struct TodaySidebarView: View {
             office: office
         )
         return [
-            presentation.rank?.displayName,
+            presentation.rankDisplayName,
             presentation.titleLatin,
             presentation.officeContext,
             headerDetail(
@@ -585,7 +638,7 @@ struct TodaySidebarView: View {
             .dateTime.weekday(.wide).month(.wide).day().year()
         )
         guard !commemorations.isEmpty else { return date }
-        return "\(date) · \(commemorations.map(\.titleLatin).joined(separator: " · "))"
+        return "\(date) · \(commemorations.map { ObservanceTitle.latin($0.titleLatin) }.joined(separator: " · "))"
     }
 
     private func resetToLocalTime() {

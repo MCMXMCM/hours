@@ -5,6 +5,12 @@ public enum HoursSharedPreferences {
         "group.com.matthewmccarty.hours"
     public static let appearanceModeKey = "appearanceMode"
     public static let defaultAppearanceMode = "dynamic"
+    public static let officeTraditionKey = "officeTradition"
+
+    public static var officeTradition: OfficeTradition {
+        defaults.string(forKey: officeTraditionKey)
+            .flatMap(OfficeTradition.init(rawValue:)) ?? .roman1960
+    }
 
     public static var defaults: UserDefaults {
         UserDefaults(suiteName: appGroupIdentifier) ?? .standard

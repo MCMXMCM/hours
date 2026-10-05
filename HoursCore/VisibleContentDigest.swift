@@ -13,7 +13,7 @@ public enum VisibleContentDigest {
     }
 
     public static func validate(_ office: OfficeDocument) throws {
-        guard office.format == .authoritativeOrdered else { return }
+        guard office.format?.preservesSourceOrder == true else { return }
         guard let expected = office.visibleContentDigest,
               !expected.isEmpty else {
             throw ContentRepositoryError.invalidContent(

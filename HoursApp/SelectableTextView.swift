@@ -182,13 +182,16 @@ struct SelectableTextView: UIViewRepresentable {
             string: configuration.text,
             attributes: attributes
         )
-        let weightedFont = UIFont(
-            descriptor: font.fontDescriptor.addingAttributes([
-                .traits: [
-                    UIFontDescriptor.TraitKey.weight: UIFont.Weight.semibold
-                ]
-            ]),
-            size: font.pointSize
+        let emphasizedBaseFont = UIFont(
+            name: "EBGaramond-SemiBold",
+            size: configuration.fontSize
+        ) ?? UIFont.systemFont(
+            ofSize: configuration.fontSize,
+            weight: .semibold
+        )
+        let weightedFont = UIFontMetrics(forTextStyle: .body).scaledFont(
+            for: emphasizedBaseFont,
+            compatibleWith: traitCollection
         )
         for range in configuration.emphasizedRanges {
             result.addAttribute(
@@ -261,6 +264,10 @@ struct SelectableTextView: UIViewRepresentable {
     }
 
     final class Coordinator {
+        // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2.
+        // https://github.com/swiftlang/swift/issues/88036
+        nonisolated deinit {}
+
         fileprivate var configuration: Configuration?
         fileprivate var measurement: (
             key: MeasurementKey,
@@ -286,6 +293,10 @@ struct SelectableTextView: UIViewRepresentable {
 }
 
 private final class StaticSelectableTextView: UITextView {
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2.
+    // https://github.com/swiftlang/swift/issues/88036
+    nonisolated deinit {}
+
     override var contentOffset: CGPoint {
         get { super.contentOffset }
         set { super.contentOffset = .zero }

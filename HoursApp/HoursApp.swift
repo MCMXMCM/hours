@@ -43,6 +43,18 @@ struct HoursApp: App {
     private let didMigrateAppearanceMode: Bool
 
     init() {
+        #if DEBUG
+        // UI tests begin each case from a fresh install's settings; the
+        // launch arguments then set only what that case needs.
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-reset-defaults") {
+            if let bundleIdentifier = Bundle.main.bundleIdentifier {
+                UserDefaults.standard.removePersistentDomain(forName: bundleIdentifier)
+            }
+            HoursSharedPreferences.defaults.removePersistentDomain(
+                forName: HoursSharedPreferences.appGroupIdentifier
+            )
+        }
+        #endif
         let recoveredSnapshot =
             AppTourPersistence.recoverInterruptedSnapshot()
         _model = State(initialValue: AppModel())
@@ -68,13 +80,22 @@ struct HoursApp: App {
                 .task {
                     let didUpdateCalendarSnapshot = await model.start()
                     await tour.recoverAfterModelStart(model: model)
+                    let build = HoursWidgetReloadPolicy.currentBuild()
                     if HoursWidgetReloadPolicy.shouldReload(
                         calendarSnapshotChanged:
                             didUpdateCalendarSnapshot,
                         appearancePreferenceMigrated:
-                            didMigrateAppearanceMode
+                            didMigrateAppearanceMode,
+                        lastReloadedBuild: UserDefaults.standard.string(
+                            forKey: HoursWidgetReloadPolicy.lastReloadedBuildKey
+                        ),
+                        currentBuild: build
                     ) {
                         WidgetCenter.shared.reloadAllTimelines()
+                        UserDefaults.standard.set(
+                            build,
+                            forKey: HoursWidgetReloadPolicy.lastReloadedBuildKey
+                        )
                     }
                 }
         }
@@ -82,10 +103,24 @@ struct HoursApp: App {
 }
 
 enum HoursWidgetReloadPolicy {
+    nonisolated static let lastReloadedBuildKey = "widgetLastReloadedBuild"
+
+    /// A new build reloads once, so a widget left stale by an earlier install recovers.
     nonisolated static func shouldReload(
         calendarSnapshotChanged: Bool,
-        appearancePreferenceMigrated: Bool
+        appearancePreferenceMigrated: Bool,
+        lastReloadedBuild: String?,
+        currentBuild: String
     ) -> Bool {
-        calendarSnapshotChanged || appearancePreferenceMigrated
+        calendarSnapshotChanged
+            || appearancePreferenceMigrated
+            || lastReloadedBuild != currentBuild
+    }
+
+    nonisolated static func currentBuild(bundle: Bundle = .main) -> String {
+        let info = bundle.infoDictionary ?? [:]
+        let version = info["CFBundleShortVersionString"] as? String ?? ""
+        let build = info["CFBundleVersion"] as? String ?? ""
+        return "\(version) (\(build))"
     }
 }

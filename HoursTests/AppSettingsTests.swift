@@ -131,7 +131,7 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(try hour(at: 23, minute: 59), .compline)
     }
 
-    func testCurrentOfficeDayAdvancesAtLaudsInsteadOfMidnight() throws {
+    func testCurrentOfficeDayFollowsTheCivilDateSoMatinsBelongsToTheNewDay() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try XCTUnwrap(
             TimeZone(identifier: "America/Chicago")
@@ -170,11 +170,11 @@ final class AppSettingsTests: XCTestCase {
         )
         XCTAssertEqual(
             try officeDay(day: 28, hour: 0, minute: 0),
-            monday
+            tuesday
         )
         XCTAssertEqual(
             try officeDay(day: 28, hour: 3, minute: 59),
-            monday
+            tuesday
         )
         XCTAssertEqual(
             try officeDay(day: 28, hour: 4, minute: 0),
@@ -204,7 +204,7 @@ final class AppSettingsTests: XCTestCase {
                 at: date,
                 calendar: calendar
             ),
-            LocalDay(year: 2026, month: 3, day: 7)
+            LocalDay(year: 2026, month: 3, day: 8)
         )
     }
 }

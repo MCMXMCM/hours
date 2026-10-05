@@ -522,12 +522,13 @@ public actor SQLiteContentRepository: ContentRepository {
     private let connection: SQLiteConnection
     private let decoder: JSONDecoder
     private let schemaVersion: Int
+    public nonisolated let tradition: OfficeTradition
     private let coverage: ClosedRange<LocalDay>
     private var recipeHeaderCache: [Int64: StoredRecipeHeader] = [:]
     private var recipeHeaderInsertionOrder: [Int64] = []
     private var recipeHeaderCacheHitCount = 0
 
-    public init(databaseURL: URL) throws {
+    public init(databaseURL: URL, expectedTradition: OfficeTradition? = nil) throws {
         var database: OpaquePointer?
         let result = sqlite3_open_v2(databaseURL.path, &database, SQLITE_OPEN_READONLY, nil)
         guard result == SQLITE_OK, let database else {
@@ -541,10 +542,17 @@ public actor SQLiteContentRepository: ContentRepository {
         self.connection = SQLiteConnection(pointer: database)
         self.decoder = JSONDecoder.hoursContentDecoder
         do {
-            self.schemaVersion = try Self.readSchemaVersion(
+            try SharedContentDatabase.prepare(database, at: databaseURL)
+            let manifest = try Self.readManifest(
                 database: database,
                 decoder: self.decoder
             )
+            guard let tradition = OfficeTradition(rubrics: manifest.rubrics),
+                  expectedTradition == nil || expectedTradition == tradition else {
+                throw ContentRepositoryError.invalidContent("The corpus has incorrect office rubrics.")
+            }
+            self.tradition = tradition
+            self.schemaVersion = manifest.schemaVersion
             self.coverage = try Self.readCoverageRange(database: database)
         } catch {
             throw error
@@ -730,7 +738,7 @@ public actor SQLiteContentRepository: ContentRepository {
             )
         }
         let office = OfficeDocument(
-            id: "\(date)-\(hour.rawValue)",
+            id: "\(tradition == .roman1960 ? "" : tradition.rawValue + ":")\(date)-\(hour.rawValue)",
             date: date,
             hour: stored.hour,
             titleLatin: stored.titleLatin,
@@ -743,7 +751,7 @@ public actor SQLiteContentRepository: ContentRepository {
             sections: sections
         )
         try VisibleContentDigest.validate(office)
-        return RomanMartyrologyCalendar.materialize(office)
+        return tradition == .roman1960 ? RomanMartyrologyCalendar.materialize(office) : office
     }
 
     public func searchOfficeTitles(
@@ -893,7 +901,7 @@ public actor SQLiteContentRepository: ContentRepository {
         SELECT text_resources.id, text_resources.stable_key, text_resources.payload,
                \(incipitsColumn), bm25(text_fts, \(weights)), \(scoreExistence)
         FROM text_fts
-        JOIN text_resources ON text_resources.rowid = text_fts.rowid
+        JOIN text_resources ON text_resources.id = text_fts.rowid
         WHERE text_fts MATCH ?
           \(kindClause)
           \(scoreClause)
@@ -901,94 +909,107 @@ public actor SQLiteContentRepository: ContentRepository {
         ORDER BY bm25(text_fts, \(weights)), length(text_resources.payload)
         LIMIT ?
         """
-        var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
-              let statement else {
-            throw ContentRepositoryError.databaseUnavailable(String(cString: sqlite3_errmsg(database)))
-        }
-        defer { sqlite3_finalize(statement) }
-        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-        guard sqlite3_bind_text(statement, 1, match, -1, transient) == SQLITE_OK else {
-            throw ContentRepositoryError.databaseUnavailable(String(cString: sqlite3_errmsg(database)))
-        }
-        var bindingIndex: Int32 = 2
-        if let kind {
-            guard sqlite3_bind_text(statement, bindingIndex, kind.rawValue, -1, transient) == SQLITE_OK else {
+        // Several resources can print one passage; they are collapsed after
+        // ranking. Widen the candidate set only when that leaves the page short.
+        func rankedHits(candidateLimit: Int) throws -> (hits: [LiturgicalSearchHit], exhausted: Bool) {
+            var statement: OpaquePointer?
+            guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
+                  let statement else {
                 throw ContentRepositoryError.databaseUnavailable(String(cString: sqlite3_errmsg(database)))
             }
-            bindingIndex += 1
-        }
-        if let hour {
-            guard sqlite3_bind_text(statement, bindingIndex, hour.rawValue, -1, transient) == SQLITE_OK else {
+            defer { sqlite3_finalize(statement) }
+            let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+            guard sqlite3_bind_text(statement, 1, match, -1, transient) == SQLITE_OK else {
                 throw ContentRepositoryError.databaseUnavailable(String(cString: sqlite3_errmsg(database)))
             }
-            bindingIndex += 1
-        }
-        let candidateLimit = min(cappedLimit * 5, 250)
-        guard sqlite3_bind_int(statement, bindingIndex, Int32(candidateLimit)) == SQLITE_OK else {
-            throw ContentRepositoryError.databaseUnavailable(String(cString: sqlite3_errmsg(database)))
-        }
+            var bindingIndex: Int32 = 2
+            if let kind {
+                guard sqlite3_bind_text(statement, bindingIndex, kind.rawValue, -1, transient) == SQLITE_OK else {
+                    throw ContentRepositoryError.databaseUnavailable(String(cString: sqlite3_errmsg(database)))
+                }
+                bindingIndex += 1
+            }
+            if let hour {
+                guard sqlite3_bind_text(statement, bindingIndex, hour.rawValue, -1, transient) == SQLITE_OK else {
+                    throw ContentRepositoryError.databaseUnavailable(String(cString: sqlite3_errmsg(database)))
+                }
+                bindingIndex += 1
+            }
+            guard sqlite3_bind_int(statement, bindingIndex, Int32(candidateLimit)) == SQLITE_OK else {
+                throw ContentRepositoryError.databaseUnavailable(String(cString: sqlite3_errmsg(database)))
+            }
 
-        var candidates: [LiturgicalSearchCandidate] = []
-        while true {
-            try Task.checkCancellation()
-            let step = sqlite3_step(statement)
-            if step == SQLITE_DONE { break }
-            guard step == SQLITE_ROW else {
-                throw ContentRepositoryError.databaseUnavailable(String(cString: sqlite3_errmsg(database)))
-            }
-            guard let stableKeyValue = sqlite3_column_text(statement, 1),
-                  let payloadValue = sqlite3_column_blob(statement, 2) else {
-                throw ContentRepositoryError.invalidContent("A search row is malformed.")
-            }
-            let id = String(cString: stableKeyValue)
-            let payload = Data(
-                bytes: payloadValue,
-                count: Int(sqlite3_column_bytes(statement, 2))
-            )
-            let resource = try decoder.decode(
-                StoredTextResource.self,
-                from: ContentPayloadCodec.decode(payload)
-            )
-            let incipits = Self.optionalText(statement, column: 3) ?? ""
-            let snippetLanguage = Self.matchedLanguage(
-                resource,
-                query: query,
-                requested: language
-            )
-            candidates.append(
-                LiturgicalSearchCandidate(
-                    rank: Self.phraseRank(
-                        resource,
-                        incipits: incipits,
-                        query: query,
-                        language: snippetLanguage
-                    ),
-                    databaseRank: sqlite3_column_double(statement, 4),
-                    hit: LiturgicalSearchHit(
-                        id: id,
-                        kind: resource.kind,
-                        titleLatin: resource.title,
-                        titleEnglish: resource.titleEnglish,
-                        snippet: Self.snippet(
-                            for: resource,
+            var candidates: [LiturgicalSearchCandidate] = []
+            while true {
+                try Task.checkCancellation()
+                let step = sqlite3_step(statement)
+                if step == SQLITE_DONE { break }
+                guard step == SQLITE_ROW else {
+                    throw ContentRepositoryError.databaseUnavailable(String(cString: sqlite3_errmsg(database)))
+                }
+                guard let stableKeyValue = sqlite3_column_text(statement, 1),
+                      let payloadValue = sqlite3_column_blob(statement, 2) else {
+                    throw ContentRepositoryError.invalidContent("A search row is malformed.")
+                }
+                let id = String(cString: stableKeyValue)
+                let payload = Data(
+                    bytes: payloadValue,
+                    count: Int(sqlite3_column_bytes(statement, 2))
+                )
+                let resource = try decoder.decode(
+                    StoredTextResource.self,
+                    from: ContentPayloadCodec.decode(payload)
+                )
+                let incipits = Self.optionalText(statement, column: 3) ?? ""
+                let snippetLanguage = Self.matchedLanguage(
+                    resource,
+                    query: query,
+                    requested: language
+                )
+                candidates.append(
+                    LiturgicalSearchCandidate(
+                        rank: Self.phraseRank(
+                            resource,
+                            incipits: incipits,
                             query: query,
                             language: snippetLanguage
                         ),
-                        snippetLanguage: snippetLanguage,
-                        hasScoredRealizations: sqlite3_column_int(statement, 5) != 0
+                        databaseRank: sqlite3_column_double(statement, 4),
+                        hit: LiturgicalSearchHit(
+                            id: id,
+                            kind: resource.kind,
+                            titleLatin: resource.title,
+                            titleEnglish: resource.titleEnglish,
+                            snippet: Self.snippet(
+                                for: resource,
+                                query: query,
+                                language: snippetLanguage
+                            ),
+                            snippetLanguage: snippetLanguage,
+                            hasScoredRealizations: sqlite3_column_int(statement, 5) != 0
+                        )
                     )
                 )
-            )
-        }
-        let rankedHits = candidates.sorted { left, right in
-            if left.rank != right.rank { return left.rank < right.rank }
-            if left.databaseRank != right.databaseRank {
-                return left.databaseRank < right.databaseRank
             }
-            return left.hit.id < right.hit.id
-        }.map(\.hit)
-        return Self.deduplicatedSearchHits(rankedHits, limit: cappedLimit)
+            let ranked = candidates.sorted { left, right in
+                if left.rank != right.rank { return left.rank < right.rank }
+                if left.databaseRank != right.databaseRank {
+                    return left.databaseRank < right.databaseRank
+                }
+                return left.hit.id < right.hit.id
+            }.map(\.hit)
+            return (ranked, candidates.count < candidateLimit)
+        }
+
+        var candidateLimit = min(cappedLimit * 5, 250)
+        while true {
+            let (ranked, exhausted) = try rankedHits(candidateLimit: candidateLimit)
+            let hits = Self.deduplicatedSearchHits(ranked, limit: cappedLimit)
+            if hits.count >= cappedLimit || exhausted || candidateLimit >= 2_000 {
+                return hits
+            }
+            candidateLimit = min(candidateLimit * 4, 2_000)
+        }
     }
 
     public func searchDetail(
@@ -1075,7 +1096,7 @@ public actor SQLiteContentRepository: ContentRepository {
             hour: hour
         )
         let office = OfficeDocument(
-            id: "\(date)-\(hour.rawValue)",
+            id: "\(tradition == .roman1960 ? "" : tradition.rawValue + ":")\(date)-\(hour.rawValue)",
             date: date,
             hour: header.hour,
             titleLatin: header.titleLatin,
@@ -1088,7 +1109,7 @@ public actor SQLiteContentRepository: ContentRepository {
             sections: sections
         )
         try VisibleContentDigest.validate(office)
-        return RomanMartyrologyCalendar.materialize(office)
+        return tradition == .roman1960 ? RomanMartyrologyCalendar.materialize(office) : office
     }
 
     private func normalizedSections(
@@ -1430,23 +1451,39 @@ public actor SQLiteContentRepository: ContentRepository {
         _ hits: [LiturgicalSearchHit],
         limit: Int
     ) -> [LiturgicalSearchHit] {
-        var seenPassages = Set<String>()
+        var resultIndexByPassage: [String: Int] = [:]
         var results: [LiturgicalSearchHit] = []
         results.reserveCapacity(min(hits.count, limit))
 
         for hit in hits {
+            // The same passage may be printed with the source's line labels in
+            // one resource and with verified Scripture references, or chant
+            // pointing, in another. Neither makes it a different passage.
             let normalizedSnippet = searchNormalized(
                 hit.snippet,
                 latin: hit.snippetLanguage != .english
-            ).split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            )
+            .replacingOccurrences(
+                of: #"\b\d{1,3}:\d{1,3}[a-z]?\b|[*†‡✠]"#,
+                with: " ",
+                options: .regularExpression
+            )
+            .split(whereSeparator: \.isWhitespace).joined(separator: " ")
             let passageKey = [
                 hit.kind.rawValue,
                 hit.snippetLanguage.rawValue,
                 normalizedSnippet
             ].joined(separator: "\u{1f}")
-            guard seenPassages.insert(passageKey).inserted else { continue }
+            if let index = resultIndexByPassage[passageKey] {
+                // Keep the passage's rank, but prefer a representation with notation.
+                if hit.hasScoredRealizations && !results[index].hasScoredRealizations {
+                    results[index] = hit
+                }
+                continue
+            }
+            guard results.count < limit else { continue }
+            resultIndexByPassage[passageKey] = results.count
             results.append(hit)
-            if results.count == limit { break }
         }
         return results
     }
@@ -1459,10 +1496,10 @@ public actor SQLiteContentRepository: ContentRepository {
         return String(cString: value)
     }
 
-    private static func readSchemaVersion(
+    private static func readManifest(
         database: OpaquePointer,
         decoder: JSONDecoder
-    ) throws -> Int {
+    ) throws -> ContentManifest {
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(
             database,
@@ -1479,7 +1516,7 @@ public actor SQLiteContentRepository: ContentRepository {
             throw ContentRepositoryError.invalidContent("The corpus manifest is missing.")
         }
         let data = Data(String(cString: value).utf8)
-        return try decoder.decode(ContentManifest.self, from: data).schemaVersion
+        return try decoder.decode(ContentManifest.self, from: data)
     }
 
     private static func readCoverageRange(

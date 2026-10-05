@@ -713,7 +713,10 @@ public enum GregorianScoreParser {
                     moraCount: suffix.filter { $0 == "." }.count,
                     episemaPosition: suffix.contains("_0") ? .below : .above,
                     liquescence: liquescence,
-                    isCavum: suffix.contains("r") || suffix.contains("R"),
+                    // r0 is a hollow note within lines; r1 to r5 are signs
+                    // written above the note (an accent, a circle), not a
+                    // hollow note.
+                    isCavum: isCavum(suffix),
                     hasIctus: suffix.contains("'"),
                     sourceRange: GregorianSourceRange(
                         lowerBound: baseOffset + noteStart,
@@ -728,6 +731,17 @@ public enum GregorianScoreParser {
 
         flushNotes()
         return result
+    }
+
+    private static func isCavum(_ suffix: String) -> Bool {
+        let characters = Array(suffix)
+        return characters.indices.contains { index in
+            guard characters[index] == "r" || characters[index] == "R" else { return false }
+            guard index + 1 < characters.count, let sign = characters[index + 1].wholeNumberValue else {
+                return true
+            }
+            return sign == 0
+        }
     }
 
     private static func pitchValue(_ character: Character) -> Int? {
@@ -898,7 +912,7 @@ public enum GregorianNeumeClassifier {
 
 /// Splits a continuous GABC note run into the named forms accepted by the
 /// native compositor. This is the native counterpart of Exsurge's
-/// `createHoursFromNotes` state machine.
+/// `createNeumesFromNotes` state machine.
 public enum GregorianNeumeSegmenter {
     public static func segment(_ notes: [GregorianNote]) -> [[GregorianNote]] {
         guard notes.count > 1 else { return notes.isEmpty ? [] : [notes] }

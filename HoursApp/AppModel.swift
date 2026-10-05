@@ -6,6 +6,10 @@ import OSLog
 @MainActor
 @Observable
 final class AppModel {
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2.
+    // https://github.com/swiftlang/swift/issues/88036
+    nonisolated deinit {}
+
     private static let logger = Logger(
         subsystem: "com.matthewmccarty.hours",
         category: "CalendarSnapshot"
@@ -23,10 +27,15 @@ final class AppModel {
     static let readerDayKey = "readerRestoration.day"
     static let readerHourKey = "readerRestoration.hour"
     static let readerScrollOffsetKey = "readerRestoration.scrollOffset"
+    static let readerScrollAnchorKey = "readerRestoration.scrollAnchor"
+    static let readerTraditionKey = "readerRestoration.tradition"
+    static let officeTraditionKey = "officeTradition"
     nonisolated static let showsEnglishKey =
         "prayerOptions.showsEnglish"
     nonisolated static let notationScaleKey =
         "prayerOptions.notationScale"
+    nonisolated static let compactPsalmodyKey =
+        "prayerOptions.compactPsalmody"
     nonisolated static let priestOrDeaconPresentKey =
         "prayerOptions.priestOrDeaconPresent"
 
@@ -35,6 +44,9 @@ final class AppModel {
     private(set) var office: OfficeDocument?
     private(set) var isLoading = false
     private(set) var errorMessage: String?
+    private(set) var officeTradition: OfficeTradition
+    private(set) var isChangingTradition = false
+    private(set) var traditionErrorMessage: String?
 
     var selectedHour: OfficeHour {
         didSet {
@@ -64,6 +76,14 @@ final class AppModel {
             )
         }
     }
+    var usesCompactPsalmody = false {
+        didSet {
+            userDefaults.set(
+                usesCompactPsalmody,
+                forKey: Self.compactPsalmodyKey
+            )
+        }
+    }
     var isPriestOrDeaconPresent = false {
         didSet {
             userDefaults.set(
@@ -77,8 +97,13 @@ final class AppModel {
     @ObservationIgnored
     private let userDefaults: UserDefaults
     @ObservationIgnored
+    private let repositoryLoader: @Sendable (OfficeTradition) throws -> any ContentRepository
+    @ObservationIgnored
+    private let calendarSnapshotStore: HoursLiturgicalCalendarSnapshotStore
+    @ObservationIgnored
     private var readerSession: ReaderSession?
-    private var hasStarted = false
+    private var hasCompletedStartup = false
+    private var isStarting = false
     private var selectionGeneration = 0
     @ObservationIgnored
     private var selectionTask: Task<SelectionPayload, Error>?
@@ -90,10 +115,18 @@ final class AppModel {
     init(
         repository: (any ContentRepository)? = nil,
         userDefaults: UserDefaults = .standard,
-        date: Date = Date()
+        date: Date = Date(),
+        calendarSnapshotStore: HoursLiturgicalCalendarSnapshotStore = .shared,
+        repositoryLoader: @escaping @Sendable (OfficeTradition) throws -> any ContentRepository = {
+            try SQLiteContentRepository(databaseURL: $0.databaseURL(), expectedTradition: $0)
+        }
     ) {
         self.repository = repository
         self.userDefaults = userDefaults
+        self.repositoryLoader = repositoryLoader
+        self.calendarSnapshotStore = calendarSnapshotStore
+        officeTradition = userDefaults.string(forKey: Self.officeTraditionKey)
+            .flatMap(OfficeTradition.init(rawValue:)) ?? .roman1960
         showsEnglish = userDefaults.bool(
             forKey: Self.showsEnglishKey
         )
@@ -102,6 +135,9 @@ final class AppModel {
                 forKey: Self.notationScaleKey
             )
         }
+        usesCompactPsalmody = userDefaults.bool(
+            forKey: Self.compactPsalmodyKey
+        )
         isPriestOrDeaconPresent = userDefaults.bool(
             forKey: Self.priestOrDeaconPresentKey
         )
@@ -139,6 +175,71 @@ final class AppModel {
         office?.format == .legacyReconstructed
     }
 
+    /// Load the complete replacement before changing the user's selected tradition.
+    /// A missing or invalid pack leaves the current office and preference intact.
+    @discardableResult
+    func changeOfficeTradition(to tradition: OfficeTradition) async -> Bool {
+        guard tradition != officeTradition, !isChangingTradition, !isStarting else { return false }
+        isChangingTradition = true
+        traditionErrorMessage = nil
+        defer { isChangingTradition = false }
+        selectionGeneration += 1
+        let generation = selectionGeneration
+        selectionTask?.cancel()
+        selectionTask = nil
+        selectionTaskKey = nil
+        isLoading = false
+        let day = selectedDay?.date ?? LocalDay(selectedCivilDate)
+        let hour = selectedHour
+        do {
+            let loader = repositoryLoader
+            let replacement = try await Task.detached {
+                try loader(tradition)
+            }.value
+            let days = try await replacement.availableDays()
+            guard !days.isEmpty else {
+                throw ContentRepositoryError.databaseUnavailable("The \(tradition.title) corpus is empty.")
+            }
+            let newDay = try await replacement.day(on: day)
+            let newOffice = try await replacement.office(on: day, hour: hour)
+            guard generation == selectionGeneration, !Task.isCancelled else { return false }
+
+            endReaderSession()
+            repository = replacement
+            availableDays = days
+            availableDayIndices = Dictionary(uniqueKeysWithValues: days.enumerated().map { ($0.element.date, $0.offset) })
+            officeTradition = tradition
+            selectedDay = newDay
+            office = newOffice
+            errorMessage = nil
+            hasCompletedStartup = true
+            userDefaults.set(tradition.rawValue, forKey: Self.officeTraditionKey)
+            // Search hit IDs are local to a corpus. Queries themselves remain useful.
+            userDefaults.removeObject(forKey: AppTourPersistence.recentHitsKey)
+            _ = await publishCalendarSnapshot(days: days, tradition: tradition)
+            return true
+        } catch is CancellationError {
+            return false
+        } catch {
+            guard generation == selectionGeneration else { return false }
+            traditionErrorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    private func publishCalendarSnapshot(days: [LiturgicalDay], tradition: OfficeTradition) async -> Bool {
+        HoursSharedPreferences.defaults.set(tradition.rawValue, forKey: HoursSharedPreferences.officeTraditionKey)
+        let store = calendarSnapshotStore
+        do {
+            return try await Task.detached(priority: .utility) {
+                try store.saveIfChanged(days: days, tradition: tradition)
+            }.value
+        } catch {
+            Self.logger.error("Unable to save calendar snapshot: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+    }
+
     var appTourState: AppModelTourState {
         AppModelTourState(
             selectedDay: selectedDay?.date
@@ -150,7 +251,8 @@ final class AppModel {
                 AppTourReaderSnapshot(
                     day: $0.day,
                     hour: $0.hour,
-                    scrollOffset: $0.scrollOffset
+                    scrollOffset: $0.scrollOffset,
+                    scrollAnchor: $0.scrollAnchor
                 )
             }
         )
@@ -158,10 +260,16 @@ final class AppModel {
 
     @discardableResult
     func start() async -> Bool {
-        guard !hasStarted else { return false }
-        hasStarted = true
+        guard !isStarting else { return false }
+        guard !hasCompletedStartup || selectedDay == nil else {
+            return false
+        }
+        isStarting = true
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            isStarting = false
+            isLoading = false
+        }
         let interval = Self.signposter.beginInterval("CorpusStartup")
         defer {
             Self.signposter.endInterval("CorpusStartup", interval)
@@ -170,14 +278,7 @@ final class AppModel {
         var didUpdateCalendarSnapshot = false
 
         do {
-            guard let databaseURL = Bundle.main.url(
-                forResource: "base-office",
-                withExtension: "sqlite",
-                subdirectory: "Resources"
-            ) ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite") else {
-                throw ContentRepositoryError.databaseUnavailable("The bundled base corpus is missing.")
-            }
-            let repository = try SQLiteContentRepository(databaseURL: databaseURL)
+            let repository = try self.repository ?? repositoryLoader(officeTradition)
             self.repository = repository
             let days = try await repository.availableDays()
             guard let fallback = days.first else {
@@ -189,23 +290,10 @@ final class AppModel {
                     ($0.element.date, $0.offset)
                 }
             )
-            do {
-                let snapshotStore =
-                    HoursLiturgicalCalendarSnapshotStore.shared
-                didUpdateCalendarSnapshot = try await Task.detached(
-                    priority: .utility
-                ) {
-                    try snapshotStore.saveIfChanged(days: days)
-                }.value
-            } catch {
-                let message = error.localizedDescription
-                Self.logger.error(
-                    "Unable to save calendar snapshot: \(message, privacy: .public)"
-                )
-            }
+            didUpdateCalendarSnapshot = await publishCalendarSnapshot(days: days, tradition: officeTradition)
 
-            // Keep automatic Matins on one Office date across midnight,
-            // advancing the calendar when Lauds begins at 4 a.m.
+            // Automatic selection follows the civil date: Matins after
+            // midnight belongs to the new liturgical day.
             let now = Date()
             let currentHour = OfficeHour.current(at: now)
             let currentDay = LocalDay.currentOfficeDay(at: now)
@@ -233,10 +321,36 @@ final class AppModel {
             let initial = days.first(where: { $0.date == initialDay }) ?? fallback
             selectedCivilDate = initial.date.date ?? Date()
             await select(day: initial.date, hour: initialHour)
+            hasCompletedStartup = selectedDay != nil && office != nil
+        } catch is CancellationError {
+            errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
         }
         return didUpdateCalendarSnapshot
+    }
+
+    func refreshAfterBecomingActive() async {
+        while isStarting {
+            do {
+                try await Task.sleep(for: .milliseconds(50))
+            } catch {
+                return
+            }
+        }
+
+        guard !isReaderSessionActive else { return }
+
+        guard selectedDay != nil else {
+            _ = await start()
+            return
+        }
+
+        if automaticallySelectsCurrentOffice {
+            await selectCurrentOffice()
+        } else if office == nil {
+            await select(hour: selectedHour)
+        }
     }
 
     func availableDay(offsetFromSelectedBy offset: Int) -> LiturgicalDay? {
@@ -287,6 +401,9 @@ final class AppModel {
     }
 
     func select(civilDate: Date) async {
+        if automaticallySelectsCurrentOffice {
+            setAutomaticOfficeSelection(false)
+        }
         if selectedCivilDate != civilDate {
             selectedCivilDate = civilDate
         }
@@ -403,17 +520,27 @@ final class AppModel {
         return readerSession.scrollOffset
     }
 
+    func restoredReaderScrollAnchor(for office: OfficeDocument) -> OfficeReaderScrollAnchor? {
+        guard shouldRestoreReader(for: office) else { return nil }
+        return readerSession?.scrollAnchor
+    }
+
     func updateReaderScrollOffset(
         _ scrollOffset: Double,
-        for office: OfficeDocument
+        for office: OfficeDocument,
+        anchor: OfficeReaderScrollAnchor? = nil
     ) {
         guard var readerSession,
               readerSession.day == office.date,
               readerSession.hour == office.hour else {
             return
         }
-        readerSession.scrollOffset = max(0, scrollOffset)
+        readerSession.scrollOffset = Self.sanitizedReaderScrollOffset(
+            scrollOffset
+        )
+        readerSession.scrollAnchor = anchor
         self.readerSession = readerSession
+        persistReaderScrollAnchor(anchor)
         userDefaults.set(
             readerSession.scrollOffset,
             forKey: Self.readerScrollOffsetKey
@@ -427,6 +554,8 @@ final class AppModel {
         userDefaults.removeObject(forKey: Self.readerDayKey)
         userDefaults.removeObject(forKey: Self.readerHourKey)
         userDefaults.removeObject(forKey: Self.readerScrollOffsetKey)
+        userDefaults.removeObject(forKey: Self.readerTraditionKey)
+        userDefaults.removeObject(forKey: Self.readerScrollAnchorKey)
     }
 
     func shouldRestoreReader(for office: OfficeDocument) -> Bool {
@@ -455,7 +584,8 @@ final class AppModel {
             readerSession = ReaderSession(
                 day: reader.day,
                 hour: reader.hour,
-                scrollOffset: reader.scrollOffset
+                scrollOffset: reader.scrollOffset,
+                scrollAnchor: reader.scrollAnchor
             )
             isReaderSessionActive = true
             persistReaderSession()
@@ -466,7 +596,9 @@ final class AppModel {
 
     private func persistReaderSession() {
         guard let readerSession else { return }
+        persistReaderScrollAnchor(readerSession.scrollAnchor)
         userDefaults.set(true, forKey: Self.readerIsPresentedKey)
+        userDefaults.set(officeTradition.rawValue, forKey: Self.readerTraditionKey)
         userDefaults.set(
             readerSession.day.description,
             forKey: Self.readerDayKey
@@ -481,9 +613,21 @@ final class AppModel {
         )
     }
 
+    private func persistReaderScrollAnchor(_ anchor: OfficeReaderScrollAnchor?) {
+        if let anchor, let data = try? JSONEncoder().encode(anchor) {
+            userDefaults.set(data, forKey: Self.readerScrollAnchorKey)
+        } else {
+            userDefaults.removeObject(forKey: Self.readerScrollAnchorKey)
+        }
+    }
+
     private static func readerSession(
         from userDefaults: UserDefaults
     ) -> ReaderSession? {
+        let selectedTradition = userDefaults.string(forKey: officeTraditionKey) ?? OfficeTradition.roman1960.rawValue
+        guard OfficeTradition(rawValue: selectedTradition) != nil else { return nil }
+        let savedTradition = userDefaults.string(forKey: readerTraditionKey) ?? OfficeTradition.roman1960.rawValue
+        guard selectedTradition == savedTradition else { return nil }
         guard userDefaults.bool(forKey: readerIsPresentedKey),
               let rawDay = userDefaults.string(forKey: readerDayKey),
               let day = LocalDay(iso8601: rawDay),
@@ -494,11 +638,20 @@ final class AppModel {
         return ReaderSession(
             day: day,
             hour: hour,
-            scrollOffset: max(
-                0,
+            scrollOffset: sanitizedReaderScrollOffset(
                 userDefaults.double(forKey: readerScrollOffsetKey)
-            )
+            ),
+            scrollAnchor: userDefaults.data(forKey: readerScrollAnchorKey).flatMap {
+                try? JSONDecoder().decode(OfficeReaderScrollAnchor.self, from: $0)
+            }
         )
+    }
+
+    private static func sanitizedReaderScrollOffset(
+        _ scrollOffset: Double
+    ) -> Double {
+        guard scrollOffset.isFinite else { return 0 }
+        return max(0, scrollOffset)
     }
 
     private func select(day: LocalDay, hour: OfficeHour) async {
@@ -518,6 +671,16 @@ final class AppModel {
             return
         }
 
+        let knownDay = selectedDay?.date == day
+            ? selectedDay
+            : availableDayIndices[day].map { availableDays[$0] }
+        if let knownDay {
+            if selectedDay?.date != day {
+                office = nil
+            }
+            selectedDay = knownDay
+        }
+
         selectionGeneration += 1
         let generation = selectionGeneration
         let key = SelectionKey(day: day, hour: hour)
@@ -529,9 +692,7 @@ final class AppModel {
             task = selectionTask
         } else {
             selectionTask?.cancel()
-            let currentDay = selectedDay?.date == day
-                ? selectedDay
-                : nil
+            let currentDay = knownDay
             task = Task {
                 try Task.checkCancellation()
 
@@ -572,7 +733,9 @@ final class AppModel {
             office = payload.office
         } catch {
             guard generation == selectionGeneration else { return }
-            selectedDay = nil
+            if selectedDay?.date != day {
+                selectedDay = nil
+            }
             office = nil
             errorMessage = error.localizedDescription
         }
@@ -599,5 +762,6 @@ final class AppModel {
         let day: LocalDay
         let hour: OfficeHour
         var scrollOffset: Double
+        var scrollAnchor: OfficeReaderScrollAnchor? = nil
     }
 }

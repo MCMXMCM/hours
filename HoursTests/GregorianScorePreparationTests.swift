@@ -4,6 +4,22 @@ import XCTest
 
 @MainActor
 final class GregorianScorePreparationTests: XCTestCase {
+    func testRestoredComplineHymnLyricsRemainInsideTheCanvas() async throws {
+        let repository = try SQLiteContentRepository(databaseURL: OfficeTradition.roman1954.databaseURL())
+        for (year, month, day) in [(2026, 9, 15), (2025, 8, 19), (2025, 5, 13), (2025, 6, 3), (2025, 12, 2)] {
+            let office = try await repository.office(on: LocalDay(year: year, month: month, day: day), hour: .compline)
+            let hymn = try XCTUnwrap(office.sections.first { $0.latin.hasPrefix("Te lucis") }?.chant)
+            let notation = try GregorianScoreParser.parse(gabc: hymn.gabc, timeline: hymn.timeline)
+            for width in [320.0, 402.0, 768.0] {
+                let layout = GregorianEngravingLayoutEngine().layout(score: notation, width: width)
+                for lyric in layout.lyrics {
+                    XCTAssertGreaterThanOrEqual(lyric.origin.x, 0, "\(year)-\(month)-\(day) \(width): \(lyric.text)")
+                    XCTAssertLessThanOrEqual(lyric.origin.x + lyric.width, width + 1, "\(year)-\(month)-\(day) \(width): \(lyric.text)")
+                }
+            }
+        }
+    }
+
     func testReaderPresentationPreparesSectionsScoresAndOutlineOnce() async throws {
         let repository = try SQLiteContentRepository(
             databaseURL: bundledDatabaseURL()
@@ -69,8 +85,8 @@ final class GregorianScorePreparationTests: XCTestCase {
                 $0.timeline.events.count < $1.timeline.events.count
             }
         )
-        let cache = GregorianLayoutCache.shared
-        await cache.resetForTesting()
+        // The host app can prepare its reader concurrently with this test.
+        let cache = GregorianLayoutCache()
         let metrics = GregorianLayoutMetrics()
 
         _ = try await cache.preparedScore(

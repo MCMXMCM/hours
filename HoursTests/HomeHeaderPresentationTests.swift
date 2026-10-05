@@ -75,6 +75,39 @@ final class HomeHeaderPresentationTests: XCTestCase {
         XCTAssertNil(presentation.officeContext)
     }
 
+    func testOrdinaryVespersTreatsExpandedOrdoAbbreviationsAsSameDay() {
+        let day = LiturgicalDay(
+            date: LocalDay(year: 2026, month: 9, day: 1),
+            observanceID:
+                "perennial/feria-tertia-infra-hebd-xiu-post-octauam-pentecostes-u",
+            titleLatin:
+                "Feria Tertia infra Hebd XIV post Octavam Pentecostes V.",
+            rank: .fourthClass,
+            season: ""
+        )
+        let office = OfficeDocument(
+            id: "2026-09-01-vespers",
+            date: day.date,
+            hour: .vespers,
+            titleLatin: OfficeHour.vespers.latinTitle,
+            contextLabel:
+                "Feria Tertia infra Hebdomadam XIV post Octavam Pentecostes V.",
+            observance: OfficeObservance(
+                observanceID:
+                    "perennial/feria-tertia-infra-hebdomadam-xiu-post-octauam-pentecostes-u",
+                titleLatin:
+                    "Feria Tertia infra Hebdomadam XIV post Octavam Pentecostes V.",
+                rank: .fourthClass,
+                eveningContext: .ferialVespers
+            ),
+            sections: []
+        )
+
+        let presentation = HomeHeaderPresentation(day: day, office: office)
+
+        XCTAssertNil(presentation.officeContext)
+    }
+
     func testDaytimeOfficeHasNoAdditionalContext() {
         let presentation = HomeHeaderPresentation(
             day: wenceslaus,

@@ -81,23 +81,45 @@ final class HoursLiturgicalCalendarSnapshotTests: XCTestCase {
         XCTAssertNotEqual(try Data(contentsOf: fileURL), originalData)
     }
 
-    func testWidgetReloadPolicyRequiresChangedSharedState() {
+    func testWidgetReloadPolicyRequiresChangedSharedStateOrBuild() {
         XCTAssertFalse(
             HoursWidgetReloadPolicy.shouldReload(
                 calendarSnapshotChanged: false,
-                appearancePreferenceMigrated: false
+                appearancePreferenceMigrated: false,
+                lastReloadedBuild: "1.0.9 (48)",
+                currentBuild: "1.0.9 (48)"
             )
         )
         XCTAssertTrue(
             HoursWidgetReloadPolicy.shouldReload(
                 calendarSnapshotChanged: true,
-                appearancePreferenceMigrated: false
+                appearancePreferenceMigrated: false,
+                lastReloadedBuild: "1.0.9 (48)",
+                currentBuild: "1.0.9 (48)"
             )
         )
         XCTAssertTrue(
             HoursWidgetReloadPolicy.shouldReload(
                 calendarSnapshotChanged: false,
-                appearancePreferenceMigrated: true
+                appearancePreferenceMigrated: true,
+                lastReloadedBuild: "1.0.9 (48)",
+                currentBuild: "1.0.9 (48)"
+            )
+        )
+        XCTAssertTrue(
+            HoursWidgetReloadPolicy.shouldReload(
+                calendarSnapshotChanged: false,
+                appearancePreferenceMigrated: false,
+                lastReloadedBuild: "1.0.8 (47)",
+                currentBuild: "1.0.9 (48)"
+            )
+        )
+        XCTAssertTrue(
+            HoursWidgetReloadPolicy.shouldReload(
+                calendarSnapshotChanged: false,
+                appearancePreferenceMigrated: false,
+                lastReloadedBuild: nil,
+                currentBuild: "1.0.9 (48)"
             )
         )
     }

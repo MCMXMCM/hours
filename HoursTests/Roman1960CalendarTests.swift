@@ -80,6 +80,32 @@ final class Roman1960CalendarTests: XCTestCase {
         )
     }
 
+    func testMartyrologyLunarDaysFollowTheGregorianEpactTable() {
+        // Independently computed from the Gregorian epacts. In a leap year
+        // the bissextile day repeats the Moon's age of February 24.
+        let expected: [(LocalDay, Int)] = [
+            (LocalDay(year: 2028, month: 2, day: 23), 27),
+            (LocalDay(year: 2028, month: 2, day: 24), 28),
+            (LocalDay(year: 2028, month: 2, day: 25), 28),
+            (LocalDay(year: 2028, month: 2, day: 26), 29),
+            (LocalDay(year: 2028, month: 2, day: 29), 3),
+            (LocalDay(year: 2028, month: 3, day: 1), 4),
+            (LocalDay(year: 2032, month: 12, day: 31), 28),
+            (LocalDay(year: 2033, month: 1, day: 1), 29),
+            (LocalDay(year: 2033, month: 1, day: 2), 1),
+            (LocalDay(year: 1965, month: 4, day: 18), 16),
+            // Luna XIV on Sunday, April 2, places Easter on April 9, 2045.
+            (LocalDay(year: 2045, month: 4, day: 2), 14)
+        ]
+        for (day, lunarDay) in expected {
+            XCTAssertEqual(
+                RomanMartyrologyCalendar.lunarDay(for: day),
+                lunarDay,
+                "\(day)"
+            )
+        }
+    }
+
     func testPrimeMaterializesFollowingDayWithoutChangingStoredDigest() {
         let office = OfficeDocument(
             id: "2031-12-31-prime",
@@ -107,5 +133,36 @@ final class Roman1960CalendarTests: XCTestCase {
         XCTAssertTrue(result.sections[0].latin.contains("Anno Dómini 2032"))
         XCTAssertTrue(result.sections[0].english?.contains("January 1st 2032") == true)
         XCTAssertFalse(result.sections[0].latin.contains("{{hours:"))
+    }
+
+    func testObservanceTitlesOmitTheScriptureWeekMarker() {
+        XCTAssertEqual(
+            ObservanceTitle.latin("Dominica XIX Post Pentecosten I."),
+            "Dominica XIX Post Pentecosten"
+        )
+        XCTAssertEqual(
+            ObservanceTitle.latin("Dominica XVIII Post Pentecosten V. Septembris"),
+            "Dominica XVIII Post Pentecosten"
+        )
+        XCTAssertEqual(
+            ObservanceTitle.latin("Dominica V Post Epiphaniam III. Novembris"),
+            "Dominica V Post Epiphaniam"
+        )
+        XCTAssertEqual(
+            ObservanceTitle.latin("Feria IV infra Hebdomadam II post Octavam Pentecostes"),
+            "Feria IV infra Hebdomadam II post Octavam Pentecostes"
+        )
+        XCTAssertEqual(
+            ObservanceTitle.latin("In Nativitate S. Joannis Baptistæ"),
+            "In Nativitate S. Joannis Baptistæ"
+        )
+        XCTAssertEqual(
+            ObservanceTitle.english("the First Sunday of Advent"),
+            "The First Sunday of Advent"
+        )
+        XCTAssertEqual(
+            ObservanceTitle.english("the Ninth Sunday after Pentecost, the second"),
+            "The Ninth Sunday after Pentecost"
+        )
     }
 }

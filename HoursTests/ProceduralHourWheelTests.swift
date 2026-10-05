@@ -196,30 +196,6 @@ final class ProceduralHourWheelTests: XCTestCase {
         }
     }
 
-    func testTextureDividersFollowEverySectorBoundary() {
-        XCTAssertEqual(
-            HourWheelGeometry.textureDividerAngles.count,
-            OfficeHour.allCases.count
-        )
-        XCTAssertGreaterThan(HourWheelGeometry.textureDividerWidth, 0)
-        XCTAssertLessThan(
-            HourWheelGeometry.textureDividerWidth,
-            HourWheelGeometry.timeRingInnerRadius
-                - HourWheelGeometry.centerBorderRadius
-        )
-
-        for (hour, dividerAngle) in zip(
-            OfficeHour.allCases,
-            HourWheelGeometry.textureDividerAngles
-        ) {
-            XCTAssertEqual(
-                dividerAngle,
-                HourWheelGeometry.worldSectorAngles(for: hour).lowerBound,
-                accuracy: 0.000_1
-            )
-        }
-    }
-
     func testAncientTimeScaleContainsTwelveDayAndNightHours() {
         let daylightMarkers =
             HourWheelGeometry.ancientTimeMarkers.filter {
@@ -324,26 +300,10 @@ final class ProceduralHourWheelTests: XCTestCase {
         )
     }
 
-    func testCanvasArtworkLoadsEverySectorTexture() {
-        XCTAssertEqual(
-            HourWheelCanvasArtwork.textureAssetNamesByHour.count,
-            OfficeHour.allCases.count
-        )
-
-        for hour in OfficeHour.allCases {
-            let assetName =
-                HourWheelCanvasArtwork.textureAssetNamesByHour[hour]
-            XCTAssertNotNil(assetName)
-            XCTAssertNotNil(
-                assetName.flatMap {
-                    UIImage(
-                        named: $0,
-                        in: .main,
-                        compatibleWith: nil
-                    )
-                }
-            )
-        }
+    func testCanvasArtworkLoadsContinuousSquareTapestry() throws {
+        let image = try XCTUnwrap(HourWheelCanvasArtwork.tapestryImage)
+        XCTAssertEqual(image.size.width, image.size.height)
+        XCTAssertGreaterThanOrEqual(image.size.width, 1024)
     }
 
     func testCanvasArtworkBuildsEveryCurvedLabelAndNumeral() {

@@ -90,6 +90,10 @@ private struct HourWheelUIKitView: UIViewRepresentable {
 }
 
 private final class HourWheelUIView: UIView {
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2.
+    // https://github.com/swiftlang/swift/issues/88036
+    nonisolated deinit {}
+
     private var selectedHour = OfficeHour.matins
     private var fillBlend = 0.0
     private var renderedTextureSize = CGSize.zero
@@ -97,10 +101,6 @@ private final class HourWheelUIView: UIView {
 
     private let annularRingLayer = CAShapeLayer()
     private let textureLayer = CALayer()
-    private let dividerLayer = CAShapeLayer()
-    private let centerBorderLayer = CAShapeLayer()
-    private let centerDiscLayer = CAShapeLayer()
-    private let crossLayer = CAShapeLayer()
     private let numeralLayer = CAShapeLayer()
     private var labelLayers: [OfficeHour: CAShapeLayer] = [:]
 
@@ -161,8 +161,6 @@ private final class HourWheelUIView: UIView {
 
     private func configureLayers() {
         annularRingLayer.fillRule = .evenOdd
-        centerBorderLayer.fillRule = .evenOdd
-        dividerLayer.fillColor = nil
         textureLayer.contentsGravity = .resize
         textureLayer.magnificationFilter = .linear
         textureLayer.minificationFilter = .trilinear
@@ -170,10 +168,6 @@ private final class HourWheelUIView: UIView {
         [
             annularRingLayer,
             textureLayer,
-            dividerLayer,
-            centerBorderLayer,
-            centerDiscLayer,
-            crossLayer,
             numeralLayer,
         ].forEach(layer.addSublayer)
 
@@ -195,10 +189,6 @@ private final class HourWheelUIView: UIView {
         [
             annularRingLayer,
             textureLayer,
-            dividerLayer,
-            centerBorderLayer,
-            centerDiscLayer,
-            crossLayer,
             numeralLayer,
         ].forEach { $0.frame = layerFrame }
         labelLayers.values.forEach { $0.frame = layerFrame }
@@ -206,38 +196,9 @@ private final class HourWheelUIView: UIView {
         annularRingLayer.path = drawingTransform.path(
             HourWheelCanvasArtwork.annularRingPath
         ).cgPath
-        centerBorderLayer.path = drawingTransform.path(
-            HourWheelCanvasArtwork.centerBorderPath
-        ).cgPath
-        centerDiscLayer.path = drawingTransform.path(
-            HourWheelCanvasArtwork.centerDiscPath
-        ).cgPath
-        crossLayer.path = drawingTransform.path(
-            HourWheelCanvasArtwork.jerusalemCrossPath
-        ).cgPath
         numeralLayer.path = drawingTransform.path(
             HourWheelCanvasArtwork.numeralPath
         ).cgPath
-
-        let dividerPath = CGMutablePath()
-        for angle in HourWheelGeometry.textureDividerAngles {
-            dividerPath.move(
-                to: drawingTransform.point(
-                    radius: HourWheelGeometry.centerBorderRadius,
-                    angle: angle
-                )
-            )
-            dividerPath.addLine(
-                to: drawingTransform.point(
-                    radius: HourWheelGeometry.texturedSectorOuterRadius,
-                    angle: angle
-                )
-            )
-        }
-        dividerLayer.path = dividerPath
-        dividerLayer.lineWidth = drawingTransform.length(
-            HourWheelGeometry.textureDividerWidth
-        )
 
         for (hour, labelLayer) in labelLayers {
             labelLayer.path = drawingTransform.path(
@@ -249,10 +210,6 @@ private final class HourWheelUIView: UIView {
             ?? traitCollection.displayScale
         [
             annularRingLayer,
-            dividerLayer,
-            centerBorderLayer,
-            centerDiscLayer,
-            crossLayer,
             numeralLayer,
         ].forEach { $0.contentsScale = displayScale }
         labelLayers.values.forEach {
@@ -266,11 +223,6 @@ private final class HourWheelUIView: UIView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         annularRingLayer.fillColor = palette.timeRingFill.uiColor.cgColor
-        dividerLayer.strokeColor = palette.timeRingFill.uiColor.cgColor
-        centerBorderLayer.fillColor = palette.mutedBorder.uiColor.cgColor
-        centerDiscLayer.fillColor = palette.timeRingFill.uiColor.cgColor
-        crossLayer.fillColor =
-            palette.jerusalemCrossForeground.uiColor.cgColor
         numeralLayer.fillColor =
             palette.timeRingNumeral.uiColor.cgColor
 
@@ -404,7 +356,6 @@ enum HourWheelGeometry {
     static let centerOutlineWidth: Float = 0.002
     static let centerOpeningRadius: Float =
         centerBorderRadius - centerOutlineWidth
-    static let textureDividerWidth: Float = 0.003
     static let canvasArtworkExtent: CGFloat = 0.555
 
     static func canRender(size: CGSize) -> Bool {
@@ -512,12 +463,6 @@ enum HourWheelGeometry {
         return lower...upper
     }
 
-    static var textureDividerAngles: [Float] {
-        HourDialMath.sectors.map {
-            worldSectorAngles(for: $0.hour).lowerBound
-        }
-    }
-
     static func position(
         for hour: OfficeHour,
         radius: Float
@@ -601,12 +546,12 @@ enum HourWheelGeometry {
 
 @MainActor
 enum HourWheelCanvasArtwork {
-    static let textureAssetNamesByHour: [OfficeHour: String] =
-        Dictionary(
-            uniqueKeysWithValues: HourDialMath.sectors.map {
-                ($0.hour, $0.textureAssetName)
-            }
-        )
+    // A single authored 360-degree tapestry rotates with the dial.
+    static let tapestryImage = UIImage(
+        named: "HourWheelTapestry",
+        in: .main,
+        compatibleWith: nil
+    )
 
     static let labelPaths: [OfficeHour: Path] = {
         Dictionary(
@@ -666,20 +611,6 @@ enum HourWheelCanvasArtwork {
     static func sectorPath(for hour: OfficeHour) -> Path {
         sectorPaths[hour] ?? Path()
     }
-
-    static let textureImagesByHour: [OfficeHour: UIImage] = Dictionary(
-        uniqueKeysWithValues: OfficeHour.allCases.compactMap { hour in
-            guard let assetName = textureAssetNamesByHour[hour],
-                  let image = UIImage(
-                      named: assetName,
-                      in: .main,
-                      compatibleWith: nil
-                  ) else {
-                return nil
-            }
-            return (hour, image)
-        }
-    )
 
     static let annularRingPath: Path = {
         var path = Path()
@@ -1016,79 +947,39 @@ enum HourWheelCanvasArtwork {
 
 @MainActor
 private enum HourWheelTextureRenderer {
-    static func image(
-        size: CGSize,
-        scale: CGFloat
-    ) -> UIImage? {
-        guard HourWheelGeometry.canRender(size: size),
-              scale > 0 else {
+    static func image(size: CGSize, scale: CGFloat) -> UIImage? {
+        guard HourWheelGeometry.canRender(size: size), scale > 0 else {
             return nil
         }
-
         let format = UIGraphicsImageRendererFormat()
         format.opaque = false
         format.scale = scale
-        return UIGraphicsImageRenderer(
-            size: size,
-            format: format
-        ).image { rendererContext in
+        return UIGraphicsImageRenderer(size: size, format: format).image { rendererContext in
+            guard let image = HourWheelCanvasArtwork.tapestryImage else { return }
             let transform = HourWheelDrawingTransform(size: size)
-            for sector in HourDialMath.sectors {
-                drawTexture(
-                    for: sector,
-                    in: rendererContext.cgContext,
-                    transform: transform
-                )
-            }
-        }
-    }
-
-    private static func drawTexture(
-        for sector: HourDialSector,
-        in context: CGContext,
-        transform: HourWheelDrawingTransform
-    ) {
-        guard let image =
-                HourWheelCanvasArtwork
-                    .textureImagesByHour[sector.hour] else {
-            return
-        }
-
-        let aspectRatio = Float(
-            image.size.width / max(image.size.height, 1)
-        )
-        let layout = HourWheelGeometry.textureLayout(
-            for: sector.hour,
-            textureAspectRatio: aspectRatio
-        )
-        context.saveGState()
-        context.addPath(
-            transform.path(
-                HourWheelCanvasArtwork.sectorPath(for: sector.hour)
-            ).cgPath
-        )
-        context.clip()
-        context.translateBy(
-            x: transform.center.x,
-            y: transform.center.y
-        )
-        context.rotate(
-            by: CGFloat(
-                HourDialMath.labelAngle(for: sector.hour) * .pi / 180
+            let radius = transform.length(HourWheelGeometry.texturedSectorOuterRadius)
+            let imageRect = CGRect(
+                x: transform.center.x - radius,
+                y: transform.center.y - radius,
+                width: radius * 2,
+                height: radius * 2
             )
-        )
-        context.interpolationQuality = .high
-
-        let imageRect = CGRect(
-            x: -transform.length(layout.width) / 2,
-            y: -transform.length(
-                layout.centerY + layout.height / 2
-            ),
-            width: transform.length(layout.width),
-            height: transform.length(layout.height)
-        )
-        image.draw(in: imageRect)
-        context.restoreGState()
+            let context = rendererContext.cgContext
+            context.addEllipse(in: imageRect)
+            context.clip()
+            context.interpolationQuality = .high
+            // The authored disk puts noon at 180°, while VI/Sexta is at
+            // 172.5°. Register the complete image to the printed time scale.
+            context.translateBy(x: transform.center.x, y: transform.center.y)
+            context.rotate(by: CGFloat(
+                (HourDialMath.labelAngle(for: .sext) - 180) * .pi / 180
+            ))
+            context.translateBy(x: -transform.center.x, y: -transform.center.y)
+            image.draw(in: imageRect.insetBy(
+                dx: -radius * 0.035,
+                dy: -radius * 0.035
+            ))
+        }
     }
 }
 

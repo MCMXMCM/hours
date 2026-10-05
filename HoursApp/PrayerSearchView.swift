@@ -359,6 +359,10 @@ private struct PrayerSearchBar: UIViewRepresentable {
     }
 
     final class Coordinator: NSObject, UISearchBarDelegate {
+        // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2.
+        // https://github.com/swiftlang/swift/issues/88036
+        nonisolated deinit {}
+
         var parent: PrayerSearchBar
 
         init(parent: PrayerSearchBar) {
@@ -599,11 +603,11 @@ private struct PrayerSearchOfficeTitleRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(context.observanceTitleLatin)
+                Text(ObservanceTitle.latin(context.observanceTitleLatin))
                     .font(.system(.headline, design: .serif))
                 if let english = context.observanceTitleEnglish,
                    english != context.observanceTitleLatin {
-                    Text(english)
+                    Text(ObservanceTitle.english(english))
                         .font(.subheadline)
                 }
                 Text(officeSummary)
@@ -912,11 +916,11 @@ private struct PrayerSearchUsageRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(context.dayTitleLatin)
+                Text(ObservanceTitle.latin(context.dayTitleLatin))
                     .font(.system(.body, design: .serif))
                 if let english = context.dayTitleEnglish,
                    english != context.dayTitleLatin {
-                    Text(english)
+                    Text(ObservanceTitle.english(english))
                         .font(.subheadline)
                 }
                 Text(settingSummary)

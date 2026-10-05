@@ -6,7 +6,9 @@ enum ContentDatabaseTestFixture {
     static let date = LocalDay(year: 2026, month: 12, day: 8)
 
     static func makeDatabase(
-        unavailableHours: Set<OfficeHour> = []
+        unavailableHours: Set<OfficeHour> = [],
+        tradition: OfficeTradition = .roman1960,
+        sourceOrdered: Bool = false
     ) throws -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appending(path: "hours-database-\(UUID().uuidString)", directoryHint: .isDirectory)
@@ -60,7 +62,7 @@ enum ContentDatabaseTestFixture {
             corpusVersion: "test",
             minimumAppVersion: "0.1.0",
             createdAt: Date(timeIntervalSince1970: 0),
-            rubrics: "Rubrics 1960 - 1960",
+            rubrics: tradition.rubrics,
             packSHA256: "",
             signature: "",
             sources: [],
@@ -69,7 +71,7 @@ enum ContentDatabaseTestFixture {
                 endDate: date,
                 expectedOfficeCount: 8,
                 generatedOfficeCount: 8,
-                authoritativeOfficeCount: unavailableHours.isEmpty
+                authoritativeOfficeCount: sourceOrdered ? 0 : unavailableHours.isEmpty
                     ? nil
                     : 8 - unavailableHours.count,
                 unresolvedScoreCount: 0,
@@ -123,7 +125,7 @@ enum ContentDatabaseTestFixture {
                 titleLatin: hour.latinTitle,
                 titleEnglish: hour.englishTitle,
                 contextLabel: "In Conceptione Immaculata B. Mariae Virginis",
-                format: isUnavailable ? .contentUnavailable : .authoritativeOrdered,
+                format: isUnavailable ? .contentUnavailable : sourceOrdered ? .sourceOrdered : .authoritativeOrdered,
                 visibleContentDigest: isUnavailable
                     ? nil
                     : try VisibleContentDigest.calculate(for: [section]),

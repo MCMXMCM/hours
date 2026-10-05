@@ -48,6 +48,14 @@ final class GregorianScoreParserTests: XCTestCase {
         }
     }
 
+    func testOnlyRAndR0MarkAHollowNote() throws {
+        // r and r0 are hollow notes; r1 to r5 are signs written above a note.
+        let gabc = "name: test; %% (c3) no(hr1)bis(hr) ló(hr0)rum(h.r3) (::)"
+        let timeline = makeTimeline(pitches: [9, 9, 9, 9], syllables: ["no", "bis", "ló", "rum"])
+        let score = try GregorianScoreParser.parse(gabc: gabc, timeline: timeline)
+        XCTAssertEqual(score.neumes.flatMap { $0.notes.map(\.isCavum) }, [false, true, true, false])
+    }
+
     func testMapsCompilerEventsAndPreservesNeumeGrouping() throws {
         let gabc = "name: test; %% (c4) Ky(fg_)ri(h.w)e(ixj~) (;) test(k) (::)"
         let timeline = makeTimeline(
@@ -289,7 +297,7 @@ final class GregorianScoreParserTests: XCTestCase {
         XCTAssertFalse(layout.lyrics.contains { $0.text.contains("/") })
     }
 
-    func testZeroSpaceBoundarySplitsNamedHoursWithoutLosingLyricIdentity() throws {
+    func testZeroSpaceBoundarySplitsNamedNeumesWithoutLosingLyricIdentity() throws {
         let timeline = makeTimeline(
             pitches: [5, 6, 7, 8],
             syllables: ["Ky", "Ky", "Ky", "Ky"]

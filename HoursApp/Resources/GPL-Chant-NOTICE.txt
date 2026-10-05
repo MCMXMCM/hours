@@ -1,0 +1,28 @@
+GPL chant transcriptions
+
+Hours includes 1,741 chant scores from two collections published under the
+GNU General Public License version 3 only (GPL-3.0-only). The full license is
+included as GPL-3.0.txt.
+
+Nocturnale Romanum (1,725 scores)
+Upstream repository:
+https://github.com/Nocturnale-Romanum/nocturnale-romanum
+Pinned revision:
+84ce1514306be54bf4e693c9e8aa3bfd5e5aa3f2
+
+Vesperale Romanum (16 scores)
+Upstream repository:
+https://github.com/MRoth1910/Vesperale-Romanum
+Pinned revision:
+823532191af5591d02afdf47eefa04eaef54f98f
+
+Hours has modified these transcriptions. Between 2026-07-24 and 2026-10-04
+selected scores were given new headers; their adiastematic neume layer,
+Euouae, and presentational markup were removed; some were divided or set to
+other words; and all were assigned application identifiers and provenance
+records, combined with other office content, and packaged into SQLite.
+
+The exact corresponding source for this build, including editable GABC files,
+checksums, and a fuller account of the modifications, is published with the
+Hours source repository:
+https://github.com/MCMXMCM/hours

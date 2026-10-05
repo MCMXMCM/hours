@@ -28,7 +28,8 @@ public actor ContentPackUpdater {
         manifestURL: URL,
         publicKey: Data,
         currentAppVersion: String,
-        destination: URL
+        destination: URL,
+        expectedTradition: OfficeTradition = .roman1960
     ) async throws -> ContentManifest {
         let (manifestData, manifestResponse) = try await session.data(from: manifestURL)
         try validate(response: manifestResponse)
@@ -49,7 +50,8 @@ public actor ContentPackUpdater {
             manifest: manifest,
             publicKey: publicKey,
             currentAppVersion: currentAppVersion,
-            destination: destination
+            destination: destination,
+            expectedTradition: expectedTradition
         )
         return manifest
     }

@@ -502,23 +502,305 @@ final class ChantPlaybackTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(750))
         XCTAssertNil(controller.errorMessage)
         XCTAssertTrue(controller.isPlaying)
+        let initiallyRunning = await controller.audioEngineIsRunningForTesting()
+        XCTAssertTrue(initiallyRunning)
 
         controller.stop()
         try await Task.sleep(for: .milliseconds(250))
         XCTAssertFalse(controller.isPlaying)
+        let runningAfterStop = await controller.audioEngineIsRunningForTesting()
+        XCTAssertFalse(runningAfterStop, "Stopped playback must not keep the audio hardware running")
 
         controller.play(score: score)
         try await Task.sleep(for: .milliseconds(750))
         XCTAssertNil(controller.errorMessage)
         XCTAssertTrue(controller.isPlaying)
+        let runningAfterRestart = await controller.audioEngineIsRunningForTesting()
+        XCTAssertTrue(runningAfterRestart)
 
         controller.stop()
         try await Task.sleep(for: .milliseconds(250))
         XCTAssertFalse(controller.isPlaying)
+        let runningAfterSecondStop = await controller.audioEngineIsRunningForTesting()
+        XCTAssertFalse(runningAfterSecondStop)
 
         // Keep AVFoundation's app-lifetime graph out of this test's teardown.
         // The regression is for interactive stop/restart, not process exit.
         Self.retainedAudioControllers.append(controller)
+    }
+
+    func testPlaybackFadeSmoothsStopsAndRestartsAtEverySampleRate() throws {
+        for sampleRate in [8_000.0, 44_100, 48_000] {
+            let format = try XCTUnwrap(AVAudioFormat(
+                standardFormatWithSampleRate: sampleRate, channels: 2
+            ))
+            let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 127))
+            buffer.frameLength = 127
+            let channels = try XCTUnwrap(buffer.floatChannelData)
+            let fade = ChantPlaybackFade(sampleRate: sampleRate)
+            var previous: Float = 0
+            // A DC input makes a discontinuity unambiguous, independently of
+            // a particular instrument's waveform or oscillator phase.
+            for audible in [true, false, true, false] {
+                fade.setAudible(audible)
+                XCTAssertFalse(fade.isSilent)
+                for _ in 0..<Int(sampleRate * 0.04 / 127) + 2 {
+                    for channel in 0..<2 {
+                        for frame in 0..<127 { channels[channel][frame] = 1 }
+                    }
+                    fade.process(buffer.mutableAudioBufferList, frameCount: 127)
+                    for frame in 0..<127 {
+                        let sample = channels[0][frame]
+                        XCTAssertEqual(sample, channels[1][frame])
+                        XCTAssertGreaterThanOrEqual(sample, 0)
+                        XCTAssertLessThanOrEqual(sample, 1)
+                        XCTAssertLessThan(abs(sample - previous), Float(2 / (sampleRate * 0.02)))
+                        previous = sample
+                    }
+                }
+                XCTAssertEqual(previous, audible ? 1 : 0)
+                XCTAssertEqual(fade.isSilent, !audible)
+            }
+        }
+    }
+
+    func testPlaybackFadeProcessesTheReverbOutput() throws {
+        let format = try XCTUnwrap(AVAudioFormat(
+            standardFormatWithSampleRate: 48_000, channels: 2
+        ))
+        let engine = AVAudioEngine()
+        let player = AVAudioPlayerNode()
+        let reverb = AVAudioUnitReverb()
+        engine.attach(player)
+        engine.attach(reverb)
+        reverb.loadFactoryPreset(.mediumRoom)
+        reverb.wetDryMix = 30
+        engine.connect(player, to: reverb, format: format)
+        engine.connect(reverb, to: engine.mainMixerNode, format: format)
+        let fade = ChantPlaybackFade(sampleRate: format.sampleRate)
+        try fade.attach(to: reverb.audioUnit)
+        defer {
+            engine.stop()
+            fade.detach(from: reverb.audioUnit)
+        }
+        try engine.enableManualRenderingMode(.offline, format: format, maximumFrameCount: 512)
+        let input = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 48_000))
+        input.frameLength = input.frameCapacity
+        let samples = try XCTUnwrap(input.floatChannelData)
+        for frame in 0..<Int(input.frameLength) {
+            for channel in 0..<2 {
+                samples[channel][frame] = Float(sin(2 * .pi * 220 * Double(frame) / 48_000)) * 0.5
+            }
+        }
+        let output = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 512))
+        try engine.start()
+        player.scheduleBuffer(input)
+        player.play()
+        fade.setAudible(true)
+        for _ in 0..<12 {
+            XCTAssertEqual(try engine.renderOffline(512, to: output), .success)
+        }
+        let rendered = try XCTUnwrap(output.floatChannelData)
+        XCTAssertGreaterThan((0..<512).map { abs(rendered[0][$0]) }.max() ?? 0, 0.1)
+        fade.setAudible(false)
+        for _ in 0..<4 {
+            XCTAssertEqual(try engine.renderOffline(512, to: output), .success)
+        }
+        XCTAssertTrue(fade.isSilent)
+        // The player and reverb are still producing audio, but the final
+        // output must already be silent before pause/reset is allowed.
+        for channel in 0..<2 {
+            XCTAssertEqual((0..<512).map { abs(rendered[channel][$0]) }.max(), 0)
+        }
+        reverb.reset()
+        reverb.wetDryMix = 0
+        XCTAssertEqual(try engine.renderOffline(512, to: output), .success)
+        XCTAssertEqual((0..<512).map { abs(rendered[0][$0]) }.max(), 0)
+        fade.setAudible(true)
+        for _ in 0..<4 {
+            XCTAssertEqual(try engine.renderOffline(512, to: output), .success)
+        }
+        XCTAssertGreaterThan((0..<512).map { abs(rendered[0][$0]) }.max() ?? 0, 0.1)
+    }
+
+    func testPlaybackFadeGatesAFullyDryTonePath() throws {
+        let format = try XCTUnwrap(AVAudioFormat(
+            standardFormatWithSampleRate: 48_000, channels: 2
+        ))
+        let engine = AVAudioEngine()
+        let player = AVAudioPlayerNode()
+        let reverb = AVAudioUnitReverb()
+        let gate = AVAudioUnitEQ(numberOfBands: 1)
+        engine.attach(player)
+        engine.attach(reverb)
+        engine.attach(gate)
+        reverb.loadFactoryPreset(.mediumRoom)
+        reverb.wetDryMix = 0
+        let band = gate.bands[0]
+        band.filterType = .parametric
+        band.frequency = 1_000
+        band.bandwidth = 2
+        band.gain = 0
+        band.bypass = false
+        gate.globalGain = 0
+        engine.connect(player, to: reverb, format: format)
+        engine.connect(reverb, to: gate, format: format)
+        engine.connect(gate, to: engine.mainMixerNode, format: format)
+        let fade = ChantPlaybackFade(sampleRate: format.sampleRate)
+        try fade.attach(to: gate.audioUnit)
+        defer {
+            engine.stop()
+            fade.detach(from: gate.audioUnit)
+        }
+        try engine.enableManualRenderingMode(.offline, format: format, maximumFrameCount: 512)
+        try engine.start()
+        let input = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 48_000))
+        input.frameLength = input.frameCapacity
+        let samples = try XCTUnwrap(input.floatChannelData)
+        for frame in 0..<Int(input.frameLength) {
+            let tone = Float(sin(2 * .pi * 440 * Double(frame) / 48_000)) * 0.5
+            for channel in 0..<2 {
+                samples[channel][frame] = tone
+            }
+        }
+        let output = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 512))
+        player.scheduleBuffer(input)
+        player.play()
+        fade.setAudible(true)
+        for _ in 0..<12 {
+            XCTAssertEqual(try engine.renderOffline(512, to: output), .success)
+        }
+        let rendered = try XCTUnwrap(output.floatChannelData)
+        XCTAssertGreaterThan((0..<512).map { abs(rendered[0][$0]) }.max() ?? 0, 0.1)
+        fade.setAudible(false)
+        for _ in 0..<4 {
+            XCTAssertEqual(try engine.renderOffline(512, to: output), .success)
+        }
+        XCTAssertTrue(fade.isSilent)
+        for channel in 0..<2 {
+            XCTAssertEqual((0..<512).map { abs(rendered[channel][$0]) }.max(), 0)
+        }
+    }
+
+    func testPlaybackFadeForceSilentRestartsFromZero() throws {
+        let format = try XCTUnwrap(AVAudioFormat(
+            standardFormatWithSampleRate: 48_000, channels: 1
+        ))
+        let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 64))
+        buffer.frameLength = 64
+        let channels = try XCTUnwrap(buffer.floatChannelData)
+        let fade = ChantPlaybackFade(sampleRate: 48_000)
+        fade.setAudible(true)
+        for _ in 0..<20 {
+            for frame in 0..<64 { channels[0][frame] = 1 }
+            fade.process(buffer.mutableAudioBufferList, frameCount: 64)
+        }
+        XCTAssertEqual(channels[0][63], 1)
+        XCTAssertFalse(fade.isSilent)
+
+        fade.forceSilent()
+        XCTAssertTrue(fade.isSilent)
+        for frame in 0..<64 { channels[0][frame] = 1 }
+        fade.process(buffer.mutableAudioBufferList, frameCount: 64)
+        XCTAssertEqual(channels[0][0], 0)
+        XCTAssertEqual(channels[0][63], 0)
+
+        fade.setAudible(true)
+        for frame in 0..<64 { channels[0][frame] = 1 }
+        fade.process(buffer.mutableAudioBufferList, frameCount: 64)
+        XCTAssertEqual(channels[0][0], 0)
+        XCTAssertGreaterThan(channels[0][63], 0)
+        XCTAssertLessThan(channels[0][63], 0.15)
+    }
+
+    func testRapidNoteSwitchingFinishesOnLatestNoteForEverySound() async throws {
+        let example = try XCTUnwrap(ChantGuideDocument.load().example("staff-scale"))
+        let score = example.variants[0].score
+        let controller = ChantPlaybackController()
+        controller.prepare(score: score, pitchReference: example.pitchReference)
+        defer {
+            controller.stop()
+            Self.retainedAudioControllers.append(controller)
+        }
+        for sound in CantorGuideSound.allCases {
+            controller.guideSound = sound
+            for note in score.timeline.events.prefix(3) {
+                controller.playNote(score: score, eventID: note.id)
+                try await Task.sleep(for: .milliseconds(80))
+                XCTAssertNil(controller.errorMessage, sound.displayName)
+                XCTAssertEqual(controller.currentEventID, note.id, sound.displayName)
+            }
+            for _ in 0..<150 where controller.isPlaying {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            XCTAssertNil(controller.errorMessage, sound.displayName)
+            XCTAssertFalse(controller.isPlaying, sound.displayName)
+            XCTAssertNil(controller.currentEventID, sound.displayName)
+        }
+    }
+
+    func testRapidNeumeTapsDoNotRestartAudioHardware() async throws {
+        let example = try XCTUnwrap(ChantGuideDocument.load().example("staff-scale"))
+        let score = example.variants[0].score
+        let controller = ChantPlaybackController()
+        controller.guideSound = .simpleTone
+        controller.prepare(score: score, pitchReference: example.pitchReference)
+        defer {
+            controller.stop()
+            Self.retainedAudioControllers.append(controller)
+        }
+
+        for note in score.timeline.events.prefix(4) {
+            controller.play(score: score, fromEventID: note.id)
+            try await Task.sleep(for: .milliseconds(40))
+            XCTAssertNil(controller.errorMessage)
+            XCTAssertTrue(controller.isPlaying)
+        }
+
+        let startCount = await controller.audioEngineStartCountForTesting()
+        XCTAssertEqual(
+            startCount,
+            1,
+            "Switching neumes must fade the current tone, not pause and restart RemoteIO."
+        )
+        let stillRunning = await controller.audioEngineIsRunningForTesting()
+        XCTAssertTrue(stillRunning)
+    }
+
+    func testNotePreviewPlaysOnlyTappedNoteEvenWithPhraseLoopingAndOptionChanges() async throws {
+        let example = try XCTUnwrap(ChantGuideDocument.load().example("staff-scale"))
+        let score = example.variants[0].score
+        let controller = ChantPlaybackController()
+        controller.guideSound = .simpleTone
+        controller.prepare(score: score, pitchReference: example.pitchReference)
+        defer {
+            controller.stop()
+            Self.retainedAudioControllers.append(controller)
+        }
+
+        for loops in [false, true] {
+            controller.loopsPhrase = loops
+            // A new tap replaces ongoing playback, including a repeated tap.
+            controller.play(score: score)
+            let note = score.timeline.events[1]
+            controller.playNote(score: score, eventID: note.id)
+            controller.playNote(score: score, eventID: note.id)
+            controller.chantRegister = controller.chantRegister == .low ? .high : .low
+            controller.restartIfPlaying(score: score)
+            XCTAssertTrue(controller.isPlaying)
+            XCTAssertEqual(controller.currentEventID, note.id)
+            XCTAssertEqual(controller.preparedScoreID, score.id)
+
+            for _ in 0..<150 where controller.isPlaying {
+                XCTAssertEqual(controller.currentEventID, note.id)
+                try await Task.sleep(for: .milliseconds(20))
+            }
+
+            XCTAssertNil(controller.errorMessage)
+            XCTAssertFalse(controller.isPlaying, "A note preview must finish without playing subsequent notes or looping")
+            XCTAssertNil(controller.currentEventID)
+            XCTAssertEqual(controller.loopsPhrase, loops)
+        }
     }
 
     func testControllerAdvancesHighlightWhenAudioFinishesEvent() async throws {
@@ -791,6 +1073,46 @@ final class ChantPlaybackTests: XCTestCase {
         XCTAssertLessThanOrEqual(harpPeak, 0.9)
         XCTAssertLessThan(organPeak, 0.9)
         XCTAssertLessThan(simpleTonePeak, 0.7)
+    }
+
+    func testSimpleToneStartsAndStopsWithoutADiscontinuity() throws {
+        let event = ChantEvent(
+            id: "tone",
+            phraseID: "phrase",
+            syllableID: "syllable",
+            syllable: "ah",
+            relativePitch: 0,
+            durationWeight: 2
+        )
+        let sampleRate = 48_000.0
+        let format = try XCTUnwrap(
+            AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1)
+        )
+        let buffer = try PitchPipeRenderer(format: format).render(
+            performanceEvent: performanceEvent(
+                event,
+                startsPhrase: true,
+                endsPhrase: true
+            ),
+            tempo: 1,
+            transposition: -10,
+            clef: .c3,
+            register: .low
+        )
+        let samples = try XCTUnwrap(buffer.floatChannelData?[0])
+        let frameCount = Int(buffer.frameLength)
+        XCTAssertEqual(samples[0], 0)
+        XCTAssertEqual(samples[frameCount - 1], 0)
+
+        var maximumDelta: Float = 0
+        for frame in 1..<frameCount {
+            maximumDelta = max(maximumDelta, abs(samples[frame] - samples[frame - 1]))
+        }
+        XCTAssertLessThan(
+            maximumDelta,
+            0.03,
+            "A phrase-start or phrase-end jump in the tone is heard as a click."
+        )
     }
 
     func testHarpRetainsHarmonicsBeyondTheFundamental() throws {

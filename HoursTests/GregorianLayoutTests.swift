@@ -2,6 +2,82 @@ import XCTest
 @testable import HoursCore
 
 final class GregorianLayoutTests: XCTestCase {
+    func testNotationAndLyricsScaleTogetherAcrossReaderRange() throws {
+        let score = try parsedFixture(noteCount: 1)
+        let engine = GregorianEngravingLayoutEngine()
+        let previousMinimum = engine.layout(
+            score: score,
+            width: 390,
+            metrics: GregorianLayoutMetrics(notationScale: 0.8)
+        )
+        let newMinimum = engine.layout(
+            score: score,
+            width: 390,
+            metrics: GregorianLayoutMetrics(
+                notationScale: GregorianLayoutMetrics.minimumNotationScale
+            )
+        )
+        let clampedBelowMinimum = engine.layout(
+            score: score,
+            width: 390,
+            metrics: GregorianLayoutMetrics(notationScale: 0)
+        )
+        let defaultSize = engine.layout(
+            score: score,
+            width: 390
+        )
+        let maximumSize = engine.layout(
+            score: score,
+            width: 390,
+            metrics: GregorianLayoutMetrics(
+                notationScale: GregorianLayoutMetrics.maximumNotationScale
+            )
+        )
+        let previousClef = try XCTUnwrap(previousMinimum.glyphs.first)
+        let minimumClef = try XCTUnwrap(newMinimum.glyphs.first)
+        let clampedClef = try XCTUnwrap(clampedBelowMinimum.glyphs.first)
+        let previousLyric = try XCTUnwrap(previousMinimum.lyrics.first)
+        let minimumLyric = try XCTUnwrap(newMinimum.lyrics.first)
+        let clampedLyric = try XCTUnwrap(clampedBelowMinimum.lyrics.first)
+        let defaultClef = try XCTUnwrap(defaultSize.glyphs.first)
+        let maximumClef = try XCTUnwrap(maximumSize.glyphs.first)
+        let defaultLyric = try XCTUnwrap(defaultSize.lyrics.first)
+        let maximumLyric = try XCTUnwrap(maximumSize.lyrics.first)
+
+        XCTAssertEqual(
+            minimumClef.frame.width,
+            previousClef.frame.width * 0.75,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            clampedClef.frame.width,
+            minimumClef.frame.width,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            minimumLyric.fontSize,
+            previousLyric.fontSize * 0.75,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            clampedLyric.fontSize,
+            minimumLyric.fontSize,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            maximumClef.frame.width,
+            defaultClef.frame.width
+                * GregorianLayoutMetrics.maximumNotationScale,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            maximumLyric.fontSize,
+            defaultLyric.fontSize
+                * GregorianLayoutMetrics.maximumNotationScale,
+            accuracy: 0.001
+        )
+    }
+
     func testGeneratedCatalogContainsCanonicalExsurgeGeometry() {
         XCTAssertEqual(GregorianGlyphName.allCases.count, 49)
         let punctum = GregorianGlyphCatalog.definition(for: .punctumQuadratum)
@@ -47,14 +123,16 @@ final class GregorianLayoutTests: XCTestCase {
             ) ?? Bundle.main.url(forResource: "base-office", withExtension: "sqlite")
         )
         let repository = try SQLiteContentRepository(databaseURL: databaseURL)
-        let days = try await repository.availableDays()
-        var offices: [OfficeDocument] = []
-        for day in days {
-            for hour in OfficeHour.allCases {
-                offices.append(try await repository.office(on: day.date, hour: hour))
-            }
+        // The release corpus spans 35,064 offices. Stream the stored scores
+        // instead of retaining every reconstructed office just to deduplicate
+        // its notation. Database integrity and office assembly have separate tests.
+        let count = try await repository.forEachScoredRealization { score in
+            _ = try GregorianScoreParser.parse(
+                gabc: score.gabc,
+                timeline: score.timeline
+            )
         }
-        XCTAssertNoThrow(try GregorianCorpusValidator.validate(offices: offices))
+        XCTAssertGreaterThan(count, 0)
     }
 
     func testResponsiveLayoutProducesCustodesAndStableEventFrames() throws {
@@ -313,13 +391,13 @@ final class GregorianLayoutTests: XCTestCase {
 
         XCTAssertEqual(
             layout.staffs.count,
-            10,
+            9,
             "Unexpected mobile wraps: \(lyricLines)"
         )
         XCTAssertLessThanOrEqual(
             layout.size.height,
             810,
-            "Automatic lyric hyphen lanes should not add more than two mobile systems."
+            "Selective connectors should preserve the reference-like mobile density."
         )
         XCTAssertEqual(layout.staffs[0].frame.minX, 8, accuracy: 0.01)
         XCTAssertEqual(layout.staffs[0].frame.maxX, 382, accuracy: 0.01)
@@ -430,31 +508,31 @@ final class GregorianLayoutTests: XCTestCase {
             return second.origin.x - (first.origin.x + first.width)
         }
 
-        XCTAssertGreaterThan(try gap(after: 0, before: 1), 2)
+        XCTAssertLessThanOrEqual(try gap(after: 0, before: 1), 2)
         XCTAssertGreaterThanOrEqual(try gap(after: 1, before: 2), 4)
         XCTAssertLessThanOrEqual(try gap(after: 1, before: 2), 7)
-        XCTAssertGreaterThan(try gap(after: 2, before: 3), 2)
+        XCTAssertLessThanOrEqual(try gap(after: 2, before: 3), 2)
         XCTAssertGreaterThanOrEqual(try gap(after: 3, before: 4), 4)
         XCTAssertLessThanOrEqual(try gap(after: 3, before: 4), 7)
-        XCTAssertGreaterThan(try gap(after: 4, before: 5), 2)
-        XCTAssertGreaterThan(try gap(after: 5, before: 6), 2)
+        XCTAssertLessThanOrEqual(try gap(after: 4, before: 5), 2)
+        XCTAssertLessThanOrEqual(try gap(after: 5, before: 6), 2)
     }
 
     func testAutomaticHyphensClarifyWideSyllableGapsWithinAWord() throws {
-        let syllables = ["Sal", "Sal", "Sal", "Sal", "ve", "Re"]
+        let syllables = ["De", "us", "in"]
         let timeline = ChantTimeline(
             events: syllables.enumerated().map { index, syllable in
                 ChantEvent(
                     id: "event-\(index)",
                     phraseID: "phrase-0",
-                    syllableID: index < 4 ? "sal" : "syllable-\(index)",
+                    syllableID: "syllable-\(index)",
                     syllable: syllable,
                     relativePitch: index
                 )
             }
         )
         let score = try GregorianScoreParser.parse(
-            gabc: "name: hyphens; %% (c4) Sal(fg!hi)ve(j) Re(k) (::)",
+            gabc: "name: hyphens; %% (c3) De(h)us(h) in(h) (::)",
             timeline: timeline
         )
         let layout = GregorianEngravingLayoutEngine().layout(score: score, width: 760)
@@ -463,28 +541,179 @@ final class GregorianLayoutTests: XCTestCase {
         XCTAssertTrue(lyricTexts.contains("-"))
         XCTAssertTrue(
             layout.lyrics.contains {
-                $0.neumeID == "lyric-hyphen-event-0-event-4"
+                $0.neumeID == "lyric-hyphen-event-0-event-1"
             }
         )
-        let sal = try XCTUnwrap(
+        let firstSyllable = try XCTUnwrap(
             layout.lyrics.first { $0.neumeID == "event-0" }
         )
         let hyphen = try XCTUnwrap(
             layout.lyrics.first {
-                $0.neumeID == "lyric-hyphen-event-0-event-4"
+                $0.neumeID == "lyric-hyphen-event-0-event-1"
             }
         )
         XCTAssertEqual(
             hyphen.origin.y,
-            sal.origin.y + (sal.fontSize - hyphen.fontSize) * 1.23 / 2,
+            firstSyllable.origin.y
+                + (firstSyllable.fontSize - hyphen.fontSize) * 1.23 / 2,
             accuracy: 0.001,
             "The smaller hyphen should be vertically centered in the lyric line."
         )
         XCTAssertFalse(
             layout.lyrics.contains {
-                $0.neumeID == "lyric-hyphen-event-4-event-5"
+                $0.neumeID == "lyric-hyphen-event-1-event-2"
             },
             "A GABC word space must not receive a lyric hyphen."
+        )
+    }
+
+    func testNearbyGABCFragmentsJoinWithoutAutomaticHyphens() throws {
+        let fragments = ["Qui", "fe", "ci", "t cæ", "lu", "m e", "t te", "rram."]
+        let timeline = ChantTimeline(
+            events: fragments.enumerated().map { index, fragment in
+                ChantEvent(
+                    id: "event-\(index)",
+                    phraseID: "phrase-0",
+                    syllableID: "syllable-\(index)",
+                    syllable: fragment,
+                    relativePitch: index == fragments.count - 1 ? -2 : 0
+                )
+            }
+        )
+        let score = try GregorianScoreParser.parse(
+            gabc: "name: compact-fragments; %% (c3) R/.() Qui(h) fe(h)ci(h)t cæ(h)lu(h)m e(h)t te(h)rram.(f.) (::)",
+            timeline: timeline
+        )
+        let layout = GregorianEngravingLayoutEngine().layout(score: score, width: 760)
+
+        XCTAssertFalse(
+            layout.lyrics.contains { $0.text == "-" },
+            "Adjacent musical attachments should read as continuous words, including et rather than e-t."
+        )
+        let fragmentBeforeT = try XCTUnwrap(
+            layout.lyrics.first { $0.neumeID == "event-5" }
+        )
+        let fragmentBeginningWithT = try XCTUnwrap(
+            layout.lyrics.first { $0.neumeID == "event-6" }
+        )
+        XCTAssertLessThanOrEqual(
+            fragmentBeginningWithT.origin.x
+                - (fragmentBeforeT.origin.x + fragmentBeforeT.width),
+            2,
+            "The e and t in et should remain visually joined."
+        )
+    }
+
+    func testReferencePrecesUseConnectorsOnlyWhereMusicalSpacingNeedsThem() throws {
+        let fragments = [
+            "De", "us", "in", "ad", "ju", "tó", "ri", "um", "me", "um",
+            "in", "tén", "de."
+        ]
+        let timeline = ChantTimeline(
+            events: fragments.enumerated().map { index, fragment in
+                ChantEvent(
+                    id: "event-\(index)",
+                    phraseID: "phrase-0",
+                    syllableID: "syllable-\(index)",
+                    syllable: fragment,
+                    relativePitch: 0
+                )
+            }
+        )
+        let score = try GregorianScoreParser.parse(
+            gabc: "name: reference-preces; %% (c3) V/.() De(h)us(h) ✠(,) in(h) ad(h)ju(h)tó(i)ri(h)um(h) me(h)um(h) in(h)tén(g)de.(h.) (::)",
+            timeline: timeline
+        )
+        let layout = GregorianEngravingLayoutEngine().layout(score: score, width: 760)
+        let actualHyphenIDs = Set(
+            layout.lyrics.filter { $0.text == "-" }.map(\.neumeID)
+        )
+
+        XCTAssertEqual(
+            actualHyphenIDs,
+            Set([
+                "lyric-hyphen-event-0-event-1",
+                "lyric-hyphen-event-6-event-7",
+                "lyric-hyphen-event-8-event-9"
+            ]),
+            "Match Exsurge's De-us, adjutóri-um, and me-um connectors without hyphenating every syllable."
+        )
+
+        let adjutoriumFragments = [
+            "A", "dju", "tó", "ri", "u", "m nó", "strum", "i", "n nó",
+            "mi", "ne", "Dó", "mi", "ni."
+        ]
+        let adjutoriumTimeline = ChantTimeline(
+            events: adjutoriumFragments.enumerated().map { index, fragment in
+                ChantEvent(
+                    id: "adjutorium-event-\(index)",
+                    phraseID: "phrase-1",
+                    syllableID: "adjutorium-syllable-\(index)",
+                    syllable: fragment,
+                    relativePitch: 0
+                )
+            }
+        )
+        let adjutoriumScore = try GregorianScoreParser.parse(
+            gabc: "name: reference-adjutorium; %% (c3) V/.() A(h)dju(h)tó(h)ri(h)u(h)m nó(h)strum(h) ✠(,) i(h)n nó(h)mi(h)ne(h) Dó(h)mi(h)ni.(f.) (::)",
+            timeline: adjutoriumTimeline
+        )
+        let adjutoriumLayout = GregorianEngravingLayoutEngine().layout(
+            score: adjutoriumScore,
+            width: 760
+        )
+
+        XCTAssertEqual(
+            Set(adjutoriumLayout.lyrics.filter { $0.text == "-" }.map(\.neumeID)),
+            Set(["lyric-hyphen-adjutorium-event-3-adjutorium-event-4"]),
+            "Match Exsurge's single adjutóri-um connector."
+        )
+    }
+
+    func testReferenceDoxologyRetainsItsSelectiveConnectors() throws {
+        let fragments = [
+            "Gló", "ri", "a", "Pa", "tri,", "et", "Fí", "li", "o,", "et",
+            "Spi", "rí", "tu", "i", "San", "cto.", "Sic", "ut", "e", "rat",
+            "in", "prin", "cí", "pi", "o,", "et", "nunc,"
+        ]
+        let timeline = ChantTimeline(
+            events: fragments.enumerated().map { index, fragment in
+                ChantEvent(
+                    id: "event-\(index)",
+                    phraseID: "phrase-0",
+                    syllableID: "syllable-\(index)",
+                    syllable: fragment,
+                    relativePitch: 0
+                )
+            }
+        )
+        let score = try GregorianScoreParser.parse(
+            gabc: "name: reference-doxology; %% (c3) Gló(h)ri(h)a(h) Pa(h)tri,(h) et(h) Fí(h)li(h)o,(h) et(h) Spi(h)rí(h)tu(h)i(h) San(g)cto.(h.) (:) Sic(h)ut(h) e(h)rat(h) in(h) prin(h)cí(h)pi(h)o,(h) et(h) nunc,(h) (::)",
+            timeline: timeline
+        )
+        let layout = GregorianEngravingLayoutEngine().layout(score: score, width: 760)
+        let actualHyphenIDs = Set(
+            layout.lyrics.filter { $0.text == "-" }.map(\.neumeID)
+        )
+        let expectedReferenceConnectors = Set([
+            "lyric-hyphen-event-1-event-2",   // Glóri-a
+            "lyric-hyphen-event-6-event-7",   // Fí-li-o
+            "lyric-hyphen-event-7-event-8",
+            "lyric-hyphen-event-12-event-13", // Spíritu-i
+            "lyric-hyphen-event-23-event-24"  // princípi-o
+        ])
+
+        XCTAssertTrue(
+            expectedReferenceConnectors.isSubset(of: actualHyphenIDs),
+            "Missing reference connectors: \(expectedReferenceConnectors.subtracting(actualHyphenIDs))"
+        )
+        XCTAssertFalse(
+            actualHyphenIDs.contains("lyric-hyphen-event-0-event-1"),
+            "Glóri should remain joined before the selective ri-a connector."
+        )
+        XCTAssertFalse(
+            actualHyphenIDs.contains("lyric-hyphen-event-18-event-19"),
+            "The compact e and rat fragments should read as erat, matching the reference engraving."
         )
     }
 
@@ -542,7 +771,7 @@ final class GregorianLayoutTests: XCTestCase {
         )
     }
 
-    func testBundledSalveReginaUsesAutomaticLyricHyphens() async throws {
+    func testBundledSalveReginaUsesOnlyNecessaryAutomaticLyricHyphens() async throws {
         let databaseURL = try XCTUnwrap(
             Bundle.main.url(
                 forResource: "base-office",
@@ -564,8 +793,12 @@ final class GregorianLayoutTests: XCTestCase {
             gabc: chant.gabc,
             timeline: chant.timeline
         )
-        let layout = GregorianEngravingLayoutEngine().layout(score: score, width: 390)
-        var expectedHyphens: [(id: String, label: String)] = []
+        let layout = GregorianEngravingLayoutEngine().layout(
+            score: score,
+            width: 390,
+            openingLabel: chant.mode
+        )
+        var eligibleHyphenIDs: [String] = []
         var previousLyricNeume: GregorianNeume?
         var lyricMarkInterruptedWord = false
         for element in score.elements {
@@ -579,11 +812,8 @@ final class GregorianLayoutTests: XCTestCase {
                    previous.syllableID != next.syllableID,
                    !previous.lyric.hasSuffix("-"),
                    !next.lyric.hasPrefix("-") {
-                    expectedHyphens.append(
-                        (
-                            id: "lyric-hyphen-\(previous.id)-\(next.id)",
-                            label: "\(previous.lyric)-\(next.lyric)"
-                        )
+                    eligibleHyphenIDs.append(
+                        "lyric-hyphen-\(previous.id)-\(next.id)"
                     )
                 }
                 previousLyricNeume = next
@@ -597,18 +827,49 @@ final class GregorianLayoutTests: XCTestCase {
                 .filter { $0.text == "-" }
                 .map(\.neumeID)
         )
-        let missingHyphens = expectedHyphens.filter {
-            !actualHyphenIDs.contains($0.id)
-        }
+        let lyricNeumes = score.neumes.filter { !$0.lyric.isEmpty }
+        let referenceConnectorPairs = [
+            ("Sal", "ve,"), ("gí", "na,"), ("di", "ae :"),
+            ("Vi", "ta,"), ("cé", "do,"), ("má", "mus,"),
+            ("su", "les,"), ("li", "i"), ("spi", "rá"),
+            ("rá", "mus,"), ("flen", "tes"), ("val", "le."),
+            ("E", "ia"), ("cá", "ta"), ("tu", "os"),
+            ("dí", "ctum"), ("tu", "i,"), ("sí", "li"),
+            ("li", "um"), ("cle", "mens :"), ("pi", "a :"),
+            ("Ma", "rí"), ("rí", "a.")
+        ]
+        let referenceConnectorIDs = try Set(referenceConnectorPairs.map { pair in
+            let adjacent = try XCTUnwrap(
+                zip(lyricNeumes, lyricNeumes.dropFirst()).first {
+                    $0.0.lyric == pair.0 && $0.1.lyric == pair.1
+                },
+                "Missing Salve Regina syllable pair \(pair.0)|\(pair.1)"
+            )
+            return "lyric-hyphen-\(adjacent.0.id)-\(adjacent.1.id)"
+        })
+        let eligibleHyphenIDSet = Set(eligibleHyphenIDs)
 
         XCTAssertGreaterThan(
-            expectedHyphens.count,
+            eligibleHyphenIDs.count,
             20,
             "The bundled Salve Regina should exercise many visible syllable boundaries."
         )
         XCTAssertTrue(
-            missingHyphens.isEmpty,
-            "Missing encoded within-word boundaries: \(missingHyphens.map(\.label))"
+            actualHyphenIDs.isSubset(of: eligibleHyphenIDSet),
+            "Automatic hyphens must only mark encoded within-word boundaries."
+        )
+        XCTAssertFalse(
+            actualHyphenIDs.isEmpty,
+            "Wide musical gaps and staff continuations should retain necessary hyphens."
+        )
+        XCTAssertTrue(
+            referenceConnectorIDs.isSubset(of: actualHyphenIDs),
+            "Missing Salve Regina connectors: \(referenceConnectorIDs.subtracting(actualHyphenIDs))"
+        )
+        XCTAssertLessThan(
+            actualHyphenIDs.count,
+            eligibleHyphenIDs.count,
+            "Compact syllable groups should join without a hyphen."
         )
     }
 

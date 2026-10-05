@@ -2,17 +2,16 @@ import XCTest
 
 @MainActor
 final class CantorGuideScrollingUITests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        MainActor.assumeIsolated { UITestAppState.reset() }
+    }
+
     func testCantorGuideStartsAndStopsRealPlayback() {
         let app = makeApplication()
         app.launchArguments += [
-            "-automaticOfficeSelectionEnabled",
-            "NO",
-            "-manuallySelectedOfficeHour",
-            "compline",
-            "-hourSelectionView",
-            "sunDial",
             "--ui-test-reader-score",
-            "reference-cccbdc9d2a0c189f",
+            "reference-2d499c8f414e9c81",
         ]
         app.launch()
 
@@ -21,7 +20,7 @@ final class CantorGuideScrollingUITests: XCTestCase {
         selectedHour.tap()
 
         let firstSalveReginaNeume = app.buttons[
-            "reference-cccbdc9d2a0c189f-note-0"
+            "reference-2d499c8f414e9c81-note-0"
         ]
         XCTAssertTrue(
             firstSalveReginaNeume.waitForExistence(timeout: 10)
@@ -64,7 +63,7 @@ final class CantorGuideScrollingUITests: XCTestCase {
         let app = makeApplication()
         app.launchArguments += [
             "--ui-test-reader-score",
-            "reference-cccbdc9d2a0c189f",
+            "reference-2d499c8f414e9c81",
             "--ui-test-cantor-follow",
         ]
         app.launch()
@@ -72,7 +71,7 @@ final class CantorGuideScrollingUITests: XCTestCase {
         openOffice("compline", in: app)
 
         let firstSalveReginaNeume = app.buttons[
-            "reference-cccbdc9d2a0c189f-note-0"
+            "reference-2d499c8f414e9c81-note-0"
         ]
         XCTAssertTrue(
             firstSalveReginaNeume.waitForExistence(timeout: 10)
@@ -109,7 +108,10 @@ final class CantorGuideScrollingUITests: XCTestCase {
         in app: XCUIApplication
     ) {
         let selectedHour = app.buttons["hour-\(hour)"]
-        if !selectedHour.waitForExistence(timeout: 1) {
+        if selectedHour.waitForExistence(timeout: 3) {
+            selectedHour.tap()
+            return
+        } else {
             let option = app.buttons["hour-option-\(hour)"]
             XCTAssertTrue(option.waitForExistence(timeout: 5))
             option.tap()
@@ -129,7 +131,18 @@ final class CantorGuideScrollingUITests: XCTestCase {
 
     private func makeApplication() -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments.append("--suppress-app-tour")
+        // Keep these playback checks independent of a previous test's restored
+        // Office reader and the current clock's automatic hour selection.
+        app.launchArguments = [
+            "--suppress-app-tour",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryL",
+            "-readerRestoration.isPresented", "NO",
+            "-automaticOfficeSelectionEnabled", "NO",
+            "-manuallySelectedOfficeHour", "compline",
+            "-hourSelectionView", "sunDial",
+            // A previous test may have left Roman 1954 selected.
+            "-officeTradition", "roman1960",
+        ]
         return app
     }
 }

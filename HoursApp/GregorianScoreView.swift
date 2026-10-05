@@ -150,22 +150,21 @@ struct GregorianScoreView: View {
         .frame(width: layout.size.width, height: layout.size.height, alignment: .topLeading)
         .accessibilityElement(children: .contain)
         .accessibilityChildren {
-            ForEach(Array(layout.neumes.enumerated()), id: \.element.id) { index, neume in
-                Button {
-                    onTapEvent(neume.id)
-                } label: {
-                    Text(accessibilityLabel(for: neume))
+            ZStack(alignment: .topLeading) {
+                ForEach(Array(layout.neumes.enumerated()), id: \.element.id) { index, neume in
+                    Button {
+                        onTapEvent(neume.id)
+                    } label: {
+                        Text(accessibilityLabel(for: neume))
+                    }
+                    .frame(width: neume.hitFrame.width, height: neume.hitFrame.height)
+                    .position(x: neume.hitFrame.midX, y: neume.hitFrame.midY)
+                    .accessibilityHint("Starts the cantor guide here")
+                    .accessibilityIdentifier(neume.id)
+                    .accessibilitySortPriority(Double(layout.neumes.count - index))
                 }
-                .accessibilityHint("Starts the cantor guide here")
-                .accessibilityIdentifier(neume.id)
-                .accessibilityActivationPoint(
-                    UnitPoint(
-                        x: neume.hitFrame.midX / layout.size.width,
-                        y: neume.hitFrame.midY / layout.size.height
-                    )
-                )
-                .accessibilitySortPriority(Double(layout.neumes.count - index))
             }
+            .frame(width: layout.size.width, height: layout.size.height)
         }
     }
 

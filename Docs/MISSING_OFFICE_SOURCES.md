@@ -235,8 +235,9 @@ Do not promote either pinned English Martyrology file as authoritative:
 
 The checked-in 1916-based English revision restores the complete February 23
 sequence and keeps the Christmas eulogies in the authoritative Latin order.
-Its review matrix records every substantive 1956/1960 change; release remains
-blocked until a human reviewer records approval in that matrix.
+Its review matrix records every substantive 1956/1960 change. Matthew McCarty
+approved that matrix on August 20, 2026; changes to the reviewed wording remain
+subject to the existing review gate.
 
 ### Martyrology notation
 
@@ -259,6 +260,17 @@ It includes the traditional 5199 chronology and the special `Natívitas`
 cadence. The record has no printed-book provenance, however. It must be
 compared note-for-note with the applicable Martyrology before promotion.
 
+On September 8, 2026, the linked **Laudes Festivae (Beatus Reiser OSB, 1940)**
+was acquired and its printed pp. 1–6 (PDF pp. 27–32) visually inspected. These
+provide an ordinary Christmas Martyrology melody and a more solemn alternative,
+including the concluding `Nativitas` sentence. This supplies a dated printed
+musical witness for the comparison. Its preface identifies a private collection
+reflecting Sant Anselmo practice, including adaptations and compositions;
+applicability to the selected Martyrology and agreement with ID 18242 remain
+unverified. See the resource assessment and
+source inventory. No Christmas score
+has been promoted on the strength of this discovery alone.
+
 Do not use GregoBase ID 18869: it is explicitly the Dominican tone with the
 2004 Martyrology text. Do not use ID 9494 for this corpus either: it contains
 the modern `Innumeris transactis sæculis` chronology, not the required 1956
@@ -279,7 +291,8 @@ For each of the twelve replacement documents, the compiler now:
    visible-content digest;
 6. includes the twelve documents in the authoritative coverage count.
 
-The remaining release work is human approval of the exceptional Martyrology
-review matrix and a note-for-note review of the exceptional Christmas
-proclamation tone. Ordinary Martyrology prose may remain unscored,
-consistently with other Prime documents.
+The exceptional English review matrix is already approved. The remaining
+musical source gap is a note-for-note review of the exceptional Christmas
+proclamation tone. Ordinary Martyrology prose may remain unscored, consistently
+with other Prime documents. The later multi-year integration and edition
+findings are tracked in the source validation follow-up.

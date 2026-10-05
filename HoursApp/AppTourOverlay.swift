@@ -291,23 +291,15 @@ private struct AppTourAdaptiveInstructions: View {
 
     private func localTargetFrame(in hostFrame: CGRect) -> CGRect? {
         guard let target = tour.currentTarget,
-              let frame = tour.frame(for: target),
-              frame.intersects(hostFrame.insetBy(dx: -2, dy: -2)) else {
+              let frame = tour.frame(for: target) else {
             return nil
         }
-        let local = frame.offsetBy(
-            dx: -hostFrame.minX,
-            dy: -hostFrame.minY
+        return AppTourGeometry.localTargetFrame(
+            frame,
+            in: hostFrame,
+            padding: target.spotlightPadding,
+            offset: target.spotlightOffset
         )
-        let padding = target.spotlightPadding
-        let offset = target.spotlightOffset
-        return CGRect(
-            x: local.minX - padding.width,
-            y: local.minY - padding.height,
-            width: local.width + padding.width * 2,
-            height: local.height + padding.height * 2
-        )
-        .offsetBy(dx: offset.width, dy: offset.height)
     }
 
     private func cardOrigin(
@@ -411,54 +403,31 @@ struct AppTourSpotlightOverlay: View {
         if target == .readerBack
             || target == .searchChantBack
             || target == .searchDetailBack {
-            return navigationBackFrame(
-                in: hostFrame
+            return AppTourGeometry.navigationBackFrame(
+                in: hostFrame,
+                usesIPadToolbarMetrics:
+                    UIDevice.current.userInterfaceIdiom == .pad,
+                usesModalToolbarMetrics: target != .readerBack
             )
         }
-        guard
-              let frame = tour.frame(for: target),
-              frame.intersects(hostFrame.insetBy(dx: -2, dy: -2)) else {
+        guard let frame = tour.frame(for: target) else {
             return nil
         }
-        let horizontalOrigin: CGFloat = switch target {
-        case .calendarIcon, .calendarClose:
-            0
-        default:
-            hostFrame.minX
+        if target == .calendarClose {
+            return AppTourGeometry.localCalendarCloseFrame(
+                frame,
+                in: hostFrame,
+                padding: target.spotlightPadding,
+                offset: target.spotlightOffset,
+                correctsIPhoneCompactSheetOrigin:
+                    UIDevice.current.userInterfaceIdiom == .phone
+            )
         }
-        let local = frame.offsetBy(
-            dx: -horizontalOrigin,
-            dy: -hostFrame.minY
-        )
-        let padding = target.spotlightPadding
-        let offset = target.spotlightOffset
-        let compactSheetToolbarOffset: CGFloat =
-            target == .calendarClose
-                ? min(hostFrame.minX, 6)
-                : 0
-        return CGRect(
-            x: local.minX - padding.width,
-            y: local.minY - padding.height,
-            width: local.width + padding.width * 2,
-            height: local.height + padding.height * 2
-        )
-        .offsetBy(
-            dx: offset.width + compactSheetToolbarOffset,
-            dy: offset.height
-        )
-    }
-
-    private func navigationBackFrame(
-        in hostFrame: CGRect
-    ) -> CGRect {
-        let globalTop: CGFloat = hostFrame.minY < 24
-            ? 60
-            : hostFrame.minY + 16
-        return CGRect(
-            x: 16,
-            y: globalTop - hostFrame.minY,
-            width: 44,
-            height: 44
+        return AppTourGeometry.localTargetFrame(
+            frame,
+            in: hostFrame,
+            padding: target.spotlightPadding,
+            offset: target.spotlightOffset
         )
     }
 
@@ -614,6 +583,82 @@ struct AppTourSpotlightOverlay: View {
         return min(maximum, preferred)
     }
 
+}
+
+nonisolated enum AppTourGeometry {
+    static func navigationBackFrame(
+        in hostFrame: CGRect,
+        usesIPadToolbarMetrics: Bool,
+        usesModalToolbarMetrics: Bool
+    ) -> CGRect {
+        if usesIPadToolbarMetrics {
+            return CGRect(
+                x: 10,
+                y: usesModalToolbarMetrics ? 10 : 32,
+                width: 44,
+                height: 44
+            )
+        }
+        let globalTop: CGFloat = hostFrame.minY < 24
+            ? 60
+            : hostFrame.minY + 16
+        return CGRect(
+            x: 16,
+            y: globalTop - hostFrame.minY,
+            width: 44,
+            height: 44
+        )
+    }
+
+    static func localTargetFrame(
+        _ targetFrame: CGRect,
+        in hostFrame: CGRect,
+        padding: CGSize,
+        offset: CGSize
+    ) -> CGRect? {
+        guard targetFrame.intersects(
+            hostFrame.insetBy(dx: -2, dy: -2)
+        ) else {
+            return nil
+        }
+
+        let local = targetFrame.offsetBy(
+            dx: -hostFrame.minX,
+            dy: -hostFrame.minY
+        )
+        return CGRect(
+            x: local.minX - padding.width,
+            y: local.minY - padding.height,
+            width: local.width + padding.width * 2,
+            height: local.height + padding.height * 2
+        )
+        .offsetBy(dx: offset.width, dy: offset.height)
+    }
+
+    static func localCalendarCloseFrame(
+        _ targetFrame: CGRect,
+        in hostFrame: CGRect,
+        padding: CGSize,
+        offset: CGSize,
+        correctsIPhoneCompactSheetOrigin: Bool
+    ) -> CGRect? {
+        guard let localFrame = localTargetFrame(
+            targetFrame,
+            in: hostFrame,
+            padding: padding,
+            offset: offset
+        ) else {
+            return nil
+        }
+        guard correctsIPhoneCompactSheetOrigin else {
+            return localFrame
+        }
+        let compactToolbarInset = min(hostFrame.minX, 6)
+        return localFrame.offsetBy(
+            dx: hostFrame.minX + compactToolbarInset,
+            dy: 0
+        )
+    }
 }
 
 private struct AppTourInstructions: View {

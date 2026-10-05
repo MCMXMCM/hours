@@ -1,2 +1,5 @@
-HoursApp/Resources/base-office.sqlite filter=lfs diff=lfs merge=lfs -text
+HoursApp/Resources/SharedOffice/base-office.sqlite filter=lfs diff=lfs merge=lfs -text
+HoursApp/Resources/SharedOffice/office-resources.sqlite filter=lfs diff=lfs merge=lfs -text
+HoursApp/Resources/SharedOffice/roman-1954-office.sqlite filter=lfs diff=lfs merge=lfs -text
 HoursApp/Resources/ConcertHarp.sf2 filter=lfs diff=lfs merge=lfs -text
+Content/*/gabc/*.gabc -text
