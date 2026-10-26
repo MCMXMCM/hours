@@ -1,0 +1,15 @@
+.DS_Store
+.build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+web-app/node_modules/
+web-app/dist/
+web-app/dist-*/
+web-app/public/fonts/
+web-app/public/icons/
+web-app/public/wheel/
+web-app/public/harp/
+web-app/public/guides/
+web-app/public/licenses.txt
+web-app/corpus/

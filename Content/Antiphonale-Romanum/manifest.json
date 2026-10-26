@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 3,
+  "collection": "Antiphonale Romanum (xmarteo)",
+  "license": "GPL-3.0-only",
+  "upstreamRepository": "https://github.com/xmarteo/Antiphonale_Romanum",
+  "upstreamRevision": "988498498631e5463ea5ef638f23118bf23ebc54",
+  "databases": [
+    {
+      "path": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
+      "sha256": "69eba1a427c7c67a9b86d9221f996ccfa974fea3e76563ebcd696f66d5b5d5d3",
+      "corpusVersion": "roman-1954-2025-01-01-2284-12-31-source-v22-corrected-5c59b5e65a5f",
+      "createdAt": "2026-09-07T00:00:00Z",
+      "rubrics": "Divino Afflatu - 1954"
+    }
+  ],
+  "sharedCatalog": {
+    "path": "HoursApp/Resources/SharedOffice/office-resources.sqlite",
+    "sha256": "072b9a21256d2b829d21e953b36bb57128d7ee359468c1da206d202f65f066c2"
+  },
+  "scoreCount": 2,
+  "fileCount": 2,
+  "entries": [
+    {
+      "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
+      "scoreRow": 10421,
+      "contentScoreID": "reference-1685d40946bda72a",
+      "file": "gabc/b43d9f4fce5b82affc4d10649ca3c358fec497b295cf31a3fa5a6ff130436292.gabc",
+      "incipit": "Cum descendísset Jesus de monte, ecce leprósus véniens adorábat eum, dicens: Dómine, si vis, potes me mundáre: et exténdens manum, tétigit eum, dicens: Volo, mundáre",
+      "mode": "8",
+      "reviewStatus": "exactMatch",
+      "sourceBook": "The Liber Usualis, 1961, p. 1108 & Liber antiphonarius, 1960, p. 337 (Antiphonale Romanum (xmarteo), gabc/E3F1LAB)",
+      "sourceURL": "https://github.com/xmarteo/Antiphonale_Romanum/blob/988498498631e5463ea5ef638f23118bf23ebc54/gabc/E3F1LAB.gabc",
+      "upstreamSnapshotSHA256": "3a1741ef282b73c804d928811ed8ebf6fc550bb1b9c7c0d92b6d551a2ecc2716",
+      "gabcSHA256": "b43d9f4fce5b82affc4d10649ca3c358fec497b295cf31a3fa5a6ff130436292",
+      "license": "GPL-3.0-only"
+    },
+    {
+      "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
+      "scoreRow": 11054,
+      "contentScoreID": "reference-f520c25a81fc184c",
+      "file": "gabc/1111872d5b034a805b315eb5085485c237f5c1877e7fb5a4fed232d4cb926141.gabc",
+      "incipit": "Cum transíret Jesus quoddam castéllum, occurrérunt ei decem viri leprósi, qui stetérunt a longe et levavérunt vocem dicéntes: Jesu præcéptor, miserére nostri",
+      "mode": "1",
+      "reviewStatus": "exactMatch",
+      "sourceBook": "The Liber Usualis, 1961, p. 1106 & Liber antiphonarius, 1960, p. 564 (Antiphonale Romanum (xmarteo), gabc/H13F1LAB)",
+      "sourceURL": "https://github.com/xmarteo/Antiphonale_Romanum/blob/988498498631e5463ea5ef638f23118bf23ebc54/gabc/H13F1LAB.gabc",
+      "upstreamSnapshotSHA256": "7d61182a811ad8e13540e3a57d290dc2414e35aba8d954152501a4ad5f1cc0b6",
+      "gabcSHA256": "1111872d5b034a805b315eb5085485c237f5c1877e7fb5a4fed232d4cb926141",
+      "license": "GPL-3.0-only"
+    }
+  ]
+}

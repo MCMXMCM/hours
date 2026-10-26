@@ -1,0 +1,30 @@
+Concert Harp — FreePats version 2020-07-02
+
+Original stereo samples from the Versilian Community Sample Library, created
+by Versilian Studios LLC and dedicated to the public domain under CC0 1.0.
+
+Performer: K. Smith
+Location: Boston, Massachusetts, small room
+Microphones: 2x Rode NT1-A spaced pair and 2x AT Pro 37 close microphones
+Interface: Focusrite Scarlett 18i8 (first generation)
+Recording date: 2015-01-26
+
+The FreePats sound bank was assembled and edited by roberto@zenvoid.org.
+
+Upstream sound bank:
+https://freepats.zenvoid.org/OrchestralStrings/harp.html
+
+Original sample library:
+https://vis.versilstudios.com/vcsl.html
+
+Hours distributes the upstream two-velocity-layer SoundFont 2 bank without
+modifying its sample data. Hours extends the medium-force F4 key zone from
+MIDI 64...67 through MIDI 68, filling an otherwise silent A-flat 4 that the
+forte layer already maps to the same source sample.
+
+Bundled SF2 SHA-256:
+ac8aeee47a423c3cfaa3ccc17cca2eef1ca0dc86a7c3a1cfd4334f1afe4c4c37
+
+The original samples and the FreePats sound bank are published under the
+Creative Commons CC0 1.0 public-domain dedication:
+https://creativecommons.org/publicdomain/zero/1.0/

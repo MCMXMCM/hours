@@ -1,0 +1,3239 @@
+@import "tailwindcss";
+
+@font-face {
+  font-display: swap;
+  font-family: "EB Garamond";
+  font-style: normal;
+  font-weight: 400 800;
+  src: url("/fonts/EBGaramond-VariableFont_wght.woff2") format("woff2");
+}
+
+@theme {
+  --font-garamond: "EB Garamond", "Iowan Old Style", Georgia, serif;
+  --font-serif:
+    ui-serif, "New York", "Iowan Old Style", "EB Garamond", Georgia, serif;
+  --font-rounded:
+    ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-page: var(--page);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-tertiary: var(--ink-tertiary);
+  --color-accent: var(--accent);
+  --color-psalm: var(--psalm);
+  --color-hairline: var(--hairline);
+}
+
+/*
+ * The app's two appearances. `data-theme` is set from the Appearance
+ * setting: Dynamic follows the canonical hour on screen (dark for Matins and
+ * Compline), System follows the device. A part of the page drawn in the
+ * other appearance, as a preview in Settings may be, takes its class.
+ */
+:root,
+.theme-light {
+  color-scheme: light;
+  --page: #ffffff;
+  --ink: #000000;
+  --ink-secondary: rgb(0 0 0 / 0.62);
+  --ink-tertiary: rgb(0 0 0 / 0.42);
+  --accent: #ad1f17;
+  --rubric: #ad1f17;
+  --psalm: #d12114;
+  --hairline: rgb(0 0 0 / 0.12);
+  --launch: #f7f1e4;
+  --score-ink: #1c1a14;
+  --score-rubric: #8a2926;
+  --score-highlight: #7a0d0a;
+  --wheel-foreground: #0f0f0f;
+}
+
+:root[data-theme="dark"],
+.theme-dark {
+  color-scheme: dark;
+  --page: #000000;
+  --ink: #d9d6d1;
+  --ink-secondary: rgb(217 214 209 / 0.62);
+  --ink-tertiary: rgb(217 214 209 / 0.42);
+  --hairline: rgb(217 214 209 / 0.16);
+  --launch: #171312;
+  --score-ink: #d9d6d1;
+  --score-rubric: #ad1f17;
+  --rubric: #de4433;
+  --score-highlight: #c73329;
+  --wheel-foreground: #ebebeb;
+}
+
+@media (prefers-contrast: more) {
+  :root[data-theme="dark"],
+  .theme-dark {
+    --ink: #ffffff;
+    --score-ink: #ffffff;
+  }
+}
+
+html {
+  background: var(--sky-background);
+  color: var(--ink);
+  font-family: var(--font-garamond);
+  font-synthesis: style;
+  /*
+   * Latin text is marked as Latin for assistive technology, and EB Garamond
+   * answers that with its classical forms (v for u). The Office is printed
+   * in the modern orthography, so those forms stay off.
+   */
+  font-feature-settings: "locl" 0;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Safari takes those forms from the language of the text itself, whatever
+   the feature says. Latin is therefore shaped as the text about it is; it
+   is still marked as Latin for assistive technology. */
+[lang="la"] {
+  -webkit-locale: "en";
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  transition: color 720ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
+}
+
+/*
+ * The ambient sky of the Dynamic appearance: a ground colour for the
+ * canonical hour on screen, a veil of night, and a band of light at the head
+ * of the page. The values are those of the native app's sky, hour by hour;
+ * registering them as properties lets one hour fade into the next.
+ */
+@property --sky-background {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --sky-upper {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --sky-lower {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --sky-accent {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --sky-night {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+:root {
+  --sky-background: var(--page);
+  transition:
+    --sky-background 720ms ease-in-out,
+    --sky-upper 720ms ease-in-out,
+    --sky-lower 720ms ease-in-out,
+    --sky-accent 720ms ease-in-out,
+    --sky-night 720ms ease-in-out;
+}
+
+:root[data-sky="matins"],
+.home-preview[data-sky="matins"] {
+  --sky-background: rgb(6 8 14);
+  --sky-upper: rgb(13 23 56);
+  --sky-lower: rgb(31 43 84);
+  --sky-accent: 0.0972;
+  --sky-night: 0.08;
+}
+
+:root[data-sky="lauds"],
+.home-preview[data-sky="lauds"] {
+  --sky-background: rgb(237 235 232);
+  --sky-upper: rgb(66 76 143);
+  --sky-lower: rgb(212 125 87);
+  --sky-accent: 0.1296;
+  --sky-night: 0.0192;
+}
+
+:root[data-sky="prime"],
+.home-preview[data-sky="prime"] {
+  --sky-background: rgb(245 247 250);
+  --sky-upper: rgb(71 143 219);
+  --sky-lower: rgb(173 194 209);
+  --sky-accent: 0.1476;
+  --sky-night: 0.0096;
+}
+
+:root[data-sky="terce"],
+.home-preview[data-sky="terce"] {
+  --sky-background: rgb(251 252 255);
+  --sky-upper: rgb(51 145 232);
+  --sky-lower: rgb(128 189 227);
+  --sky-accent: 0.1404;
+  --sky-night: 0;
+}
+
+:root[data-sky="sext"],
+.home-preview[data-sky="sext"] {
+  --sky-background: rgb(255 255 255);
+  --sky-upper: rgb(41 148 240);
+  --sky-lower: rgb(145 199 235);
+  --sky-accent: 0.1476;
+  --sky-night: 0;
+}
+
+:root[data-sky="none"],
+.home-preview[data-sky="none"] {
+  --sky-background: rgb(250 247 240);
+  --sky-upper: rgb(71 145 219);
+  --sky-lower: rgb(168 184 201);
+  --sky-accent: 0.1368;
+  --sky-night: 0.0032;
+}
+
+:root[data-sky="vespers"],
+.home-preview[data-sky="vespers"] {
+  --sky-background: rgb(237 232 230);
+  --sky-upper: rgb(82 71 138);
+  --sky-lower: rgb(219 99 69);
+  --sky-accent: 0.126;
+  --sky-night: 0.0144;
+}
+
+:root[data-sky="compline"],
+.home-preview[data-sky="compline"] {
+  --sky-background: rgb(6 8 14);
+  --sky-upper: rgb(13 23 56);
+  --sky-lower: rgb(31 43 84);
+  --sky-accent: 0.0972;
+  --sky-night: 0.08;
+}
+
+.ambient-sky {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--sky-background);
+  pointer-events: none;
+}
+
+.ambient-sky::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(9 14 33);
+  opacity: var(--sky-night);
+}
+
+.ambient-sky::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: clamp(200px, 34vh, 320px);
+  background: linear-gradient(
+    180deg,
+    color-mix(
+        in srgb,
+        var(--sky-upper) calc(var(--sky-accent) * 100%),
+        transparent
+      )
+      0%,
+    color-mix(
+        in srgb,
+        var(--sky-lower) calc(var(--sky-accent) * 72%),
+        transparent
+      )
+      34%,
+    color-mix(
+        in srgb,
+        var(--sky-lower) calc(var(--sky-accent) * 18%),
+        transparent
+      )
+      70%,
+    transparent 100%
+  );
+  filter: blur(18px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    transition: none;
+  }
+}
+
+/*
+ * Home's sky, beneath the hour wheel: the sky of horarum.com, which fills
+ * the page and passes from hour to hour as the wheel turns. Its colours are
+ * set as the wheel moves (`src/home/ambientSky.ts`) and before the page is
+ * first painted (`src/firstPaint.ts`); it is painted on the body so that it
+ * is there before the app is. The head of the sky is the page's own colour,
+ * which a browser takes for its bars and shows beyond the page's edge.
+ */
+:root[data-home-sky] {
+  background: var(--home-sky-top);
+}
+
+:root[data-home-sky] .ambient-sky {
+  display: none;
+}
+
+:root[data-home-sky] body::before,
+.home-preview--wheel .home-preview__sky {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 100lvh;
+  background:
+    linear-gradient(
+        180deg,
+        rgba(var(--home-sky-upper), var(--home-sky-accent)) 0,
+        rgba(var(--home-sky-lower), calc(var(--home-sky-accent) * 0.72)) 34%,
+        rgba(var(--home-sky-lower), calc(var(--home-sky-accent) * 0.18)) 70%,
+        rgba(var(--home-sky-lower), 0) 100%
+      )
+      top / 100% 100lvh no-repeat,
+    linear-gradient(
+      rgba(9, 14, 33, var(--home-sky-night)),
+      rgba(9, 14, 33, var(--home-sky-night))
+    ),
+    var(--home-sky-background);
+  pointer-events: none;
+}
+
+/* Chant notation, drawn by gabc-parser. The colours are ours; each word is
+   set in the face and size it was measured in. */
+.chant-score {
+  position: relative;
+  color: var(--score-ink);
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.chant-score svg {
+  display: block;
+  overflow: visible;
+}
+
+.chant-score svg path {
+  fill-rule: evenodd;
+  stroke: none;
+}
+
+.chant-score svg text {
+  font-kerning: normal;
+  stroke: none;
+}
+
+.chant-score svg .gregorian-rubric {
+  fill: var(--score-rubric);
+}
+
+/* The neume being sung, with its syllable. Leaving it, the colour lingers. */
+.chant-score svg .gregorian-neume path,
+.chant-score svg .gregorian-neume line,
+.chant-score svg .gregorian-lyric {
+  transition:
+    fill 400ms ease-out,
+    stroke 400ms ease-out;
+}
+
+.chant-score svg .is-sung path,
+.chant-score svg .gregorian-lyric.is-sung-syllable {
+  fill: var(--score-highlight);
+  transition: none;
+}
+
+.chant-score svg .is-sung line {
+  stroke: var(--score-highlight);
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chant-score svg .gregorian-neume *,
+  .chant-score svg .gregorian-lyric {
+    transition: none;
+  }
+}
+
+/* One button per neume for assistive technology and the keyboard. */
+.chant-score__neume {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  font-size: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chant-score__neume:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 6px;
+}
+
+.chant-score--unavailable {
+  display: grid;
+  place-items: center;
+  min-height: 112px;
+  color: var(--ink-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+/* Shared controls. */
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.icon-button svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+.icon-button:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--hairline);
+  border-top-color: var(--ink-secondary);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Home. */
+.home {
+  color: var(--ink);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* The Dial fills the window, its hours at the foot. */
+.home--dial {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/*
+ * The Wheel is laid out as horarum.com lays out its own
+ * (`web/local-site/styles.css`), so that the two are one design: the hub at
+ * the foot of the window, the wheel as large as the window allows, and the
+ * day's header in the room above the pointer.
+ */
+.home--wheel {
+  /* The square the wheel is drawn in. */
+  --wheel-size: min(90vw, 112dvh, 1100px);
+  /* How far the hub stands above the foot of the window. */
+  --wheel-rest: 8px;
+  /* How far the pointer's tip stands above that square. */
+  --wheel-pointer-rise: 52px;
+  /* The wheel is set lower when the header needs more room than is left. */
+  --wheel-bottom: min(
+    var(--wheel-rest),
+    calc(
+      100dvh - var(--wheel-size) / 2 - var(--wheel-pointer-rise) -
+        var(--home-content-height, 0px)
+    )
+  );
+  position: relative;
+  height: 100svh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* The window does not scroll beneath the wheel. */
+html:has(.home--wheel),
+html:has(.home--wheel) body {
+  height: 100%;
+  height: 100lvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+@media (max-width: 1000px) {
+  .home--wheel {
+    --wheel-size: min(104vw, 108dvh, 850px);
+    --wheel-rest: 0px;
+  }
+}
+
+@media (max-width: 640px) {
+  /*
+   * A phone's browser lays its bar over the foot of the page. The page is
+   * made taller than the window, and the wheel and sky are let run on into
+   * it, so that what lies under the bar is the wheel and not the page's
+   * edge. The window's own height changes as the bar comes and goes, while
+   * the largest it can be does not: the hub is kept 56px above the foot of
+   * that, wherever the bar is.
+   */
+  html:has(.home--wheel),
+  html:has(.home--wheel) body {
+    height: calc(100lvh + 76vw);
+  }
+
+  :root[data-home-sky] body::before {
+    height: calc(100lvh + 76vw);
+  }
+
+  .home--wheel {
+    --wheel-browser-lowering: 0px;
+    --wheel-size: 128vw;
+    --wheel-rest: calc(
+      clamp(-120px, calc(100dvh - 100lvh + 56px), 56px) -
+        var(--wheel-browser-lowering)
+    );
+    --wheel-pointer-rise: clamp(46px, 6.4dvh, 54px);
+    overflow: visible;
+  }
+
+  /* Safari and Brave on iOS draw their bars lower than they report. */
+  html.ios-safari .home--wheel {
+    --wheel-browser-lowering: 72px;
+  }
+
+  html.ios-brave .home--wheel {
+    --wheel-browser-lowering: 128px;
+  }
+}
+
+.home__toolbar {
+  position: absolute;
+  inset: env(safe-area-inset-top, 0px) 0 auto;
+  z-index: 4;
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  /* Only its buttons are in the way of what lies beneath it. */
+  pointer-events: none;
+}
+
+.home__toolbar > * {
+  pointer-events: auto;
+}
+
+/* About and Settings, side by side in the far corner. */
+.home__toolbar-group {
+  display: flex;
+}
+
+/* Home's own buttons are drawn a little larger than a sheet's. */
+.home__toolbar .icon-button {
+  width: 48px;
+  height: 48px;
+}
+
+.home__toolbar .icon-button svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* The day drawn beside the header while it is dragged lies beyond the
+   window's edge, and never widens the page. */
+.home__header-region {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 16px 18px;
+  overflow-x: clip;
+}
+
+/* Above the wheel the header and Pray stand together, midway between the
+   head of the window and the pointer. They lie over the wheel: it is drawn
+   on a square that turns, whose empty corners swing up across them. */
+.home__content {
+  position: absolute;
+  inset: 0 0 auto;
+  bottom: calc(
+    var(--wheel-bottom) + var(--wheel-size) / 2 + var(--wheel-pointer-rise)
+  );
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* What the two need, which the wheel makes way for; on a narrow window the
+   header clears the buttons in the corners. */
+.home__content-fit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0 12px;
+}
+
+@media (max-width: 1000px) {
+  .home__content-fit {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 56px);
+  }
+}
+
+.home--wheel .home__header-region {
+  position: static;
+  align-self: stretch;
+  padding: 0 16px;
+}
+
+/* With the Dial the header keeps a little more room above the hours. */
+.home__header-region--sundial {
+  padding-bottom: 34px;
+}
+
+/* The Dial display, at the foot of Home. */
+.home__sundial {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 2;
+}
+
+.sundial {
+  position: relative;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Each layer of the shadow is softened whole and kept on a layer of its own,
+   so that it moves from hour to hour without being drawn anew. */
+.sundial__shadow {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  fill: var(--ink);
+  stop-color: var(--ink);
+  pointer-events: none;
+  transform: translateZ(0);
+  will-change: filter;
+}
+
+.sundial__shadow stop {
+  stop-color: var(--ink);
+}
+
+.sundial__hour {
+  position: absolute;
+  display: flex;
+  height: 44px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  /* The page's own colour, which fades with the appearance; an hour not
+     chosen is dimmed by its opacity, so the two fades never compound. */
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sundial__name {
+  width: 120px;
+  overflow: hidden;
+  font-family: var(--font-garamond);
+  font-size: 21px;
+  line-height: 44px;
+  opacity: 0.42;
+  text-align: right;
+  white-space: nowrap;
+  transition: opacity 720ms ease-in-out;
+}
+
+.sundial__hour[aria-current="true"] .sundial__name {
+  opacity: 1;
+}
+
+.sundial__disclosure {
+  display: grid;
+  width: 16px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+}
+
+.sundial__disclosure svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+  stroke-width: 2.6;
+  transition: opacity 720ms ease-in-out;
+}
+
+.sundial__disclosure svg[data-shown] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sundial__name,
+  .sundial__disclosure svg {
+    transition: none;
+  }
+}
+
+.home-header__rank {
+  color: var(--accent);
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.home-header__edition {
+  margin-top: 2px;
+  color: var(--ink-secondary);
+  font-family: var(--font-serif);
+  font-size: 12px;
+}
+
+.home-header__title {
+  margin-top: 4px;
+  font-size: 31px;
+  font-weight: 400;
+  line-height: 1.16;
+  text-wrap: balance;
+}
+
+.home-header__context {
+  margin-top: 8px;
+  color: var(--ink-secondary);
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.home-header__date {
+  margin-top: 8px;
+  color: var(--ink-secondary);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.home__pray {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 52px;
+  margin-top: 6px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-garamond);
+  font-size: 23px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home__pray svg {
+  width: 8px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.home__unloaded {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  font-family: var(--font-sans);
+  text-align: center;
+}
+
+.home__unloaded h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.home__unloaded p {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--ink-secondary);
+}
+
+/* The wheel shows its upper half; the rest lies below the window's foot. */
+.hour-wheel {
+  position: absolute;
+  bottom: var(--wheel-bottom);
+  left: 50%;
+  z-index: 2;
+  width: var(--wheel-size);
+  aspect-ratio: 1;
+  transform: translate(-50%, 50%);
+}
+
+.hour-wheel__stage {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+}
+
+.hour-wheel__stage.is-dragging {
+  cursor: grabbing;
+}
+
+.hour-wheel__stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* The pointer's shadow is cast by the pointer's own shape. A shadow set on
+   the masked shape itself would be cut away with the rest of its square. */
+.hour-wheel__pointer {
+  position: absolute;
+  top: calc(-1 * var(--wheel-pointer-rise));
+  left: 50%;
+  width: 40px;
+  height: 60px;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.7));
+  pointer-events: none;
+}
+
+.hour-wheel__pointer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--wheel-foreground);
+  -webkit-mask: url("/wheel/pointer.svg") center / contain no-repeat;
+  mask: url("/wheel/pointer.svg") center / contain no-repeat;
+  transition: background-color 720ms ease-in-out;
+}
+
+@media (max-width: 640px) {
+  /* On a phone the pointer stands on the wheel's square, not into it. */
+  .hour-wheel__pointer {
+    top: auto;
+    bottom: 100%;
+    width: calc(var(--wheel-pointer-rise) * 2 / 3);
+    height: var(--wheel-pointer-rise);
+  }
+}
+
+.hour-wheel__choices {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.icon-button--quiet {
+  color: var(--ink-secondary);
+}
+
+.icon-button--quiet svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Sheets. */
+.sheet__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgb(0 0 0 / 0.32);
+  transition: opacity 240ms ease;
+}
+
+.sheet__backdrop[data-starting-style],
+.sheet__backdrop[data-ending-style] {
+  opacity: 0;
+}
+
+.sheet__viewport {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.sheet {
+  --sheet-surface: color-mix(in srgb, var(--page) 94%, var(--ink) 6%);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 720px;
+  max-height: calc(100dvh - 44px - env(safe-area-inset-top, 0px));
+  border-radius: 18px 18px 0 0;
+  background: var(--sheet-surface);
+  color: var(--ink);
+  box-shadow: 0 -8px 40px rgb(0 0 0 / 0.18);
+  font-family: var(--font-sans);
+  pointer-events: auto;
+  transform: translateY(var(--drawer-swipe-movement-y, 0px));
+  transition: transform 340ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* A sheet is given the focus as it opens, so that it is announced and Tab
+   begins within it. It is not itself a control and is not ringed as one; the
+   controls within it are. */
+.sheet:focus,
+.sheet:focus-visible {
+  outline: none;
+}
+
+.sheet--large {
+  height: calc(100dvh - 44px - env(safe-area-inset-top, 0px));
+}
+
+.sheet--medium {
+  height: min(62dvh, 640px);
+}
+
+.sheet[data-swiping] {
+  transition: none;
+}
+
+.sheet[data-starting-style],
+.sheet[data-ending-style] {
+  transform: translateY(100%);
+}
+
+@media (min-width: 760px) {
+  .sheet__viewport {
+    align-items: center;
+  }
+
+  .sheet,
+  .sheet--large,
+  .sheet--medium {
+    height: min(820px, calc(100dvh - 96px));
+    border-radius: 18px;
+  }
+
+  .sheet__grabber {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet__backdrop {
+    transition: none;
+  }
+}
+
+.sheet__grabber {
+  flex: none;
+  width: 36px;
+  height: 5px;
+  margin: 6px auto 0;
+  border-radius: 3px;
+  background: var(--ink-tertiary);
+}
+
+.sheet__bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  flex: none;
+  min-height: 48px;
+  padding: 2px 8px 4px;
+}
+
+.sheet__bar-side {
+  display: flex;
+  align-items: center;
+}
+
+.sheet__bar-side--trailing {
+  justify-content: flex-end;
+}
+
+.sheet__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.sheet__close {
+  width: 34px;
+  height: 34px;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.sheet__close svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.6;
+}
+
+.sheet__content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* A sheet whose bar holds a field or a way back, beside Close. */
+.sheet__bar--custom {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.sheet__bar-header {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Search. */
+.search {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.search-field svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--ink-secondary);
+}
+
+.search-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+}
+
+.search-field input::placeholder {
+  color: var(--ink-tertiary);
+}
+
+.search-field input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+.search-bar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.search-bar__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 36px;
+  padding: 0 8px 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.search-bar__back svg {
+  width: 22px;
+  height: 22px;
+}
+
+.search-bar__title {
+  overflow: hidden;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-filters {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--sheet-surface);
+  scrollbar-width: none;
+}
+
+.search-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.search-chip {
+  flex: none;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 9%, transparent);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.search-chip[aria-pressed="true"],
+.search-chip[data-active] {
+  background: var(--ink);
+  color: var(--page);
+}
+
+/* A menu is the chip itself: the choice is made in the browser's own list. */
+.search-chip--menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.search-chip--menu svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3;
+}
+
+.search-chip--menu select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  font-size: 16px;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.search-chip--menu:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.search-list,
+.search-list ul,
+.search-detail ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.search-list li + li,
+.search-detail li + li {
+  border-top: 1px solid var(--hairline);
+}
+
+.search-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .search-row:hover {
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+  }
+}
+
+.search-row__chevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  color: var(--ink-tertiary);
+  stroke-width: 2.6;
+}
+
+.search-row--query {
+  gap: 10px;
+  font-size: 17px;
+}
+
+.search-row--query svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.search-hit,
+.search-usage,
+.search-setting {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+
+.search-hit__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.search-hit__title svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--ink-secondary);
+}
+
+/* A part of the Mass, told from the Office's as the Masses among titles are. */
+.search-hit__mass {
+  color: var(--rubric);
+  font-family: var(--font-sans, inherit);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.search-hit__snippet {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ink-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.search-hit__snippet[data-language="latin"] {
+  font-family: var(--font-serif);
+}
+
+.search-usage__title {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.search-usage__day,
+.search-setting__incipit {
+  font-family: var(--font-serif);
+  font-size: 17px;
+}
+
+.search-usage__english {
+  font-size: 15px;
+}
+
+.search-usage__summary,
+.search-setting__label {
+  color: var(--ink-secondary);
+  font-size: 12px;
+}
+
+/* A Mass is told from the Hours by its name, red as Home's link to it is. */
+.search-usage__mass {
+  color: var(--rubric);
+}
+
+.search-setting__source {
+  color: var(--ink-tertiary);
+  font-size: 11px;
+}
+
+.search-history {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 18px 16px 6px;
+}
+
+.search-history h3 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.search-history button {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.search-empty {
+  display: grid;
+  flex: 1;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 48px 32px;
+  color: var(--ink-secondary);
+  text-align: center;
+}
+
+.search-empty > svg {
+  width: 44px;
+  height: 44px;
+  color: var(--ink-tertiary);
+  stroke-width: 1.5;
+}
+
+.search-empty h3 {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.search-empty p {
+  max-width: 36ch;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.search-library__fetch {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--page);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.search-library__fetch span {
+  font-size: 14px;
+  font-weight: 400;
+  opacity: 0.72;
+}
+
+.search-library__progress {
+  width: min(260px, 70%);
+  accent-color: var(--ink);
+}
+
+.search-empty .search-library__error {
+  color: var(--psalm);
+}
+
+.search-detail {
+  padding-bottom: 24px;
+}
+
+.search-detail section > h3 {
+  margin: 22px 16px 6px;
+  color: var(--ink-secondary);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.search-detail__latin,
+.search-detail__english {
+  margin: 0;
+  padding: 4px 16px 0;
+  font-size: 17px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.search-detail__latin {
+  font-family: var(--font-serif);
+}
+
+.search-detail__usage {
+  padding: 22px 16px 6px;
+}
+
+.search-detail__usage p {
+  margin: 0 0 2px;
+  color: var(--ink-secondary);
+  font-size: 12px;
+}
+
+.search-detail__usage h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* A chant setting, with the cantor guide at the foot of the sheet. */
+.search-chant {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.search-chant__score {
+  flex: 1;
+  padding: 20px 16px 28px;
+}
+
+.cantor-bar--contained {
+  position: sticky;
+  bottom: 0;
+}
+
+/* Grouped settings, in the manner of a native form. */
+.form {
+  padding: 8px 16px 32px;
+}
+
+.form__section {
+  margin-top: 22px;
+}
+
+.form__section > h3 {
+  margin: 0 16px 7px;
+  color: var(--ink-secondary);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.form__group {
+  overflow: hidden;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--page) 100%, transparent);
+}
+
+.form__group > * + * {
+  border-top: 1px solid var(--hairline);
+}
+
+.form__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 52px;
+  padding: 8px 16px;
+  font-size: 17px;
+}
+
+.form__row--stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.form__row-head {
+  display: flex;
+  justify-content: space-between;
+}
+
+.form__row-head output {
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.form__label-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form__label-with-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.form__row select {
+  max-width: 60%;
+  padding: 6px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-secondary);
+  font: inherit;
+  text-align: right;
+}
+
+.form__row input[type="range"] {
+  width: 100%;
+  accent-color: var(--ink);
+}
+
+.form__note {
+  margin: 0;
+  padding: 10px 16px;
+  color: var(--ink-secondary);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.form__footer {
+  margin: 7px 16px 0;
+  color: var(--ink-secondary);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.form__button {
+  display: flex;
+  width: 100%;
+  min-height: 52px;
+  align-items: center;
+  padding: 8px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.form__button:disabled {
+  color: var(--ink-tertiary);
+  cursor: default;
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 51px;
+  height: 31px;
+  margin: 0;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
+  appearance: none;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 0.25);
+  transition: transform 200ms ease;
+}
+
+.switch:checked {
+  background: #34c759;
+}
+
+.switch:checked::after {
+  transform: translateX(20px);
+}
+
+/* The outline of an office. */
+.outline {
+  margin: 0;
+  padding: 0 0 24px;
+  list-style: none;
+}
+
+.outline li + li {
+  border-top: 1px solid var(--hairline);
+}
+
+.outline button {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 20px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-garamond);
+  font-size: 21px;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The reader. */
+.reader {
+  min-height: 100dvh;
+  color: var(--ink);
+}
+
+.reader--unloaded {
+  display: grid;
+  place-items: center;
+}
+
+.reader__bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 48px;
+  padding: env(safe-area-inset-top, 0px) 6px 0;
+  background: color-mix(in srgb, var(--sky-background) 78%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(18px);
+  backdrop-filter: saturate(1.6) blur(18px);
+}
+
+.reader__bar-title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* The title, and beneath it, where both languages are read, the tabs of
+   the reader's two pages: the page shown, and the page a tap turns to. */
+.reader__bar-heading {
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+}
+
+.reader--paged .reader__bar-title {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.reader__pages {
+  display: flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.reader__page-tab {
+  min-height: 24px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-secondary);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.reader__page-tab[aria-selected="true"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.reader__pages-separator {
+  color: var(--ink-tertiary);
+}
+
+/* Each page keeps the browser's own vertical scrolling, and pinching; a
+   horizontal swipe is left to the reader, which turns the page by it. A
+   page sliding in never widens the document, which a phone's browser
+   would meet by drawing the whole page smaller. */
+.reader--paged .reader__column {
+  overflow-x: clip;
+  touch-action: pan-y pinch-zoom;
+}
+
+.reader__bar-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.reader__column {
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding-bottom: 100px;
+}
+
+/*
+ * The cantor guide's bar, at the foot of the reader while a chant is sung:
+ * one slim row docked to the foot of the window, what is sung and its three
+ * buttons, with how it is sung in a popover above the options button.
+ */
+.reader[data-cantor] .reader__column {
+  padding-bottom: 120px;
+}
+
+.cantor-bar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  border-top: 1px solid var(--hairline);
+  background: var(--sky-background);
+  box-shadow: 0 -6px 18px rgb(0 0 0 / 0.06);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  animation: cantor-bar-enter 200ms ease-out;
+}
+
+@keyframes cantor-bar-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.cantor-bar__inner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)) 16px;
+}
+
+.cantor-bar__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+}
+
+.cantor-bar__score {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  margin: 0 8px 0 0;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cantor-bar__button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cantor-bar__button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.cantor-bar__button[data-popup-open] {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.cantor-bar__button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Play is the one filled button. */
+.cantor-bar__play {
+  background: var(--ink);
+  color: var(--page);
+}
+
+.cantor-bar__play svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+@media (hover: hover) {
+  .cantor-bar__button:hover {
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+  }
+
+  .cantor-bar__play:hover {
+    background: color-mix(in srgb, var(--ink) 80%, var(--page));
+  }
+}
+
+.cantor-bar__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 4px;
+  color: var(--psalm);
+  font-size: 12px;
+}
+
+.cantor-bar__error svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+/* The options: a popover above their button, over any sheet the bar is in. */
+.cantor-options__positioner {
+  z-index: 60;
+}
+
+.cantor-options {
+  box-sizing: border-box;
+  width: min(300px, calc(100vw - 24px));
+  padding: 14px 16px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--page);
+  box-shadow:
+    0 12px 32px rgb(0 0 0 / 0.16),
+    0 2px 6px rgb(0 0 0 / 0.08);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.cantor-options[data-starting-style],
+.cantor-options[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.97);
+}
+
+.cantor-options:focus-visible {
+  outline: none;
+}
+
+.cantor-options svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.cantor-options__title,
+.cantor-options__voice legend {
+  margin: 0 0 10px;
+  padding: 0;
+  color: var(--ink-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.cantor-options__tempo {
+  display: grid;
+  gap: 6px;
+}
+
+.cantor-options__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cantor-options__label output {
+  margin-left: auto;
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.cantor-options__tempo input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.cantor-options__voice {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.cantor-options__voice label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cantor-options select {
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--page);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.cantor-options__loop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+  cursor: pointer;
+}
+
+.cantor-options__loop input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cantor-bar {
+    animation: none;
+  }
+
+  .cantor-options {
+    transition: none;
+  }
+}
+
+.reader__status {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 96px 24px;
+  color: var(--ink-secondary);
+  font-family: var(--font-sans);
+  text-align: center;
+}
+
+.reader__status p,
+.reader__status h1 {
+  margin: 0;
+}
+
+.office-header {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 36px 24px 38px;
+  text-align: center;
+  scroll-margin-top: 56px;
+}
+
+.office-header > * {
+  margin: 0;
+}
+
+.office-header__banner {
+  color: var(--ink-secondary);
+  font-family: var(--font-rounded);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.3px;
+}
+
+.office-header__rank {
+  color: var(--accent);
+  font-size: calc(18px * var(--reader-scale));
+  line-height: 1.3;
+}
+
+.office-header__edition {
+  color: var(--ink-secondary);
+  font-family: var(--font-serif);
+  font-size: 12px;
+}
+
+.office-header__title {
+  font-size: calc(43px * var(--reader-scale));
+  font-weight: 600;
+  line-height: calc(1.305em - 4px * var(--reader-scale));
+}
+
+.office-header__title-english {
+  color: var(--ink-secondary);
+  font-size: calc(23px * var(--reader-scale));
+  line-height: 1.305;
+}
+
+.office-header__observance {
+  color: var(--ink-secondary);
+  font-size: calc(19px * var(--reader-scale));
+  line-height: 1.305;
+}
+
+.office-header__observance-english {
+  color: var(--ink-tertiary);
+  font-size: calc(18px * var(--reader-scale));
+  line-height: 1.305;
+}
+
+.office-section {
+  padding-bottom: 52px;
+  scroll-margin-top: 56px;
+}
+
+.office-section--psalmody {
+  padding-bottom: 34px;
+}
+
+.office-section--continues {
+  padding-bottom: 24px;
+}
+
+.office-section__heading {
+  display: grid;
+  gap: 5px;
+  padding: 0 20px 16px;
+  color: var(--ink-secondary);
+  font-family: var(--font-rounded);
+  text-align: center;
+}
+
+.office-section__heading h2 {
+  margin: 0;
+  font-size: calc(11px * var(--reader-scale));
+  font-weight: 600;
+  letter-spacing: calc(1.5px * var(--reader-scale));
+}
+
+.office-section__heading p {
+  margin: 0;
+  font-size: calc(12px * var(--reader-scale));
+}
+
+/* A missal's heading: red capitals, spaced, the English beneath in italic. */
+.office-section__heading--missal {
+  gap: 6px;
+  padding-bottom: 18px;
+  color: var(--rubric);
+  font-family: var(--font-garamond);
+}
+
+.office-section__heading--missal h2 {
+  font-size: calc(17px * var(--reader-scale));
+  font-weight: 500;
+  letter-spacing: calc(3px * var(--reader-scale));
+}
+
+.office-section__heading--missal p {
+  color: var(--ink-secondary);
+  font-size: calc(16px * var(--reader-scale));
+  font-style: italic;
+}
+
+.office-section__psalm-title {
+  margin: 0;
+  padding: 0 20px 16px;
+  color: var(--psalm);
+  font-size: calc(20px * var(--reader-scale));
+  font-weight: 400;
+  line-height: 1.305;
+}
+
+.office-section__rubric {
+  display: grid;
+  gap: 8px;
+  padding: 0 20px 12px;
+  color: var(--accent);
+  text-align: center;
+}
+
+.office-section__rubric p {
+  margin: 0;
+  font-size: calc(17px * var(--reader-scale));
+  font-style: italic;
+  line-height: 1.305;
+}
+
+.office-section__rubric .office-section__rubric-english {
+  font-size: calc(19px * var(--reader-scale));
+  opacity: 0.62;
+}
+
+.office-section__score {
+  display: flex;
+  justify-content: center;
+  padding: 0 12px;
+}
+
+.office-text {
+  margin: 0;
+  font-size: calc(var(--text-size) * var(--reader-scale));
+  line-height: calc(1.305em + var(--line-spacing) * var(--reader-scale));
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.office-text--italic {
+  font-style: italic;
+}
+
+.office-text--secondary {
+  color: var(--ink-secondary);
+}
+
+.office-text__emphasis {
+  font-weight: 600;
+}
+
+/* A line to a block, every line at the left edge, a mark before its words. */
+.office-text--lines {
+  white-space: normal;
+}
+
+.office-text__line {
+  display: block;
+  white-space: pre-wrap;
+}
+
+.office-text__line--blank {
+  height: calc(1.305em + var(--line-spacing) * var(--reader-scale));
+}
+
+.office-text__mark,
+.office-text__sign {
+  color: var(--rubric);
+}
+
+.office-text--secondary .office-text__mark,
+.office-text--secondary .office-text__sign {
+  opacity: 0.78;
+}
+
+/*
+ * The words of a Mass, set plainly (MissalText): every line at the left
+ * edge, its turns too, with a space between lines in place of indents; a
+ * line's mark in red before its words.
+ */
+.missal-text {
+  /* A part's initial stays within the part: the next begins below it. */
+  display: flow-root;
+  margin: 0;
+  padding: 0 20px;
+  font-size: calc(var(--text-size) * var(--reader-scale));
+  line-height: calc(1.305em + var(--line-spacing) * var(--reader-scale));
+  overflow-wrap: break-word;
+}
+
+.missal-text--translation {
+  padding-top: 20px;
+  color: var(--ink-secondary);
+}
+
+.missal-text__line {
+  display: block;
+  white-space: pre-wrap;
+}
+
+.missal-text--principal .missal-text__line + .missal-text__line {
+  margin-top: calc(0.45em + var(--line-spacing) * 0.6 * var(--reader-scale));
+}
+
+.missal-text--translation .missal-text__line + .missal-text__line {
+  margin-top: calc(0.3em + var(--line-spacing) * 0.4 * var(--reader-scale));
+}
+
+.missal-text__line--blank {
+  height: calc(1.305em + var(--line-spacing) * var(--reader-scale));
+}
+
+.missal-text__mark {
+  color: var(--rubric);
+}
+
+/* The part's first prayer opens with a red initial two lines tall, at the
+ * left edge; the rest of its first word in small capitals. */
+.missal-text__line--initial::first-letter {
+  float: left;
+  margin: 0.075em 0.09em 0 0;
+  color: var(--rubric);
+  font-size: 3.45em;
+  font-weight: 500;
+  line-height: 0.74;
+}
+
+.missal-text__first-word {
+  font-variant-caps: small-caps;
+}
+
+/* Where the initial's own line is a single line, the next line stands
+ * beside the initial too, as a drop cap's does, with no space before it;
+ * a line after that begins below the initial. A line with a mark is
+ * another's part, and begins below it at the left edge. */
+.missal-text--initial-beside
+  .missal-text__line--initial
+  + .missal-text__line:not(.missal-text__line--marked) {
+  margin-top: calc(var(--line-spacing) * 0.6 * var(--reader-scale));
+}
+
+.missal-text--initial-beside
+  .missal-text__line--initial
+  + .missal-text__line--marked {
+  clear: left;
+}
+
+.missal-text--initial-beside
+  .missal-text__line--initial
+  + .missal-text__line
+  + .missal-text__line {
+  clear: left;
+}
+
+.missal-text__direction {
+  color: var(--rubric);
+  font-style: italic;
+}
+
+.missal-text__cross,
+.missal-text__inline-mark {
+  color: var(--rubric);
+}
+
+.missal-text--translation .missal-text__mark,
+.missal-text--translation .missal-text__direction,
+.missal-text--translation .missal-text__cross,
+.missal-text--translation .missal-text__inline-mark {
+  opacity: 0.78;
+}
+
+.office-section__prose,
+.office-section__english {
+  padding: 0 20px;
+}
+
+.office-section__english {
+  padding-top: 20px;
+}
+
+.psalm-text {
+  display: grid;
+  gap: 18px;
+  padding: 0 20px;
+}
+
+.psalm-text__line {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.psalm-text__number {
+  flex: none;
+  font-size: calc(21px * var(--reader-scale));
+  line-height: calc(1.305em + 3px * var(--reader-scale));
+}
+
+.psalm-text__number--secondary {
+  color: var(--ink-secondary);
+}
+
+.psalm-text__verse {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+}
+
+/*
+ * A psalm's verses read without their chant, set plainly (PsalterVerse):
+ * each a paragraph at the left edge, a red asterisk at its pause; a hymn's
+ * stanza a line to a block, its turns at the left edge too.
+ */
+.psalter {
+  display: grid;
+  gap: calc(12px * var(--reader-scale));
+  padding: 0 20px;
+}
+
+.psalter--spacious {
+  gap: calc(18px * var(--reader-scale));
+}
+
+.psalter__verse {
+  display: grid;
+  gap: calc(4px * var(--reader-scale));
+}
+
+.psalter-verse {
+  margin: 0;
+  font-size: calc(var(--text-size) * var(--reader-scale));
+  line-height: calc(1.305em + var(--line-spacing) * var(--reader-scale));
+  overflow-wrap: break-word;
+}
+
+.psalter-verse--translation {
+  color: var(--ink-secondary);
+}
+
+.psalter-verse--italic {
+  font-style: italic;
+}
+
+.psalter-verse__sign {
+  color: var(--rubric);
+}
+
+.psalter-verse--translation .psalter-verse__sign {
+  opacity: 0.78;
+}
+
+.psalter-verse__line {
+  display: block;
+}
+
+/* An antiphon read without its chant: in italic after its red "Ant.",
+ * upright, an en space after it. */
+.office-section__antiphon .office-text {
+  font-style: italic;
+}
+
+.office-section__antiphon .office-text__mark {
+  margin-right: 0.25em;
+  font-style: normal;
+}
+
+/* The month's offices. */
+.month-days ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.month-days__neighbour {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-secondary);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.month-days__neighbour:disabled {
+  visibility: hidden;
+}
+
+.month-days__neighbour svg {
+  width: 16px;
+  height: 16px;
+}
+
+.month-days__status {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  margin: 0;
+  color: var(--ink-secondary);
+}
+
+.month-day {
+  display: flex;
+  width: 100%;
+  min-height: 54px;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 20px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.month-day__date {
+  display: grid;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  place-content: center;
+  justify-items: center;
+  gap: 1px;
+  font-family: var(--font-sans);
+}
+
+.month-day__date > :first-child {
+  color: var(--ink-secondary);
+  font-size: 12px;
+}
+
+.month-day__date > :last-child {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.month-day__text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.month-day__rank {
+  color: var(--ink-secondary);
+  font-family: var(--font-garamond);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.month-day__title {
+  font-family: var(--font-garamond);
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.month-day--selected .month-day__date > *,
+.month-day--selected .month-day__rank {
+  color: var(--accent);
+}
+
+/* Today wears the colour of the wheel's ring. */
+.month-day--today .month-day__date {
+  background: #0f0f0f;
+}
+
+.month-day--today .month-day__date > * {
+  color: #ebebeb;
+}
+
+.month-day--today.month-day--selected .month-day__date > * {
+  color: #ebebeb;
+}
+
+/* Any date in the edition. */
+.calendar-grid {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 8px 16px 0;
+  font-family: var(--font-sans);
+}
+
+.calendar-grid__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+}
+
+.calendar-grid__header p {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.calendar-grid__header .icon-button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.calendar-grid__weekdays,
+.calendar-grid__days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.calendar-grid__weekdays {
+  margin-top: 10px;
+  color: var(--ink-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.calendar-day {
+  position: relative;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.calendar-day::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+}
+
+.calendar-day:disabled {
+  color: color-mix(in srgb, var(--ink-secondary) 35%, transparent);
+  cursor: default;
+}
+
+.calendar-day--today {
+  color: var(--accent);
+}
+
+.calendar-day--today::before {
+  border: 1.5px solid var(--accent);
+}
+
+.calendar-day--selected {
+  color: var(--page);
+  isolation: isolate;
+}
+
+.calendar-day--selected::before {
+  border: 0;
+  background: var(--ink);
+}
+
+.calendar-grid__today {
+  display: block;
+  margin: 12px auto 24px;
+  padding: 8px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  cursor: pointer;
+}
+
+/* Day stepping on Home, for a pointer that cannot swipe. */
+.home__header-slide {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  max-width: 760px;
+}
+
+/* The day a swipe turns to, a width away beside the header and laid out as
+   it is, the steps either side held empty. */
+.home__header-incoming {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.home-header {
+  display: grid;
+  justify-items: center;
+  width: 100%;
+  max-width: 620px;
+  text-align: center;
+}
+
+.home-header__open {
+  display: grid;
+  justify-items: center;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The day's Mass, in red under the civil date and above Pray. */
+.home-header__mass {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 4px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.3;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-header__mass:hover span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.home-header__mass svg {
+  width: 6px;
+  height: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.home-header__date {
+  cursor: pointer;
+}
+
+/* The choice among a day's Masses, above the Mass's header. */
+.mass-choice {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 18px auto 0;
+  padding: 0 16px;
+}
+
+.mass-choice__option {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 18px;
+  background: transparent;
+  color: var(--ink-secondary);
+  font-family: var(--font-serif);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.mass-choice__option[aria-current="page"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.home-header__rank,
+.home-header__edition,
+.home-header__title,
+.home-header__context,
+.home-header__date {
+  display: block;
+}
+
+.home__day-step {
+  flex: none;
+  margin-bottom: 6px;
+  color: var(--ink-tertiary);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.home__day-step:disabled {
+  visibility: hidden;
+}
+
+@media (hover: hover) {
+  .home__header-region:hover .home__day-step,
+  .home__day-step:focus-visible {
+    opacity: 1;
+  }
+}
+
+@media (hover: none) {
+  .home__day-step {
+    display: none;
+  }
+}
+
+/* Settings. */
+.settings,
+.about {
+  padding: 4px 20px 40px;
+}
+
+.settings__section {
+  margin-top: 26px;
+}
+
+.settings__section > h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.settings__description,
+.settings__note {
+  margin: 12px 0 0;
+  color: var(--ink-secondary);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.settings__note {
+  font-size: 13px;
+}
+
+.settings__error {
+  margin: 12px 0 0;
+  color: var(--accent);
+  font-size: 15px;
+}
+
+.spinner--small {
+  width: 16px;
+  height: 16px;
+}
+
+.segmented {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  padding: 2px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--ink) 9%, transparent);
+}
+
+.segmented button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.segmented button[aria-checked="true"] {
+  background: var(--page);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.16);
+  font-weight: 600;
+}
+
+/* A choice beside its label, in a row of a form. */
+.form__segmented {
+  flex: none;
+  width: min(15.5rem, 62%);
+}
+
+.segmented button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The row of previews stands in the middle of the sheet, and each preview's
+   name beneath its middle, as in the native Settings. */
+.settings__cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  max-width: 520px;
+  margin-inline: auto;
+}
+
+.settings-card {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.settings-card__preview {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  margin-bottom: 6px;
+  border: 2px solid transparent;
+  border-radius: 18px;
+}
+
+/*
+ * A small Home in a settings card: the Dial or the Wheel as Home draws them,
+ * at a phone's width (390 points) and made small (`HomePreview.tsx`). Its
+ * measures are in shares of its own width, so that it is the same picture
+ * at any size.
+ */
+.home-preview {
+  position: relative;
+  display: block;
+  aspect-ratio: 390 / 300;
+  overflow: hidden;
+  container-type: inline-size;
+  background: var(--page);
+  color: var(--ink);
+}
+
+/* The Dial's sky: the hour's ground, and its light washing down. */
+.home-preview--dial .home-preview__sky {
+  position: absolute;
+  inset: 0;
+  background: var(--sky-background);
+}
+
+.home-preview--dial .home-preview__sky::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(9 14 33);
+  opacity: var(--sky-night);
+}
+
+.home-preview--dial .home-preview__sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    color-mix(
+        in srgb,
+        var(--sky-upper) calc(var(--sky-accent) * 100%),
+        transparent
+      )
+      0%,
+    color-mix(
+        in srgb,
+        var(--sky-lower) calc(var(--sky-accent) * 72%),
+        transparent
+      )
+      34%,
+    color-mix(
+        in srgb,
+        var(--sky-lower) calc(var(--sky-accent) * 18%),
+        transparent
+      )
+      70%,
+    transparent 100%
+  );
+}
+
+/* The Wheel's sky is Home's own, over the whole of the small Home. */
+.home-preview--wheel .home-preview__sky {
+  z-index: 0;
+  height: 100%;
+  background-size: 100% 100%;
+}
+
+.home-preview__dial {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform-origin: top center;
+}
+
+/* The Wheel as on a phone: 104% of the width, its hub at the foot, and its
+   pointer standing on it, 52 points high. */
+.home-preview__wheel {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 104cqw;
+  aspect-ratio: 1;
+  transform: translate(-50%, 50%);
+}
+
+.home-preview__wheel canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: center;
+}
+
+.home-preview__pointer {
+  position: absolute;
+  bottom: 52cqw;
+  left: 50%;
+  width: calc(100cqw * 52 / 390 * 2 / 3);
+  height: calc(100cqw * 52 / 390);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 0.5cqw 0.5cqw rgb(0 0 0 / 0.7));
+}
+
+.home-preview__pointer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--wheel-foreground);
+  -webkit-mask: url("/wheel/pointer.svg") center / contain no-repeat;
+  mask: url("/wheel/pointer.svg") center / contain no-repeat;
+}
+
+.settings-card[aria-checked="true"] .settings-card__preview {
+  border-color: var(--accent);
+}
+
+.settings-card__title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.settings-card__subtitle {
+  color: var(--ink-secondary);
+  font-size: 13px;
+}
+
+/* About. */
+.about__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin: 22px 0 26px;
+  font-family: var(--font-garamond);
+  font-size: 44px;
+  letter-spacing: 0.04em;
+}
+
+.about__logo img {
+  width: 58px;
+  height: 58px;
+  border-radius: 13px;
+}
+
+.about__hours {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  border-collapse: collapse;
+  font-size: 17px;
+}
+
+.about__hours th,
+.about__hours td {
+  padding: 7px 0;
+  font-weight: 400;
+}
+
+.about__hours th {
+  text-align: left;
+}
+
+.about__hours td {
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.about__hours .is-current th,
+.about__hours .is-current td {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* The Guide to Chant and the Rubrics, each opened from its row. */
+.about__guides {
+  margin: 26px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.about__guides li + li {
+  border-top: 1px solid var(--hairline);
+}
+
+.about__guides a {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 60px;
+  padding: 8px 0;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.about__guides a > svg:first-child {
+  width: 21px;
+  height: 21px;
+  color: var(--ink-secondary);
+}
+
+.about__guides a > svg:last-child {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-tertiary);
+  stroke-width: 2.6;
+}
+
+.about__guide-title,
+.about__guide-summary {
+  display: block;
+}
+
+.about__guide-title {
+  font-size: 17px;
+}
+
+.about__guide-summary {
+  margin-top: 2px;
+  color: var(--ink-secondary);
+  font-size: 12px;
+}
+
+.about__links {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.about__links li + li {
+  border-top: 1px solid var(--hairline);
+}
+
+.about__links a {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  color: var(--ink);
+  font-size: 17px;
+  text-decoration: none;
+}
+
+.about__links a svg {
+  width: 19px;
+  height: 19px;
+}
+
+.about__links a > :last-child {
+  color: var(--ink-secondary);
+}
+
+.update-prompt {
+  position: fixed;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  left: 12px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 10px 12px 10px 16px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ink) 92%, transparent);
+  color: var(--page);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.24);
+  font-family: var(--font-sans);
+  font-size: 15px;
+}
+
+.update-prompt span {
+  flex: 1;
+}
+
+.update-prompt button {
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--page);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.update-prompt .update-prompt__later {
+  background: transparent;
+  color: var(--page);
+  font-weight: 400;
+}
+
+/* Printing an hour: the Office alone, in ink on white. */
+@media print {
+  :root,
+  :root[data-theme="dark"] {
+    --page: #ffffff;
+    --ink: #1c1a14;
+    --ink-secondary: rgb(28 26 20 / 0.7);
+    --ink-tertiary: rgb(28 26 20 / 0.55);
+    --accent: #8a2926;
+    --rubric: #8a2926;
+    --psalm: #8a2926;
+    --score-ink: #1c1a14;
+    --score-rubric: #8a2926;
+    --sky-background: #ffffff;
+  }
+
+  /* The margins of the native app's printed page, with its footer. A
+     browser that cannot write in the margin prints the page without one. */
+  @page {
+    margin: 18mm 16mm 20mm;
+
+    @bottom-left {
+      color: rgb(60 60 67 / 0.6);
+      content: "Hours\00a0\00a0\00a0\00a0" counter(page) " of " counter(pages);
+      font:
+        9pt system-ui,
+        -apple-system,
+        "Segoe UI",
+        sans-serif;
+    }
+  }
+
+  .ambient-sky,
+  :root[data-home-sky] body::before,
+  .reader__bar,
+  .update-prompt,
+  .chant-score__neume,
+  .cantor-bar,
+  .sheet__viewport,
+  .sheet__backdrop {
+    display: none !important;
+  }
+
+  /* One column, of the width the chant was engraved for (see
+     `printColumnWidth` in ReaderScreen.tsx), whatever the paper. */
+  .reader__column,
+  .reader[data-cantor] .reader__column {
+    width: 640px;
+    max-width: none;
+    padding-bottom: 0;
+  }
+
+  .reader {
+    min-height: 0;
+  }
+
+  .chant-score {
+    content-visibility: visible !important;
+  }
+
+  /* For paper each staff is a drawing of its own. A staff and its words
+     are never divided between pages, and neither is a line of a psalm. */
+  .chant-score--paged {
+    height: auto;
+  }
+
+  .chant-score--paged svg {
+    break-inside: avoid;
+  }
+
+  .psalm-text__line,
+  .office-header {
+    break-inside: avoid;
+  }
+
+  .office-section__prose p,
+  .office-section__english p {
+    orphans: 2;
+    widows: 2;
+  }
+
+  .office-section__heading,
+  .office-section__psalm-title,
+  .office-section__rubric {
+    break-after: avoid;
+  }
+}

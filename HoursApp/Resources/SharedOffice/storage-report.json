@@ -1,0 +1,43 @@
+{
+  "storageSchema": 5,
+  "catalogIdentity": "56878477c3cc45dab852f7079fd9d1380cfdf4f64580dc6fee1b3ea84b6c94bc",
+  "budgetBytes": 167772160,
+  "totalBytes": 149266432,
+  "verifiedPayloads": 181029,
+  "sharedValues": 70578,
+  "packerSHA256": "1b18679f8f8820e630d7562199ad017dca5a2d6f0c2f4f821f70341cdbe2f924",
+  "payloadCodecSHA256": "2918b2c2e18fe02dce240e9e09212d1372991a0bb403052c97a9a6351ed82690",
+  "relationships": {
+    "base-office.sqlite": "3d6f02bb15a6d35df014b14fdd5614b4b28589b0f7b902f8c9ae8ef791b79f0b",
+    "roman-1954-office.sqlite": "c877723b20d2df269bfb4ae8b254ed08613b0c265fa3e27181baa6e6bae2cfaf"
+  },
+  "inputs": [
+    {
+      "name": "base-office.sqlite",
+      "bytes": 129331200,
+      "sha256": "4be6246a029929d954a86503edd593648b1a19b4c6609bc3f68ed4cfa45b65d6"
+    },
+    {
+      "name": "roman-1954-office.sqlite",
+      "bytes": 178491392,
+      "sha256": "b1c671bff56a52ccfbec9d443afda6e81099bd8b25e0531e7213d0f7d2382161"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "base-office.sqlite",
+      "bytes": 57495552,
+      "sha256": "6a7fccc037c06e52194c8e7bbaff4b9a6b0059e281eafc909b8cc03dfc330f69"
+    },
+    {
+      "name": "roman-1954-office.sqlite",
+      "bytes": 79261696,
+      "sha256": "69eba1a427c7c67a9b86d9221f996ccfa974fea3e76563ebcd696f66d5b5d5d3"
+    },
+    {
+      "name": "office-resources.sqlite",
+      "bytes": 12509184,
+      "sha256": "072b9a21256d2b829d21e953b36bb57128d7ee359468c1da206d202f65f066c2"
+    }
+  ]
+}

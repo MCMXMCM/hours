@@ -1,0 +1,973 @@
+/*
+ * The two guides: the Guide to Chant and the Rubrics reference. The sizes are
+ * those of the native screens at their ordinary size of type; the colours
+ * are the app's own, from the tokens at the head of `styles.css`.
+ */
+.guide {
+  /* A red that can be read as text against either page. */
+  --guide-accent: var(--accent);
+  --guide-fill: color-mix(in srgb, var(--ink) 6%, transparent);
+  min-height: 100dvh;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+:root[data-theme="dark"] .guide {
+  --guide-accent: color-mix(in srgb, var(--accent) 62%, var(--ink));
+}
+
+/* The bar at the head of every page of a guide. */
+.guide-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns:
+    minmax(max-content, 1fr) minmax(0, auto)
+    minmax(max-content, 1fr);
+  align-items: center;
+  gap: 4px;
+  min-height: 48px;
+  padding: env(safe-area-inset-top, 0px) 6px 0;
+  background: color-mix(in srgb, var(--page) 92%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(18px);
+  backdrop-filter: saturate(1.6) blur(18px);
+}
+
+.guide-bar__title {
+  overflow: hidden;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guide-bar__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.guide-bar__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.guide-bar__action svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+/* On a phone the bar has room for the sign alone; its name is still read. */
+@media (max-width: 479px) {
+  .guide-bar__action span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+.guide__column {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 24px calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Room for the last lines of a lesson above the cantor guide's bar. */
+.guide[data-controls] .guide__column {
+  padding-bottom: calc(176px + env(safe-area-inset-bottom, 0px));
+}
+
+/* A guide that is being fetched, or cannot be shown. */
+.guide-status {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 96px 24px;
+  color: var(--ink-secondary);
+  text-align: center;
+}
+
+.guide-status > svg {
+  width: 44px;
+  height: 44px;
+  color: var(--ink-tertiary);
+  stroke-width: 1.5;
+}
+
+.guide-status h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.guide-status p {
+  max-width: 40ch;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.guide-status button {
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--ink);
+  color: var(--page);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* The head of a guide's contents: its name and what it is. */
+.guide-introduction {
+  display: grid;
+  gap: 12px;
+  padding: 8px 0 20px;
+}
+
+.guide-introduction > * {
+  margin: 0;
+}
+
+.guide-introduction h1,
+.guide-heading h1 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
+
+.guide-introduction__subtitle {
+  color: var(--ink-secondary);
+  font-size: 15px;
+  line-height: 1.33;
+}
+
+.guide-introduction__text {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+/* A list of pages to open, in the manner of a native list. */
+.guide-section-title {
+  margin: 18px 0 6px;
+  color: var(--ink-secondary);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.guide-section-footer {
+  margin: 10px 0 0;
+  color: var(--ink-secondary);
+  font-size: 13px;
+  line-height: 1.38;
+}
+
+.guide-list {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  list-style: none;
+}
+
+.guide-list li + li {
+  border-top: 1px solid var(--hairline);
+}
+
+.guide-row {
+  display: flex;
+  width: 100%;
+  min-height: 56px;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  .guide-row:hover .guide-row__title {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+}
+
+.guide-row__text {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
+
+.guide-row__title {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.guide-row__title--large {
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.27;
+}
+
+.guide-row__summary {
+  color: var(--ink-secondary);
+  font-size: 15px;
+  line-height: 1.33;
+}
+
+.guide-row__chevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--ink-tertiary);
+  stroke-width: 2.6;
+}
+
+/* The head of a lesson or a topic. */
+.guide-heading {
+  display: grid;
+  gap: 8px;
+}
+
+.guide-heading p {
+  margin: 0;
+  color: var(--ink-secondary);
+  font-size: 12px;
+  line-height: 1.33;
+}
+
+/* A lesson of the Guide to Chant. */
+.guide-lesson {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+
+.guide-prose {
+  display: grid;
+  gap: 10px;
+}
+
+.guide-prose h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.guide-prose__text {
+  display: grid;
+  gap: 1lh;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.53;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.guide-prose__text p {
+  margin: 0;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+/* What opens to show more: a pronunciation, or the notes of an example. */
+.guide-disclosure > summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 12px;
+  list-style: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.guide-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.guide-disclosure > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.guide-disclosure__label {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+}
+
+.guide-disclosure__chevron {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--guide-accent);
+  stroke-width: 2.6;
+  transition: transform 200ms ease;
+}
+
+.guide-disclosure[open] > summary .guide-disclosure__chevron {
+  transform: rotate(90deg);
+}
+
+.guide-pronunciation__title {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.guide-pronunciation__text {
+  color: var(--ink-secondary);
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.guide-pronunciation__detail {
+  margin: 0;
+  padding: 8px 0 4px;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+/* A musical example: its name, its notation, and what to observe in it. */
+.guide-example {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 18px 0;
+  border-top: 1px solid color-mix(in srgb, var(--guide-accent) 35%, transparent);
+}
+
+.guide-example > p {
+  margin: 0;
+}
+
+.guide-example__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.guide-example__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding-top: 6px;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* A filled disc, with a fingertip's room about it. */
+.guide-example__play {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -6px -7px -6px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.guide-example__play span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--page);
+}
+
+.guide-example__play svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.guide-example__caption {
+  color: var(--ink-secondary);
+  font-size: 16px;
+  line-height: 1.32;
+}
+
+.guide-example__selector-label {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.32;
+}
+
+.guide-example__explanation {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.47;
+  white-space: pre-wrap;
+}
+
+.guide-example__source {
+  color: var(--ink-secondary);
+  font-size: 12px;
+  line-height: 1.33;
+}
+
+.guide-example__explore-label {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* The versions of an example: side by side while they fit, else a menu. */
+.guide-variants {
+  position: relative;
+  min-width: 0;
+}
+
+.guide-variants__tabs {
+  display: inline-flex;
+  gap: 20px;
+  white-space: nowrap;
+}
+
+/* The unseen row is kept from widening the page; the menu keeps room for its focus ring. */
+.guide-variants[data-menu] {
+  overflow: hidden;
+  margin: -4px;
+  padding: 4px;
+}
+
+.guide-variants__tabs[data-hidden] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.guide-variants__tabs button {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.guide-variants__tabs button[aria-pressed="true"] {
+  border-bottom-color: currentColor;
+  color: var(--guide-accent);
+}
+
+.guide-variants__menu {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  color: var(--guide-accent);
+  font-size: 16px;
+}
+
+.guide-variants__menu > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guide-variants__menu svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.guide-variants__menu select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  font-size: 16px;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.guide-variants__menu:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* The notation of an example, and what is marked upon it. */
+/* A staff engraved for a wider column is cut off until it is engraved anew. */
+.guide-stave {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.guide-stave[data-exploring] {
+  padding-top: 20px;
+}
+
+.guide-stave__layer {
+  position: relative;
+  animation: guide-stave-enter 280ms ease-in-out;
+}
+
+@keyframes guide-stave-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+.guide-stave__preparing {
+  display: grid;
+  min-height: 140px;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  color: var(--ink-secondary);
+  font-size: 15px;
+}
+
+.guide-stave__preparing p {
+  margin: 0;
+}
+
+.guide-stave__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  fill: none;
+  stroke: var(--guide-accent);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+/* A formula: the notes of a rule, set out upon a staff of their own. */
+.guide-formula {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.guide-formula figcaption {
+  color: var(--ink-secondary);
+  font-size: 12px;
+  line-height: 1.33;
+}
+
+.guide-formula svg {
+  display: block;
+  width: 100%;
+  height: 96px;
+  overflow: visible;
+}
+
+.guide-formula__line {
+  stroke: var(--ink-secondary);
+  stroke-width: 0.8;
+}
+
+.guide-formula__note {
+  fill: var(--ink);
+}
+
+.guide-formula__note--optional {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.guide-formula text {
+  fill: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
+
+/* The notes of an example in the order they are sung. */
+.guide-explore {
+  display: grid;
+  gap: 14px;
+  padding-top: 12px;
+}
+
+.guide-explore p {
+  margin: 0;
+}
+
+.guide-explore__hint {
+  color: var(--ink-secondary);
+  font-size: 12px;
+  line-height: 1.33;
+}
+
+.guide-explore__notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+  gap: 8px;
+}
+
+.guide-note {
+  display: grid;
+  min-height: 44px;
+  align-content: center;
+  justify-items: center;
+  gap: 3px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--guide-fill);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.guide-note[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--guide-accent);
+}
+
+.guide-note__number {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.guide-note__name {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.guide-annotation {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.32;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.guide-annotation svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.guide-annotation__explanation {
+  padding-bottom: 4px;
+  font-size: 16px;
+  line-height: 1.38;
+}
+
+/* The cantor guide's bar beneath a lesson, its row in the lesson's column. */
+.guide-cantor-bar .cantor-bar__inner {
+  padding-left: 24px;
+}
+
+/* While no example is in view, the bar says how to find one. */
+.guide-cantor-bar__prompt {
+  flex: 1;
+  margin: 0;
+  color: var(--ink-secondary);
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+/* The glossary: each term leads to the lesson that teaches it. */
+.guide-glossary {
+  margin: 0;
+  padding: 0 0 24px;
+  list-style: none;
+}
+
+.guide-glossary li + li {
+  border-top: 1px solid var(--hairline);
+}
+
+.guide-glossary button {
+  display: grid;
+  width: 100%;
+  min-height: 56px;
+  gap: 5px;
+  padding: 11px 20px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .guide-glossary button:hover {
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+  }
+}
+
+.guide-glossary__term {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.guide-glossary__definition {
+  color: var(--ink-secondary);
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+/* The Rubrics reference: the search of an edition's topics. */
+.guide-search {
+  display: flex;
+  height: 36px;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.guide-search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.guide-search svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--ink-secondary);
+}
+
+.guide-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+}
+
+.guide-search input::placeholder {
+  color: var(--ink-tertiary);
+}
+
+.guide-search input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+.guide-no-results {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 40px 16px;
+  color: var(--ink-secondary);
+  text-align: center;
+}
+
+.guide-no-results > svg {
+  width: 44px;
+  height: 44px;
+  color: var(--ink-tertiary);
+  stroke-width: 1.5;
+}
+
+.guide-no-results h3 {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.guide-no-results p {
+  max-width: 36ch;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+/* A topic of the Rubrics reference: its rules, each with its sources. */
+.rubrics-topic {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+}
+
+.rubrics-rule {
+  display: grid;
+  gap: 12px;
+}
+
+.rubrics-rule h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.27;
+}
+
+.rubrics-rule__text {
+  display: grid;
+  gap: 16px;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.45;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.rubrics-rule__text p {
+  margin: 0;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.rubrics-rule__citations {
+  display: grid;
+  justify-items: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rubrics-citation,
+.rubrics-topic__examples {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--ink-tertiary);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.rubrics-citation {
+  font-size: 13px;
+  line-height: 1.38;
+}
+
+.rubrics-citation svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+}
+
+.rubrics-topic__examples {
+  justify-self: start;
+  gap: 10px;
+  font-size: 17px;
+}
+
+.rubrics-topic__examples svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-stave__layer {
+    animation: none;
+  }
+
+  .guide-disclosure__chevron {
+    transition: none;
+  }
+}
+
+/* A printed guide is its text and notation alone. */
+@media print {
+  .guide {
+    min-height: 0;
+    background: none;
+  }
+
+  .guide-bar,
+  .guide-search,
+  .guide-example__play {
+    display: none !important;
+  }
+
+  .guide__column {
+    max-width: none;
+    padding: 0;
+  }
+
+  .guide-example,
+  .rubrics-rule {
+    break-inside: avoid;
+  }
+}

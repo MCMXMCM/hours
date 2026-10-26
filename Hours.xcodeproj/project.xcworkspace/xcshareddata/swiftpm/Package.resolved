@@ -1,0 +1,15 @@
+{
+  "originHash" : "6001b1534387aa71e89075d5e11e4116a718ac0ffb8b097e4b974a6afeddec1d",
+  "pins" : [
+    {
+      "identity" : "gabc-parser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/MCMXMCM/gabc-parser.git",
+      "state" : {
+        "revision" : "6113974ebdb4e1d18dda13c489c267cbaf862e48",
+        "version" : "0.8.0"
+      }
+    }
+  ],
+  "version" : 3
+}
