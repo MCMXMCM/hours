@@ -8,6 +8,14 @@
   src: url("/fonts/EBGaramond-VariableFont_wght.woff2") format("woff2");
 }
 
+@font-face {
+  font-display: swap;
+  font-family: "EB Garamond";
+  font-style: italic;
+  font-weight: 400 800;
+  src: url("/fonts/EBGaramond-Italic-VariableFont_wght.woff2") format("woff2");
+}
+
 @theme {
   --font-garamond: "EB Garamond", "Iowan Old Style", Georgia, serif;
   --font-serif:
@@ -2034,8 +2042,10 @@ html:has(.home--wheel) body {
   letter-spacing: 1.3px;
 }
 
+/* The Hour's titles, its rank, its name and its day's, in red as a breviary
+   prints them; the English beneath them is the reader's. */
 .office-header__rank {
-  color: var(--accent);
+  color: var(--rubric);
   font-size: calc(18px * var(--reader-scale));
   line-height: 1.3;
 }
@@ -2047,6 +2057,7 @@ html:has(.home--wheel) body {
 }
 
 .office-header__title {
+  color: var(--rubric);
   font-size: calc(43px * var(--reader-scale));
   font-weight: 600;
   line-height: calc(1.305em - 4px * var(--reader-scale));
@@ -2059,7 +2070,7 @@ html:has(.home--wheel) body {
 }
 
 .office-header__observance {
-  color: var(--ink-secondary);
+  color: var(--rubric);
   font-size: calc(19px * var(--reader-scale));
   line-height: 1.305;
 }
@@ -2083,11 +2094,12 @@ html:has(.home--wheel) body {
   padding-bottom: 24px;
 }
 
+/* A part's title in red, as a breviary prints it; its English beneath. */
 .office-section__heading {
   display: grid;
   gap: 5px;
   padding: 0 20px 16px;
-  color: var(--ink-secondary);
+  color: var(--rubric);
   font-family: var(--font-rounded);
   text-align: center;
 }
@@ -2101,6 +2113,7 @@ html:has(.home--wheel) body {
 
 .office-section__heading p {
   margin: 0;
+  color: var(--ink-secondary);
   font-size: calc(12px * var(--reader-scale));
 }
 
@@ -2137,7 +2150,7 @@ html:has(.home--wheel) body {
   display: grid;
   gap: 8px;
   padding: 0 20px 12px;
-  color: var(--accent);
+  color: var(--rubric);
   text-align: center;
 }
 
@@ -2179,6 +2192,11 @@ html:has(.home--wheel) body {
   font-weight: 600;
 }
 
+/* A pointed verse's preparatory syllables, in EB Garamond's italic. */
+.office-text__preparatory {
+  font-style: italic;
+}
+
 /* A line to a block, every line at the left edge, a mark before its words. */
 .office-text--lines {
   white-space: normal;
@@ -2198,8 +2216,16 @@ html:has(.home--wheel) body {
   color: var(--rubric);
 }
 
+/* A rubric among the words: a direction to the one who prays, or a part
+   that is a rubric in its whole (OfficeRubrics). */
+.office-text__rubric {
+  color: var(--rubric);
+  font-style: italic;
+}
+
 .office-text--secondary .office-text__mark,
-.office-text--secondary .office-text__sign {
+.office-text--secondary .office-text__sign,
+.office-text--secondary .office-text__rubric {
   opacity: 0.78;
 }
 
@@ -2376,7 +2402,13 @@ html:has(.home--wheel) body {
   color: var(--rubric);
 }
 
-.psalter-verse--translation .psalter-verse__sign {
+.psalter-verse__rubric {
+  color: var(--rubric);
+  font-style: italic;
+}
+
+.psalter-verse--translation .psalter-verse__sign,
+.psalter-verse--translation .psalter-verse__rubric {
   opacity: 0.78;
 }
 

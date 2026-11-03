@@ -160,6 +160,13 @@ enum PsalterTypography {
             let length = (mark as NSString).length
             result.addAttribute(.foregroundColor, value: red, range: NSRange(location: 0, length: length - 1))
         }
+        // Its rubrics, a bow or a genuflexion, in red italic.
+        let italicBase = UIFont(name: "EBGaramond-Italic", size: fontSize)
+            ?? UIFont.italicSystemFont(ofSize: fontSize)
+        let italic = UIFontMetrics(forTextStyle: .body).scaledFont(for: italicBase, compatibleWith: traits)
+        for range in OfficeRubrics.ranges(in: words) {
+            result.addAttributes([.foregroundColor: red, .font: italic], range: range)
+        }
 
         var pause: Int?
         if form == .verse {

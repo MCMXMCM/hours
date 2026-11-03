@@ -923,6 +923,7 @@ private struct OfficeReaderPage: View {
                 }
                 selectedScore = score
                 selectedScoreSectionID = section.id
+                playback.prepare(score: score)
                 #if DEBUG
                 if Self.uiTestSimulatesCantorFollow {
                     playback.simulateViewportFollow(
@@ -1496,7 +1497,7 @@ private struct OfficeReaderHeader: View {
                         relativeTo: .body
                     )
                 )
-                .foregroundStyle(Color(red: 0.68, green: 0.12, blue: 0.09))
+                .foregroundStyle(Color(uiColor: MissalTypography.rubric))
                 .accessibilityIdentifier("office-rank-label")
 
             if model.officeTradition != .roman1960 {
@@ -1519,6 +1520,9 @@ private struct OfficeReaderHeader: View {
                     )
                 )
                 .fontWeight(.semibold)
+                // The Hour's name and its day's, in red as a breviary prints
+                // them.
+                .foregroundStyle(Color(uiColor: MissalTypography.rubric))
                 .multilineTextAlignment(.center)
                 .lineSpacing(-4 * readerScale)
                 .accessibilityIdentifier("office-reader-title")
@@ -1531,7 +1535,7 @@ private struct OfficeReaderHeader: View {
                         relativeTo: .body
                     )
                 )
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(uiColor: MissalTypography.rubric))
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 24)
@@ -2540,6 +2544,9 @@ nonisolated enum OfficeReaderSectionBuilder {
         return verses
     }
 
+    /// A verse's words, spaced as its lyric is spaced, each accented syllable
+    /// between the emphasis markers and each preparatory one between the
+    /// preparatory markers.
     static func pointedLyricText(
         in elements: [GregorianNotationElement]
     ) -> String {
@@ -2558,12 +2565,13 @@ nonisolated enum OfficeReaderSectionBuilder {
                result.last?.isWhitespace != true {
                 result.append(" ")
             }
-            if style == .accented {
-                result.append(PsalmTextFormatter.emphasisStartMarker)
+            let markers = PsalmTextFormatter.markers(for: style)
+            if let markers {
+                result.append(markers.start)
             }
             result.append(text)
-            if style == .accented {
-                result.append(PsalmTextFormatter.emphasisEndMarker)
+            if let markers {
+                result.append(markers.end)
             }
             separatesFollowingLyric = isLyricMark
         }
@@ -3716,8 +3724,8 @@ private struct PrayerOptionsView: View {
                     Text(
                         "Choose the sampled harp, modeled organ, or simple "
                             + "pitch-pipe tone. "
-                            + "The reciting tone is placed at the selected "
-                            + "schola pitch and register."
+                            + "Each chant is sung as it is written, its do at "
+                            + "the selected schola pitch and register."
                     )
                 }
 
@@ -3803,21 +3811,36 @@ struct PsalmTextLine: Identifiable, Equatable {
     let number: Int?
     let latin: String
     let english: String?
+    /// The syllables sung to a cadence's accented notes, set in heavy type.
     let emphasizedRanges: [Range<String.Index>]
+    /// The syllables sung to the notes preparatory to an accent, set in
+    /// italics, as the Liber Usualis sets them.
+    let preparatoryRanges: [Range<String.Index>]
 }
 
 nonisolated enum PsalmTextFormatter {
     nonisolated static let missingTranslationPlaceholder = "\u{2063}"
     nonisolated static let emphasisStartMarker = "\u{F0000}"
     nonisolated static let emphasisEndMarker = "\u{F0001}"
+    nonisolated static let preparatoryStartMarker = "\u{F0002}"
+    nonisolated static let preparatoryEndMarker = "\u{F0003}"
 
-    private static let latinDiphthongs: Set<String> = [
-        "ae", "au", "oe"
-    ]
-    private static let inseparableConsonantPairs: Set<String> = [
-        "bl", "br", "ch", "cl", "cr", "dr", "fl", "fr", "gl", "gn",
-        "gr", "gu", "ph", "pl", "pr", "qu", "th", "tr"
-    ]
+    /// The markers around a syllable of the style in pointed text: an
+    /// accented syllable's, a preparatory one's, or none.
+    nonisolated static func markers(
+        for style: GregorianLyricStyle
+    ) -> (start: String, end: String)? {
+        switch style {
+        case .accented:
+            (emphasisStartMarker, emphasisEndMarker)
+        case .preparatory:
+            (preparatoryStartMarker, preparatoryEndMarker)
+        case .regular, .rubric:
+            nil
+        @unknown default:
+            nil
+        }
+    }
 
     static func lines(
         latin: String,
@@ -3852,9 +3875,8 @@ nonisolated enum PsalmTextFormatter {
                         return strippingVersePrefix(from: paragraph)
                     }
                     : nil,
-                emphasizedRanges: pointedLatin.ranges.isEmpty
-                    ? emphasizedSyllableRanges(in: pointedLatin.text)
-                    : pointedLatin.ranges
+                emphasizedRanges: pointedLatin.accents,
+                preparatoryRanges: pointedLatin.preparatory
             )
         }
     }
@@ -3889,34 +3911,60 @@ nonisolated enum PsalmTextFormatter {
         value
             .replacingOccurrences(of: emphasisStartMarker, with: "")
             .replacingOccurrences(of: emphasisEndMarker, with: "")
+            .replacingOccurrences(of: preparatoryStartMarker, with: "")
+            .replacingOccurrences(of: preparatoryEndMarker, with: "")
     }
 
+    /// The text without its markers, and the ranges of its accented and its
+    /// preparatory syllables. Syllables of one kind that meet are one range
+    /// (dex-tris), so that they are set as one word.
     private static func extractingEmphasis(
         from value: String
-    ) -> (text: String, ranges: [Range<String.Index>]) {
+    ) -> (
+        text: String,
+        accents: [Range<String.Index>],
+        preparatory: [Range<String.Index>]
+    ) {
         var text = ""
-        var rangeOffsets: [Range<Int>] = []
-        var rangeStart: Int?
+        var accentOffsets: [Range<Int>] = []
+        var preparatoryOffsets: [Range<Int>] = []
+        var accentStart: Int?
+        var preparatoryStart: Int?
+
+        func close(_ start: Int?, in offsets: inout [Range<Int>]) {
+            guard let start, start < text.count else { return }
+            if let last = offsets.last, last.upperBound == start {
+                offsets[offsets.count - 1] = last.lowerBound..<text.count
+            } else {
+                offsets.append(start..<text.count)
+            }
+        }
 
         for character in value {
-            if String(character) == emphasisStartMarker {
-                rangeStart = text.count
-            } else if String(character) == emphasisEndMarker {
-                if let rangeStart, rangeStart < text.count {
-                    rangeOffsets.append(rangeStart..<text.count)
-                }
-                rangeStart = nil
-            } else {
+            switch String(character) {
+            case emphasisStartMarker:
+                accentStart = text.count
+            case emphasisEndMarker:
+                close(accentStart, in: &accentOffsets)
+                accentStart = nil
+            case preparatoryStartMarker:
+                preparatoryStart = text.count
+            case preparatoryEndMarker:
+                close(preparatoryStart, in: &preparatoryOffsets)
+                preparatoryStart = nil
+            default:
                 text.append(character)
             }
         }
 
-        let ranges = rangeOffsets.map { offset in
-            let lowerBound = text.index(text.startIndex, offsetBy: offset.lowerBound)
-            let upperBound = text.index(text.startIndex, offsetBy: offset.upperBound)
-            return lowerBound..<upperBound
+        func ranges(_ offsets: [Range<Int>]) -> [Range<String.Index>] {
+            offsets.map { offset in
+                let lowerBound = text.index(text.startIndex, offsetBy: offset.lowerBound)
+                let upperBound = text.index(text.startIndex, offsetBy: offset.upperBound)
+                return lowerBound..<upperBound
+            }
         }
-        return (text, ranges)
+        return (text, ranges(accentOffsets), ranges(preparatoryOffsets))
     }
 
     nonisolated static func scriptureVerseNumber(
@@ -3933,161 +3981,6 @@ nonisolated enum PsalmTextFormatter {
             return nil
         }
         return Int(parts[1])
-    }
-
-    static func emphasizedSyllableRanges(
-        in value: String
-    ) -> [Range<String.Index>] {
-        // Point the prose text like the corresponding psalm-tone score:
-        // emphasize the lexical accent nearest each half-verse cadence.
-        // Liturgical Latin marks polysyllabic stress with an acute accent;
-        // unmarked endings fall back to the natural penultimate syllable.
-        let mediants = value.indices.filter { value[$0] == "*" }
-        guard !mediants.isEmpty else { return [] }
-
-        var ranges: [Range<String.Index>] = []
-        var segmentStart = value.startIndex
-        for mediant in mediants {
-            if let range = finalAccentRange(
-                in: value,
-                segment: segmentStart..<mediant
-            ) {
-                ranges.append(range)
-            }
-            segmentStart = value.index(after: mediant)
-        }
-        if let range = finalAccentRange(
-            in: value,
-            segment: segmentStart..<value.endIndex
-        ) {
-            ranges.append(range)
-        }
-        return ranges
-    }
-
-    private static func finalAccentRange(
-        in value: String,
-        segment: Range<String.Index>
-    ) -> Range<String.Index>? {
-        guard let finalLetter = value[segment].lastIndex(where: \.isLetter) else {
-            return nil
-        }
-
-        var wordStart = finalLetter
-        while wordStart > segment.lowerBound {
-            let previous = value.index(before: wordStart)
-            guard value[previous].isLetter else { break }
-            wordStart = previous
-        }
-        let wordEnd = value.index(after: finalLetter)
-        let wordRange = wordStart..<wordEnd
-        let nuclei = vowelNuclei(in: value, wordRange: wordRange)
-        guard !nuclei.isEmpty else { return wordRange }
-
-        let accentedNucleus = nuclei.firstIndex {
-            value[$0].containsAcuteAccent
-        } ?? max(0, nuclei.count - 2)
-        let lowerBound = accentedNucleus == 0
-            ? wordRange.lowerBound
-            : syllableBoundary(
-                in: value,
-                leftNucleus: nuclei[accentedNucleus - 1],
-                rightNucleus: nuclei[accentedNucleus]
-            )
-        let upperBound = accentedNucleus == nuclei.count - 1
-            ? wordRange.upperBound
-            : syllableBoundary(
-                in: value,
-                leftNucleus: nuclei[accentedNucleus],
-                rightNucleus: nuclei[accentedNucleus + 1]
-            )
-        return lowerBound..<upperBound
-    }
-
-    private static func vowelNuclei(
-        in value: String,
-        wordRange: Range<String.Index>
-    ) -> [Range<String.Index>] {
-        var result: [Range<String.Index>] = []
-        var index = wordRange.lowerBound
-
-        while index < wordRange.upperBound {
-            let character = value[index]
-            guard character.isLatinVowel,
-                  !isConsonantalVowel(
-                    in: value,
-                    at: index,
-                    wordRange: wordRange
-                  )
-            else {
-                index = value.index(after: index)
-                continue
-            }
-
-            var upperBound = value.index(after: index)
-            if upperBound < wordRange.upperBound {
-                let pair = character.unaccentedLowercase
-                    + value[upperBound].unaccentedLowercase
-                if latinDiphthongs.contains(pair) {
-                    upperBound = value.index(after: upperBound)
-                }
-            }
-            result.append(index..<upperBound)
-            index = upperBound
-        }
-        return result
-    }
-
-    private static func isConsonantalVowel(
-        in value: String,
-        at index: String.Index,
-        wordRange: Range<String.Index>
-    ) -> Bool {
-        let vowel = value[index].unaccentedLowercase
-        let previous = index > wordRange.lowerBound
-            ? value[value.index(before: index)].unaccentedLowercase
-            : nil
-        let nextIndex = value.index(after: index)
-        let nextIsVowel = nextIndex < wordRange.upperBound
-            && value[nextIndex].isLatinVowel
-
-        if vowel == "i", nextIsVowel {
-            return index == wordRange.lowerBound
-                || previous.map {
-                    ["a", "e", "i", "o", "u", "y", "æ", "œ"].contains($0)
-                } == true
-        }
-        return vowel == "u"
-            && (previous == "q" || (previous == "g" && nextIsVowel))
-    }
-
-    private static func syllableBoundary(
-        in value: String,
-        leftNucleus: Range<String.Index>,
-        rightNucleus: Range<String.Index>
-    ) -> String.Index {
-        let clusterRange = leftNucleus.upperBound..<rightNucleus.lowerBound
-        let consonantIndices = Array(value.indices[clusterRange])
-        guard !consonantIndices.isEmpty else {
-            return rightNucleus.lowerBound
-        }
-        guard consonantIndices.count > 1 else {
-            return consonantIndices[0]
-        }
-
-        let lastPair = consonantIndices.suffix(2)
-            .map { value[$0].unaccentedLowercase }
-            .joined()
-        if inseparableConsonantPairs.contains(lastPair) {
-            return lastPairStart(in: consonantIndices)
-        }
-        return consonantIndices[consonantIndices.count - 1]
-    }
-
-    private static func lastPairStart(
-        in indices: [String.Index]
-    ) -> String.Index {
-        indices[indices.count - 2]
     }
 
     private static func paragraphs(in value: String) -> [String] {
@@ -4218,32 +4111,6 @@ nonisolated enum PsalmTextFormatter {
     }
 }
 
-nonisolated private extension Character {
-    var isLatinVowel: Bool {
-        ["a", "e", "i", "o", "u", "y", "æ", "œ"]
-            .contains(unaccentedLowercase)
-    }
-
-    var unaccentedLowercase: String {
-        String(self)
-            .folding(
-                options: [.caseInsensitive, .diacriticInsensitive],
-                locale: Locale(identifier: "la")
-            )
-            .lowercased()
-    }
-}
-
-nonisolated private extension Substring {
-    var containsAcuteAccent: Bool {
-        unicodeScalars.contains {
-            $0.value == 0x0301
-        } || decomposedStringWithCanonicalMapping.unicodeScalars.contains {
-            $0.value == 0x0301
-        }
-    }
-}
-
 private struct PsalmTextSectionView: View {
     let section: OfficeSection
     /// Whether the page is the Latin; else each verse's English stands
@@ -4369,6 +4236,7 @@ private struct PsalmTextSectionView: View {
                         fontSize: 21 * contentScale,
                         lineSpacing: 3 * contentScale,
                         emphasizedRanges: line.emphasizedRanges,
+                        preparatoryRanges: line.preparatoryRanges,
                         highlightsAsterisks: true,
                         marksRubrics: true
                     )
@@ -4506,6 +4374,7 @@ private struct OfficeSectionView: View {
                         "office-section-heading-\(section.id)"
                     )
                 } else {
+                    // A part's title, in red as a breviary prints it.
                     VStack(spacing: 5) {
                         Text(heading.uppercased())
                             .font(
@@ -4517,7 +4386,7 @@ private struct OfficeSectionView: View {
                             )
                             .tracking(1.5 * contentScale)
                     }
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(uiColor: MissalTypography.rubric))
                     .frame(maxWidth: .infinity)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 20)
@@ -4540,7 +4409,7 @@ private struct OfficeSectionView: View {
                             .italic()
                         )
                 }
-                .foregroundStyle(Color(red: 0.68, green: 0.12, blue: 0.09))
+                .foregroundStyle(Color(uiColor: MissalTypography.rubric))
                 .frame(maxWidth: .infinity)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 20)
@@ -4631,7 +4500,10 @@ private struct OfficeSectionView: View {
                     fontSize: (isAntiphonText ? 21 : 23) * contentScale,
                     isItalic: isAntiphonText,
                     lineSpacing: (isAntiphonText ? 3 : 7) * contentScale,
-                    marksRubrics: true
+                    marksRubrics: true,
+                    // A part that is a rubric in its whole, a citation or a
+                    // direction, set as a breviary prints a rubric.
+                    isRubric: OfficeRubrics.isRubric(section)
                 )
                     .accessibilityIdentifier("selectable-prayer-text")
                     .frame(maxWidth: .infinity, alignment: .leading)

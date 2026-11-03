@@ -573,6 +573,7 @@ nonisolated private struct OfficePrintBlockBuilder {
                         : snapshot.office.titleEnglish.flatMap { $0.isEmpty ? nil : $0 }
                             ?? snapshot.office.titleLatin,
                     size: 30 * snapshot.readerScale,
+                    color: OfficePrintStyle.rubric,
                     weight: .semibold
                 ),
                 keepWithNext: true
@@ -605,7 +606,7 @@ nonisolated private struct OfficePrintBlockBuilder {
                 OfficePrintStyle.centered(
                     snapshot.showsLatin ? observanceTitleLatin : observanceTitleEnglish ?? observanceTitleLatin,
                     size: 14 * snapshot.readerScale,
-                    color: .darkGray
+                    color: OfficePrintStyle.rubric
                 )
             )
         )
@@ -650,7 +651,7 @@ nonisolated private struct OfficePrintBlockBuilder {
                         : OfficePrintStyle.centered(
                             title.uppercased(),
                             size: 10 * snapshot.readerScale,
-                            color: .darkGray,
+                            color: OfficePrintStyle.rubric,
                             weight: .semibold
                         ),
                     keepWithNext: true,
@@ -726,7 +727,11 @@ nonisolated private struct OfficePrintBlockBuilder {
                 .text(
                     isAntiphonText(section)
                         ? OfficePrintStyle.antiphon(english, scale: snapshot.readerScale)
-                        : OfficePrintStyle.body(english, scale: snapshot.readerScale),
+                        : OfficePrintStyle.body(
+                            english,
+                            scale: snapshot.readerScale,
+                            isRubric: OfficeRubrics.isRubric(section)
+                        ),
                     column: .scoreAligned
                 )
             )
@@ -735,7 +740,11 @@ nonisolated private struct OfficePrintBlockBuilder {
                 .text(
                     isAntiphonText(section)
                         ? OfficePrintStyle.antiphon(latin, scale: snapshot.readerScale)
-                        : OfficePrintStyle.body(latin, scale: snapshot.readerScale),
+                        : OfficePrintStyle.body(
+                            latin,
+                            scale: snapshot.readerScale,
+                            isRubric: OfficeRubrics.isRubric(section)
+                        ),
                     column: .scoreAligned
                 )
             )
@@ -755,7 +764,8 @@ nonisolated private struct OfficePrintBlockBuilder {
                         english,
                         scale: snapshot.readerScale,
                         color: .darkGray,
-                        italic: printsScore(of: section)
+                        italic: printsScore(of: section),
+                        isRubric: OfficeRubrics.isRubric(section)
                     ),
                     column: .scoreAligned
                 )
@@ -833,27 +843,42 @@ nonisolated private struct OfficePrintBlockBuilder {
                 let numberPrefixLength = line.number.map {
                     String("\($0). ").utf16.count
                 } ?? 0
-                for range in line.emphasizedRanges {
-                    let lower = line.latin.utf16.distance(
-                        from: line.latin.utf16.startIndex,
-                        to: range.lowerBound.samePosition(in: line.latin.utf16)!
-                    )
-                    let upper = line.latin.utf16.distance(
-                        from: line.latin.utf16.startIndex,
-                        to: range.upperBound.samePosition(in: line.latin.utf16)!
-                    )
-                    attributed.addAttribute(
-                        .font,
-                        value: OfficePrintStyle.font(
-                            size: 17 * snapshot.readerScale,
-                            weight: .semibold
-                        ),
-                        range: NSRange(
-                            location: numberPrefixLength + lower,
-                            length: upper - lower
+                // The accented syllables in heavy type and the preparatory
+                // ones in italics, as the reader sets them.
+                func set(_ ranges: [Range<String.Index>], in font: UIFont) {
+                    for range in ranges {
+                        let lower = line.latin.utf16.distance(
+                            from: line.latin.utf16.startIndex,
+                            to: range.lowerBound.samePosition(in: line.latin.utf16)!
                         )
-                    )
+                        let upper = line.latin.utf16.distance(
+                            from: line.latin.utf16.startIndex,
+                            to: range.upperBound.samePosition(in: line.latin.utf16)!
+                        )
+                        attributed.addAttribute(
+                            .font,
+                            value: font,
+                            range: NSRange(
+                                location: numberPrefixLength + lower,
+                                length: upper - lower
+                            )
+                        )
+                    }
                 }
+                set(
+                    line.emphasizedRanges,
+                    in: OfficePrintStyle.font(
+                        size: 17 * snapshot.readerScale,
+                        weight: .semibold
+                    )
+                )
+                set(
+                    line.preparatoryRanges,
+                    in: OfficePrintStyle.font(
+                        size: 17 * snapshot.readerScale,
+                        italic: true
+                    )
+                )
                 result.append(.text(attributed, column: .scoreAligned))
                 if let english = distinctEnglish(line.english, from: line.latin) {
                     result.append(.space(4))
@@ -1216,12 +1241,15 @@ nonisolated private enum OfficePrintStyle {
         )
     }
 
+    /// Words printed as the reader sets them; all in red italic, if they are
+    /// a rubric's own part (`OfficeRubrics.isRubric`).
     static func body(
         _ value: String,
         scale: Double,
         size: CGFloat = 18,
         color: UIColor = ink,
-        italic: Bool = false
+        italic: Bool = false,
+        isRubric: Bool = false
     ) -> NSAttributedString {
         let result = NSMutableAttributedString(attributedString: text(
             PsalmTextFormatter.removingEmphasisMarkers(from: value),
@@ -1230,7 +1258,7 @@ nonisolated private enum OfficePrintStyle {
             italic: italic,
             lineSpacing: 3 * scale
         ))
-        markingRubrics(in: result)
+        markingRubrics(in: result, isRubric: isRubric)
         return result
     }
 
@@ -1282,11 +1310,16 @@ nonisolated private enum OfficePrintStyle {
 
     /// The marks a breviary prints in red, in red: a versicle's, a
     /// response's and an antiphon's at the head of a line, the cross and
-    /// the signs of the chant's pauses.
-    static func markingRubrics(in text: NSMutableAttributedString) {
+    /// the signs of the chant's pauses; and the rubrics among the words
+    /// (OfficeRubrics), in red italic.
+    static func markingRubrics(in text: NSMutableAttributedString, isRubric: Bool = false) {
         let range = NSRange(location: 0, length: (text.string as NSString).length)
         for match in rubricMarks.matches(in: text.string, range: range) {
             text.addAttribute(.foregroundColor, value: rubric, range: match.range)
+        }
+        for found in OfficeRubrics.ranges(in: text.string, isRubric: isRubric) {
+            let size = (text.attribute(.font, at: found.location, effectiveRange: nil) as? UIFont)?.pointSize ?? 18
+            text.addAttributes([.foregroundColor: rubric, .font: font(size: size, italic: true)], range: found)
         }
     }
 

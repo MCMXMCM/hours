@@ -1,4 +1,8 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  OfficeRubrics,
+  type RubricRange,
+} from "@/reader/presentation/officeRubrics.ts";
 
 /**
  * A verse of a psalm or canticle read without its chant, set plainly: a
@@ -49,11 +53,44 @@ function withSigns(text: string, key: string): ReactNode[] {
   return pieces;
 }
 
-/** The opening of a verse: its mark in red, if it has one. */
-function opening(text: string): { lead: ReactNode[]; rest: string } {
+/** The words of the text from `from` to `to`, with their signs, and their
+ * rubrics in red italic. */
+function rubricated(
+  text: string,
+  from: number,
+  to: number,
+  rubrics: readonly RubricRange[],
+  key: string,
+): ReactNode[] {
+  const pieces: ReactNode[] = [];
+  let position = from;
+  for (const rubric of rubrics) {
+    const lower = Math.max(position, rubric.lowerBound);
+    const upper = Math.min(to, rubric.upperBound);
+    if (upper <= lower) continue;
+    if (lower > position) {
+      pieces.push(
+        ...withSigns(text.slice(position, lower), `${key}${position}`),
+      );
+    }
+    pieces.push(
+      <span key={`${key}u${lower}`} className="psalter-verse__rubric">
+        {withSigns(text.slice(lower, upper), `${key}${lower}`)}
+      </span>,
+    );
+    position = upper;
+  }
+  if (position < to) {
+    pieces.push(...withSigns(text.slice(position, to), `${key}${position}`));
+  }
+  return pieces;
+}
+
+/** The opening of a verse: its mark in red, if it has one, and where the
+ * words after it begin. */
+function opening(text: string): { lead: ReactNode[]; start: number } {
   const lead: ReactNode[] = [];
-  let rest = text;
-  const mark = openingMark.exec(rest)?.[1];
+  const mark = openingMark.exec(text)?.[1];
   if (mark !== undefined) {
     lead.push(
       <span key="mark" className="psalter-verse__sign">
@@ -61,9 +98,9 @@ function opening(text: string): { lead: ReactNode[]; rest: string } {
       </span>,
       " ",
     );
-    rest = rest.slice(mark.length + 1);
+    return { lead, start: mark.length + 1 };
   }
-  return { lead, rest };
+  return { lead, start: 0 };
 }
 
 export function PsalterVerse({
@@ -118,34 +155,48 @@ export function PsalterVerse({
     ["--line-spacing" as string]: `${lineSpacing}px`,
   };
 
+  const rubrics = OfficeRubrics.ranges(text);
   if (form === "stanza") {
+    let lineStart = 0;
     return (
       <p className={className} style={style} lang={lang}>
-        {text.split("\n").map((line, index) => (
-          <span key={index} className="psalter-verse__line">
-            {withSigns(line, `l${index}`)}
-          </span>
-        ))}
+        {text.split("\n").map((line, index) => {
+          const start = lineStart;
+          lineStart += line.length + 1;
+          return (
+            <span key={index} className="psalter-verse__line">
+              {rubricated(
+                text,
+                start,
+                start + line.length,
+                rubrics,
+                `l${index}-`,
+              )}
+            </span>
+          );
+        })}
       </p>
     );
   }
 
-  const { lead, rest } = opening(pause < 0 ? text : text.slice(0, pause));
+  const { lead, start } = opening(text);
   return (
     <p ref={paragraph} className={className} style={style} lang={lang}>
       {pause < 0 ? (
         <>
           {lead}
-          {withSigns(rest, "v")}
+          {rubricated(text, start, text.length, rubrics, "v")}
         </>
       ) : (
         <>
           <span ref={first}>
             {lead}
-            {withSigns(rest, "a")}
+            {rubricated(text, start, pause, rubrics, "a")}
           </span>
           {breaks ? <br /> : " "}
-          <span ref={second}>{withSigns(text.slice(pause + 1), "b")}</span>
+          <span ref={second}>
+            {rubricated(text, pause + 1, text.length, rubrics, "b")}
+          </span>
         </>
       )}
     </p>

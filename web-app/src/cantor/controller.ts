@@ -93,9 +93,6 @@ export class ChantPlaybackController {
   private activeScore: ChantScore | null = null;
   private activeStartEventID: string | null = null;
   private playsSingleNote = false;
-  // A lesson can keep related examples on the same pitch reference.
-  // This is session state, never part of the persisted Office score format.
-  private pitchReference: ChantScore | null = null;
   private playbackID: symbol | null = null;
 
   constructor(audioPlayer: CantorAudioPlayer, preferences: Preferences) {
@@ -211,7 +208,10 @@ export class ChantPlaybackController {
     this.store.update({ loopsPhrase });
   }
 
-  get targetDominantOffset(): number {
+  /** Where every chant's do sounds: the Schola pitch, in the register
+   * chosen. Each chant is sung as it is written, so that a note sounds the
+   * same in every score that writes it. */
+  get doOffset(): number {
     return (
       ScholaPitches.semitoneOffset(this.scholaPitch) +
       ChantRegisters.octaveOffset(this.chantRegister)
@@ -220,12 +220,11 @@ export class ChantPlaybackController {
 
   // MARK: Playback
 
-  prepare(score: ChantScore, pitchReference: ChantScore | null = null): void {
+  prepare(score: ChantScore): void {
     if (this.preparedScoreID !== score.id) {
       this.stop();
       this.activeStartEventID = null;
     }
-    this.pitchReference = pitchReference;
     this.activeScore = score;
     this.store.update({ errorMessage: null, preparedScoreID: score.id });
   }
@@ -254,9 +253,6 @@ export class ChantPlaybackController {
     fromEventID: string | null,
     singleNote: boolean,
   ): void {
-    if (this.preparedScoreID !== score.id) {
-      this.pitchReference = null;
-    }
     this.playbackID = null;
     this.activeScore = score;
     this.activeStartEventID = fromEventID;
@@ -279,12 +275,8 @@ export class ChantPlaybackController {
 
     const tempoAtStart = this.tempo;
     const clefAtStart = GABCClefs.fromGABC(score.gabc);
-    const reference = this.pitchReference ?? score;
-    const transpositionAtStart = CantorGuideSynthesizer.centeredTransposition(
-      reference.timeline.events,
-      this.targetDominantOffset,
-      GABCClefs.fromGABC(reference.gabc),
-    );
+    // The chant as it is written, its do on the Schola pitch.
+    const transpositionAtStart = this.doOffset;
     const registerAtStart = this.chantRegister;
     const soundAtStart = this.guideSound;
     const loopsAtStart = this.loopsPhrase && !singleNote;

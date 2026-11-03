@@ -6903,7 +6903,7 @@
           "score": {
             "id": "guide-cadence-syllables-two",
             "incipit": "Two or three syllables at the cadence",
-            "gabc": "%% (c3) Dó(h)mi(h)<i>no</i>(g) <b>mé</b>(i)o.(g.) (::)",
+            "gabc": "%% (c3) Dó(h)mi(h)_no_(g) *mé*(i)o.(g.) (::)",
             "reviewStatus": "generatedFormula",
             "provenance": {
               "collection": "Hours Guide to Chant",
@@ -7032,7 +7032,7 @@
           "score": {
             "id": "guide-cadence-syllables-three",
             "incipit": "Two or three syllables at the cadence",
-            "gabc": "%% (c3) Pú(h)e(h)<i>ri</i>(g) <b>Dó</b>(i)mi(h)num.(g.) (::)",
+            "gabc": "%% (c3) Pú(h)e(h)_ri_(g) *Dó*(i)mi(h)num.(g.) (::)",
             "reviewStatus": "generatedFormula",
             "provenance": {
               "collection": "Hours Guide to Chant",

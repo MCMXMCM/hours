@@ -15,7 +15,7 @@ product information is at [horarum.com](https://horarum.com/).
 ## What is included
 
 This repository is the source of the app as it is distributed. This revision
-corresponds to Hours 1.2.0 (build 65). It contains:
+corresponds to Hours 1.2.2 (build 71). It contains:
 
 - The SwiftUI app, shared core, and widget source
 - Gregorian notation and chant-playback code

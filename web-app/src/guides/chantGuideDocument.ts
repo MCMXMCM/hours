@@ -5,8 +5,7 @@
 //
 // A Swift struct is plain data here, and what Swift attaches to it stands in
 // the namespace named for its plural: `document.example(_:)` is
-// `ChantGuideDocuments.example`, and `example.pitchReference` is
-// `ChantGuideExamples.pitchReference`.
+// `ChantGuideDocuments.example`.
 //
 // `ChantGuideDocuments.decode` stands for `JSONDecoder` and the `Decodable`
 // conformances of these types (see `decoding.ts`); a key the document does
@@ -325,12 +324,6 @@ export const ChantGuideDocuments = {
 
   example(document: ChantGuideDocument, id: string): ChantGuideExample | null {
     return document.examples.find((candidate) => candidate.id === id) ?? null;
-  },
-};
-
-export const ChantGuideExamples = {
-  pitchReference(example: ChantGuideExample): ChantScore {
-    return example.variants[0].score;
   },
 };
 

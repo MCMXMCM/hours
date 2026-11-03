@@ -115,7 +115,10 @@ final class ChantPlaybackController {
     }
     var loopsPhrase = false
 
-    var targetDominantOffset: Int {
+    /// Where every chant's do sounds: the Schola pitch, in the register
+    /// chosen. Each chant is sung as it is written, so that a note sounds
+    /// the same in every score that writes it.
+    var doOffset: Int {
         scholaPitch.semitoneOffset + chantRegister.octaveOffset
     }
 
@@ -126,9 +129,6 @@ final class ChantPlaybackController {
     private var activeScore: ChantScore?
     private var activeStartEventID: String?
     private var playsSingleNote = false
-    // A lesson can keep related examples on the same pitch reference.
-    // This is session state, never part of the persisted Office score format.
-    private var pitchReference: ChantScore?
     private var playbackID: UUID?
 
     private static let scheduledBufferWindow = 8
@@ -159,12 +159,11 @@ final class ChantPlaybackController {
         observeAudioLifecycle()
     }
 
-    func prepare(score: ChantScore, pitchReference: ChantScore? = nil) {
+    func prepare(score: ChantScore) {
         if preparedScoreID != score.id {
             stop()
             activeStartEventID = nil
         }
-        self.pitchReference = pitchReference
         errorMessage = nil
         activeScore = score
         preparedScoreID = score.id
@@ -187,9 +186,6 @@ final class ChantPlaybackController {
     }
 
     private func play(score: ChantScore, fromEventID: String?, singleNote: Bool) {
-        if preparedScoreID != score.id {
-            pitchReference = nil
-        }
         playbackID = nil
         isPlaying = false
         currentEventID = nil
@@ -215,12 +211,8 @@ final class ChantPlaybackController {
         errorMessage = nil
         let tempoAtStart = tempo
         let clefAtStart = GABCClef(gabc: score.gabc)
-        let reference = pitchReference ?? score
-        let transpositionAtStart = CantorGuideSynthesizer.centeredTransposition(
-            for: reference.timeline.events,
-            targetOffset: targetDominantOffset,
-            clef: GABCClef(gabc: reference.gabc)
-        )
+        // The chant as it is written, its do on the Schola pitch.
+        let transpositionAtStart = doOffset
         let registerAtStart = chantRegister
         let soundAtStart = guideSound
         let loopsAtStart = loopsPhrase && !singleNote
@@ -1886,26 +1878,6 @@ nonisolated enum CantorGuideSynthesizer {
             semitones += eventClef.appliesDefaultFlat(to: event.relativePitch) ? 2 : 1
         }
         return semitones
-    }
-
-    static func centeredTransposition(
-        for events: [ChantEvent],
-        targetOffset: Int,
-        clef: GABCClef = .c3
-    ) -> Int {
-        let offsets = events.map { semitoneOffset(for: $0, clef: clef) }
-        let counts = offsets.reduce(into: [Int: Int]()) { result, offset in
-            result[offset, default: 0] += 1
-        }
-        guard let dominantOffset = counts.max(by: { left, right in
-            if left.value == right.value {
-                return left.key < right.key
-            }
-            return left.value < right.value
-        })?.key else {
-            return targetOffset
-        }
-        return targetOffset - dominantOffset
     }
 
     static func frequency(

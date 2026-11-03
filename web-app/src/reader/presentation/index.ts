@@ -1,5 +1,6 @@
 export * from "./cantorGuideTracking.ts";
 export * from "./officeHeadingTranslation.ts";
+export * from "./officeRubrics.ts";
 export * from "./officeTextPresentation.ts";
 export * from "./outline.ts";
 export * from "./presentation.ts";

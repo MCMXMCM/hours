@@ -292,7 +292,7 @@ private struct ChantGuideLessonView: View {
     private func select(_ example: ChantGuideExample) {
         hasPresentedControls = true
         selectedID = example.id
-        playback.prepare(score: variant(example).score, pitchReference: example.pitchReference)
+        playback.prepare(score: variant(example).score)
     }
 
     private func updateTarget(_ document: ChantGuideDocument, reason: ChantGuideViewport.Reason) {

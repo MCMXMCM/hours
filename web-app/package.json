@@ -16,7 +16,7 @@
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@sqlite.org/sqlite-wasm": "^3.53.4-build2",
-    "gabc-parser": "github:MCMXMCM/gabc-parser#0.8.0",
+    "gabc-parser": "github:MCMXMCM/gabc-parser#0.8.1",
     "lucide-react": "^0.544.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

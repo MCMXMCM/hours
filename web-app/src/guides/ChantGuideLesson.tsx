@@ -9,7 +9,6 @@ import {
 import { usePlayback } from "@/cantor/usePlayback.ts";
 import {
   ChantGuideDocuments,
-  ChantGuideExamples,
   ChantGuideViewport,
   type ChantGuideViewportReason,
   type ChantGuideBlock,
@@ -100,10 +99,7 @@ export function ChantGuideLesson({
       setHasPresentedControls(true);
       selected.current = example.id;
       setSelectedID(example.id);
-      playback.prepare(
-        version.score,
-        ChantGuideExamples.pitchReference(example),
-      );
+      playback.prepare(version.score);
     },
     [playback, variant],
   );

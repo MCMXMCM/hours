@@ -7,14 +7,14 @@
   "databases": [
     {
       "path": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "sha256": "6a7fccc037c06e52194c8e7bbaff4b9a6b0059e281eafc909b8cc03dfc330f69",
+      "sha256": "8af58070350b0d7463093ba4ddcc5ed1dae67f527aaca6710dfc433bdd6d7ce5",
       "corpusVersion": "perennial-2025-2284-reviewed-2025-2036-v1-corrected-6bed71ea3d7e",
-      "createdAt": "2026-10-14T20:57:50.113Z",
+      "createdAt": "2026-11-02T17:15:00.453Z",
       "rubrics": "Rubrics 1960 - 1960"
     },
     {
       "path": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "sha256": "69eba1a427c7c67a9b86d9221f996ccfa974fea3e76563ebcd696f66d5b5d5d3",
+      "sha256": "97857bbe7b813b0b01fea97944260b894addb4eb3767d87e270831d79d575b74",
       "corpusVersion": "roman-1954-2025-01-01-2284-12-31-source-v22-corrected-5c59b5e65a5f",
       "createdAt": "2026-09-07T00:00:00Z",
       "rubrics": "Divino Afflatu - 1954"
@@ -22,14 +22,14 @@
   ],
   "sharedCatalog": {
     "path": "HoursApp/Resources/SharedOffice/office-resources.sqlite",
-    "sha256": "072b9a21256d2b829d21e953b36bb57128d7ee359468c1da206d202f65f066c2"
+    "sha256": "6e37b1cec8f7834c41767d4919bfd49a2a8a4b2b478f1bbe7f379a3fc046b7d2"
   },
   "scoreCount": 33,
   "fileCount": 18,
   "entries": [
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 49,
+      "scoreRow": 48,
       "contentScoreID": "reference-833dde7ccf3f087c",
       "file": "gabc/b11749bc7ee8d62eea538ca44f4e333f6bd314623ac0898b954e91fee2931134.gabc",
       "incipit": "Beáta Mater et intácta Virgo María, gloriósa Regína mundi, intercéde pro nobis ad Dóminum",
@@ -43,7 +43,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 386,
+      "scoreRow": 387,
       "contentScoreID": "reference-fdae0fb716ea6b9d",
       "file": "gabc/e7b222356febac810d6783b12bcb1c462c9bc72d415a631e15164ac92286e969.gabc",
       "incipit": "Quis es tu, * qui venísti ad me curáre vúlnera mea? Ego sum Apóstolus Christi: nihil in me dúbites, fília",
@@ -57,7 +57,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 1100,
+      "scoreRow": 1115,
       "contentScoreID": "reference-e85bc3aa634bdea8",
       "file": "gabc/18749ea2cf3de90a360368ffe61c71f915a25e71d9eac95c14bae493be6f4112.gabc",
       "incipit": "Ipse Iesus erat incípiens quasi annórum trigínta, ut putabátur, fílius Ioseph, allelúia",
@@ -71,7 +71,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 1520,
+      "scoreRow": 1534,
       "contentScoreID": "reference-80f99eca95758676",
       "file": "gabc/f535ff65be618511568f5124167d033b06c7d9f419d4dc08f52a8ca7d7b0dd17.gabc",
       "incipit": "Læva eius sub cápite meo, et déxtera illíus amplexábitur me, allelúia",
@@ -85,7 +85,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 2069,
+      "scoreRow": 2095,
       "contentScoreID": "reference-963a7326682b642e",
       "file": "gabc/3677b615f2815d0f3646c294b7691eafe691b7fa60e37a4d409b06e02432ceb0.gabc",
       "incipit": "Læva eius * sub cápite meo, et déxtera illíus amplexábitur me, allelúia",
@@ -99,7 +99,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 2661,
+      "scoreRow": 2693,
       "contentScoreID": "reference-0aa8bfe8ad09dbf7",
       "file": "gabc/fd5425da2468a27584d648d71c7365f4077b1337a1680e38baf41c307d4c1d90.gabc",
       "incipit": "Mercenárius autem, * cuius non sunt oves própriæ, videt lupum veniéntem, et dimíttit oves, et fugit, et lupus rapit, et dispérgit oves, allelúia",
@@ -113,7 +113,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 5924,
+      "scoreRow": 5930,
       "contentScoreID": "reference-0aa8bfe8ad09dbf7",
       "file": "gabc/fd5425da2468a27584d648d71c7365f4077b1337a1680e38baf41c307d4c1d90.gabc",
       "incipit": "Mercenárius autem, cuius non sunt oves própriæ, videt lupum veniéntem, et dimíttit oves, et fugit, et lupus rapit, et dispérgit oves, allelúia",
@@ -127,7 +127,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 6008,
+      "scoreRow": 6013,
       "contentScoreID": "reference-2be341f1b073276b",
       "file": "gabc/0d16abca71ae8949dd7626e554280d03567b46d65f52961f3811a6cb86626c30.gabc",
       "incipit": "Ecce véniet Rex Dóminus terræ, et ipse áuferet iugum captivitátis nostræ",
@@ -141,7 +141,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 6013,
+      "scoreRow": 6018,
       "contentScoreID": "reference-963a7326682b642e",
       "file": "gabc/3677b615f2815d0f3646c294b7691eafe691b7fa60e37a4d409b06e02432ceb0.gabc",
       "incipit": "Læva eius sub cápite meo, et déxtera illíus amplexábitur me, allelúia",
@@ -155,7 +155,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 8900,
+      "scoreRow": 8917,
       "contentScoreID": "reference-e85bc3aa634bdea8",
       "file": "gabc/18749ea2cf3de90a360368ffe61c71f915a25e71d9eac95c14bae493be6f4112.gabc",
       "incipit": "Ipse Iesus * erat incípiens quasi annórum trigínta, ut putabátur, fílius Ioseph, allelúia",
@@ -169,7 +169,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 9631,
+      "scoreRow": 9645,
       "contentScoreID": "reference-660069d1956277b4",
       "file": "gabc/a03ed2aa6e0184b37283c95d3454f8606ec0221a2b0889378c385d37ca45b2fb.gabc",
       "incipit": "Beáta Mater * et intácta Virgo María, gloriósa Regína mundi, intercéde pro nobis ad Dóminum. Allelúia",
@@ -183,7 +183,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 9764,
+      "scoreRow": 9777,
       "contentScoreID": "reference-660069d1956277b4",
       "file": "gabc/a03ed2aa6e0184b37283c95d3454f8606ec0221a2b0889378c385d37ca45b2fb.gabc",
       "incipit": "Beáta Mater et intácta Virgo María, gloriósa Regína mundi, intercéde pro nobis ad Dóminum. Allelúia",
@@ -197,7 +197,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 9963,
+      "scoreRow": 9976,
       "contentScoreID": "reference-fdae0fb716ea6b9d",
       "file": "gabc/e7b222356febac810d6783b12bcb1c462c9bc72d415a631e15164ac92286e969.gabc",
       "incipit": "Quis es tu, qui venísti ad me curáre vúlnera mea? Ego sum Apóstolus Christi: nihil in me dúbites, fília",
@@ -211,7 +211,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 10264,
+      "scoreRow": 10276,
       "contentScoreID": "reference-833dde7ccf3f087c",
       "file": "gabc/b11749bc7ee8d62eea538ca44f4e333f6bd314623ac0898b954e91fee2931134.gabc",
       "incipit": "Beáta Mater * et intácta Virgo María, gloriósa Regína mundi, intercéde pro nobis ad Dóminum",
@@ -225,7 +225,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 10756,
+      "scoreRow": 10771,
       "contentScoreID": "reference-80f99eca95758676",
       "file": "gabc/f535ff65be618511568f5124167d033b06c7d9f419d4dc08f52a8ca7d7b0dd17.gabc",
       "incipit": "Læva eius * sub cápite meo, et déxtera illíus amplexábitur me, allelúia",
@@ -239,7 +239,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/base-office.sqlite",
-      "scoreRow": 11670,
+      "scoreRow": 11674,
       "contentScoreID": "reference-2be341f1b073276b",
       "file": "gabc/0d16abca71ae8949dd7626e554280d03567b46d65f52961f3811a6cb86626c30.gabc",
       "incipit": "Ecce véniet Rex * Dóminus terræ, et ipse áuferet iugum captivitátis nostræ",
@@ -253,7 +253,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 46,
+      "scoreRow": 45,
       "contentScoreID": "reference-833dde7ccf3f087c",
       "file": "gabc/b11749bc7ee8d62eea538ca44f4e333f6bd314623ac0898b954e91fee2931134.gabc",
       "incipit": "Beáta Mater et intácta Virgo María, gloriósa Regína mundi, intercéde pro nobis ad Dóminum",
@@ -267,7 +267,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 1888,
+      "scoreRow": 1897,
       "contentScoreID": "reference-ac2e494216d101a9",
       "file": "gabc/e5746641fa4ccaa31120930af0a111366be9ef6ce6cc22f45275f18c5ccd5b11.gabc",
       "incipit": "Anulo suo subarrhávit me Dóminus meus Jesus Christus, et tamquam sponsam decorávit me coróna",
@@ -281,7 +281,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 3040,
+      "scoreRow": 3061,
       "contentScoreID": "reference-ebaab375c0f380f2",
       "file": "gabc/4588d77c02aa6dd3318b95263e1f28995ef33118ac86b06c693ed4c6288d6763.gabc",
       "incipit": "Amen dico vobis, quia plorábitis et flébitis vos: mundus autem gaudébit, vos vero contristabímini, sed tristítia vestra convertétur in gáudium, allelúja",
@@ -295,7 +295,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 5274,
+      "scoreRow": 5302,
       "contentScoreID": "reference-f0477ab3f1f6a078",
       "file": "gabc/2b13b2c0cb7d99a35a9dd6f7ccf30e89fd0639a6148d0ef7cf3030437ce0964d.gabc",
       "incipit": "Dómine, si fuísses hic, Lázarus non esset mórtuus: ecce jam fœtet quatriduánus in monuménto",
@@ -309,7 +309,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 5418,
+      "scoreRow": 5441,
       "contentScoreID": "reference-0c338924742691cb",
       "file": "gabc/8cd262e07f01362c0a729aa5880e1413ef0815dc73cc9ab931cd0d3b2ca39d66.gabc",
       "incipit": "Sancta María, succúrre míseris, juva pusillánimes, réfove flébiles, ora pro pópulo, intérveni pro clero, intercéde pro devóto femíneo sexu: séntiant omnes tuum juvámen, quicúmque célebrant tuam sanctam festivitátem",
@@ -323,7 +323,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 6814,
+      "scoreRow": 6840,
       "contentScoreID": "reference-ab279849311327cf",
       "file": "gabc/b6e94b44aade3767bbd5f66f441f9e7f08b25c38cbb8c544cd60e3a3dddcb713.gabc",
       "incipit": "Anulo suo subarrhávit me Dóminus meus Jesus Christus, et tamquam sponsam decorávit me coróna",
@@ -337,7 +337,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 7731,
+      "scoreRow": 7748,
       "contentScoreID": "reference-e403040727ec8ee0",
       "file": "gabc/deaf00821325c83487d35bf9a6650c424d035c13b570dd5bebac14d4c1bda18f.gabc",
       "incipit": "Quis es tu, qui venísti ad me curáre vúlnera mea? Ego sum Apóstolus Christi: nihil in me dúbites, fília",
@@ -351,7 +351,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 9004,
+      "scoreRow": 9037,
       "contentScoreID": "reference-fdae0fb716ea6b9d",
       "file": "gabc/e7b222356febac810d6783b12bcb1c462c9bc72d415a631e15164ac92286e969.gabc",
       "incipit": "Quis es tu, qui venísti ad me curáre vúlnera mea? Ego sum Apóstolus Christi: nihil in me dúbites, fília",
@@ -365,7 +365,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 10471,
+      "scoreRow": 10503,
       "contentScoreID": "reference-2b079b4bdf63032a",
       "file": "gabc/9f02b14750edf3dd48005ebe05dd3d54c78a486caf00dd10a6065afe1160556a.gabc",
       "incipit": "Dómine",
@@ -380,7 +380,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 10763,
+      "scoreRow": 10796,
       "contentScoreID": "reference-963a7326682b642e",
       "file": "gabc/3677b615f2815d0f3646c294b7691eafe691b7fa60e37a4d409b06e02432ceb0.gabc",
       "incipit": "Læva ejus sub cápite meo, et déxtera illíus amplexábitur me, allelúja",
@@ -394,7 +394,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 10794,
+      "scoreRow": 10828,
       "contentScoreID": "reference-660069d1956277b4",
       "file": "gabc/a03ed2aa6e0184b37283c95d3454f8606ec0221a2b0889378c385d37ca45b2fb.gabc",
       "incipit": "Beáta Mater et intácta Virgo María, gloriósa Regína mundi, intercéde pro nobis ad Dóminum. Allelúja",
@@ -408,7 +408,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 11418,
+      "scoreRow": 11456,
       "contentScoreID": "reference-80f99eca95758676",
       "file": "gabc/f535ff65be618511568f5124167d033b06c7d9f419d4dc08f52a8ca7d7b0dd17.gabc",
       "incipit": "Læva ejus sub cápite meo, et déxtera illíus amplexábitur me, allelúja",
@@ -422,7 +422,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 11671,
+      "scoreRow": 11710,
       "contentScoreID": "reference-2d8c42b24eaae7eb",
       "file": "gabc/d1b7c840e26134f789eded1d54e065738b7b148d6ddb61f8789e1c09b646ac8e.gabc",
       "incipit": "Dómine, si vis, potes me mundáre: et ait Jesus: Volo, mundáre",
@@ -436,7 +436,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 11853,
+      "scoreRow": 11891,
       "contentScoreID": "reference-905721534513b8fc",
       "file": "gabc/4f00a8b01f1dffc8efe5332dd2c7d9f101043650f85791a81b524ea4e96a72c9.gabc",
       "incipit": "Læva ejus sub cápite meo, et déxtera illíus amplexábitur me, allelúja",
@@ -450,7 +450,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 11918,
+      "scoreRow": 11955,
       "contentScoreID": "reference-2b079b4bdf63032a",
       "file": "gabc/9f02b14750edf3dd48005ebe05dd3d54c78a486caf00dd10a6065afe1160556a.gabc",
       "incipit": "Dómine",
@@ -465,7 +465,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 12527,
+      "scoreRow": 12570,
       "contentScoreID": "reference-da5f2c57bbf6d90f",
       "file": "gabc/e1420b6c8d93689139b34e007ab1c08dcc03cead818e5c303de103d6162b58fb.gabc",
       "incipit": "Beáta quæ credidísti, quæ dicta sunt tibi a Dómino: cum Christo regnas in ætérnum",
@@ -479,7 +479,7 @@
     },
     {
       "database": "HoursApp/Resources/SharedOffice/roman-1954-office.sqlite",
-      "scoreRow": 13293,
+      "scoreRow": 13334,
       "contentScoreID": "reference-e85bc3aa634bdea8",
       "file": "gabc/18749ea2cf3de90a360368ffe61c71f915a25e71d9eac95c14bae493be6f4112.gabc",
       "incipit": "Ipse Jesus erat incípiens quasi annórum trigínta, ut putabátur, fílius Joseph, allelúja",

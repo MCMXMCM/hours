@@ -24,10 +24,10 @@ license solely because a project or edition was consulted.
   The app does not include Exsurge JavaScript, a web view, or an Exsurge runtime
   font. The required MIT notice is bundled at
   `HoursApp/Resources/Exsurge-LICENSE.txt`.
-- **EB Garamond** — SIL Open Font License 1.1. Hours distributes the variable
-  font and its license under `HoursApp/Resources`, and gabc-parser carries a
-  copy of both.
-- **gabc-parser** — MIT, version 0.8.0 (https://github.com/MCMXMCM/gabc-parser).
+- **EB Garamond** — SIL Open Font License 1.1. Hours distributes the roman
+  and italic variable fonts and their license under `HoursApp/Resources`, and
+  gabc-parser carries a copy of each.
+- **gabc-parser** — MIT, version 0.8.1 (https://github.com/MCMXMCM/gabc-parser).
   Hours parses and engraves chant with its `GABCParser` and `GABCLayout`
   libraries, which hold the Exsurge-derived glyph geometry above, and on the
   web with its TypeScript package, which holds the same geometry.
@@ -43,7 +43,7 @@ license solely because a project or edition was consulted.
   under the Unlicense; the Roman 1954 edition's own chant from Divinum Officium
   is under its MIT license. Under GPL-3.0-only, the Roman 1960 corpus contains
   1,730 Nocturnale Romanum and 16 Vesperale Romanum transcriptions, and the
-  Roman 1954 corpus 1,344 Nocturnale Romanum, 17 Vesperale Romanum and 2
+  Roman 1954 corpus 1,347 Nocturnale Romanum, 17 Vesperale Romanum and 2
   Antiphonale Romanum transcriptions. Their exact editable GABC, provenance
   manifests, modification notices, and license are included under `Content`,
   `NOTICE.md`, and `LICENSE`.

@@ -713,6 +713,9 @@ function scoredVerseElements(
   return verses;
 }
 
+/** A verse's words, spaced as its lyric is spaced, each accented syllable
+ * between the emphasis markers and each preparatory one between the
+ * preparatory markers. */
 function pointedLyricText(
   elements: readonly GregorianNotationElement[],
 ): string {
@@ -734,12 +737,13 @@ function pointedLyricText(
     ) {
       result += " ";
     }
-    if (style === "accented") {
-      result += PsalmTextFormatter.emphasisStartMarker;
+    const markers = PsalmTextFormatter.markers(style);
+    if (markers !== null) {
+      result += markers.start;
     }
     result += text;
-    if (style === "accented") {
-      result += PsalmTextFormatter.emphasisEndMarker;
+    if (markers !== null) {
+      result += markers.end;
     }
     separatesFollowingLyric = isLyricMark;
   }
@@ -2396,6 +2400,7 @@ function withPlainOpening(text: string): string {
 export const OfficeReaderSectionBuilder = {
   compactContinuationSuffix,
   displaySections,
+  pointedLyricText,
   writingOutSungWords,
   settingEnglishOfSungParts,
   isAntiphon,

@@ -1,4 +1,8 @@
 import { Fragment, type ReactNode } from "react";
+import {
+  OfficeRubrics,
+  type RubricRange,
+} from "@/reader/presentation/officeRubrics.ts";
 
 export interface TextRange {
   readonly lowerBound: number;
@@ -15,8 +19,19 @@ export interface OfficeTextProps {
   secondary?: boolean;
   /** Ranges of `text`, in UTF-16 units, set in the semibold weight. */
   emphasizedRanges?: readonly TextRange[];
+  /** Ranges of `text`, in UTF-16 units, set in the italic: a pointed verse's
+   * preparatory syllables. */
+  preparatoryRanges?: readonly TextRange[];
+  /** Whether the text is a rubric's own part (`OfficeRubrics.isRubric`). */
+  rubric?: boolean;
   label?: string;
   className?: string;
+}
+
+/** A range of the text and how it is set: an accented syllable or a
+ * preparatory one. */
+interface StyledRange extends TextRange {
+  readonly kind: "accent" | "preparatory";
 }
 
 /** The marks that open a line: a versicle's and a response's, a short
@@ -49,12 +64,13 @@ function withSigns(text: string, key: string): ReactNode {
 }
 
 /** A stretch of the text, from `start` to `end` (UTF-16 offsets), with its
- * emphasized syllables in semibold and its signs coloured. */
+ * emphasized syllables in semibold, its preparatory ones in the italic, and
+ * its signs coloured. */
 function decorated(
   text: string,
   start: number,
   end: number,
-  ranges: readonly TextRange[],
+  ranges: readonly StyledRange[],
 ): ReactNode[] {
   const pieces: ReactNode[] = [];
   let position = start;
@@ -71,10 +87,17 @@ function decorated(
         </Fragment>,
       );
     }
+    const content = plain(lower, upper, `e${start}-${index}`);
     pieces.push(
-      <strong key={`e${start}-${index}`} className="office-text__emphasis">
-        {plain(lower, upper, `e${start}-${index}`)}
-      </strong>,
+      range.kind === "accent" ? (
+        <strong key={`e${start}-${index}`} className="office-text__emphasis">
+          {content}
+        </strong>
+      ) : (
+        <em key={`e${start}-${index}`} className="office-text__preparatory">
+          {content}
+        </em>
+      ),
     );
     position = upper;
   });
@@ -88,12 +111,40 @@ function decorated(
   return pieces;
 }
 
+/** A stretch of the text, from `start` to `end`, decorated, with its
+ * rubrics in red italic. */
+function rubricated(
+  text: string,
+  start: number,
+  end: number,
+  ranges: readonly StyledRange[],
+  rubrics: readonly RubricRange[],
+): ReactNode[] {
+  const pieces: ReactNode[] = [];
+  let position = start;
+  for (const rubric of rubrics) {
+    const lower = Math.max(position, rubric.lowerBound);
+    const upper = Math.min(end, rubric.upperBound);
+    if (upper <= lower) continue;
+    if (lower > position)
+      pieces.push(...decorated(text, position, lower, ranges));
+    pieces.push(
+      <span key={`u${lower}`} className="office-text__rubric">
+        {decorated(text, lower, upper, ranges)}
+      </span>,
+    );
+    position = upper;
+  }
+  if (position < end) pieces.push(...decorated(text, position, end, ranges));
+  return pieces;
+}
+
 /**
  * A passage of the Office, selectable as ordinary text, a line to a block,
- * every line at the left edge. The type scales with the reader size. The
- * marks a breviary prints in red are red: a versicle's and a response's, an
+ * every line at the left edge. The type scales with the reader size. What a
+ * breviary prints in red is red: a versicle's mark and a response's, an
  * antiphon's, the cross and the signs of the chant's pauses, each before
- * its words.
+ * its words; and the rubrics, in italic.
  */
 export function OfficeText({
   text,
@@ -102,10 +153,19 @@ export function OfficeText({
   italic = false,
   secondary = false,
   emphasizedRanges = [],
+  preparatoryRanges = [],
+  rubric = false,
   label,
   className,
 }: OfficeTextProps) {
-  const ranges = [...emphasizedRanges]
+  const rubrics = OfficeRubrics.ranges(text, rubric);
+  const ranges: StyledRange[] = [
+    ...emphasizedRanges.map((range) => ({ ...range, kind: "accent" as const })),
+    ...preparatoryRanges.map((range) => ({
+      ...range,
+      kind: "preparatory" as const,
+    })),
+  ]
     .filter((range) => range.upperBound > range.lowerBound)
     .sort((a, b) => a.lowerBound - b.lowerBound);
 
@@ -126,7 +186,7 @@ export function OfficeText({
       lines.push(
         <span key={`l${start}`} className="office-text__line">
           {mark !== null && <span className="office-text__mark">{mark}</span>}
-          {decorated(text, markEnd, end, ranges)}
+          {rubricated(text, markEnd, end, ranges, rubrics)}
         </span>,
       );
     }

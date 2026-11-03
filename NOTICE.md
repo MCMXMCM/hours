@@ -7,7 +7,7 @@ only. It comes with absolutely no warranty. You may redistribute and modify it
 under the terms in `LICENSE`.
 
 This repository is the corresponding source of the Hours app distributed on
-the App Store. This revision is the source of Hours 1.2.0 (build 65), and the
+the App Store. This revision is the source of Hours 1.2.2 (build 71), and the
 databases under `HoursApp/Resources/SharedOffice` and
 `HoursApp/Resources/Missal` are the ones that build contains. It also holds
 the source of the Hours web app as it is released at
@@ -19,16 +19,16 @@ to these notices.
 
 ## GPL chant transcriptions
 
-The bundled databases contain 3,109 chant scores from three collections
+The bundled databases contain 3,112 chant scores from three collections
 published under `GPL-3.0-only`: 1,746 in the Roman 1960 database,
-`HoursApp/Resources/SharedOffice/base-office.sqlite`, compiled on 2026-10-14,
-and 1,363 in the Roman 1954 database,
-`HoursApp/Resources/SharedOffice/roman-1954-office.sqlite`, compiled on
-2026-10-25. The Missals and the Kyriale under `HoursApp/Resources/Missal`
-contain none: their chant is from GregoBase, under CC0.
+`HoursApp/Resources/SharedOffice/base-office.sqlite`, and 1,366 in the Roman
+1954 database, `HoursApp/Resources/SharedOffice/roman-1954-office.sqlite`,
+both compiled on 2026-11-02. The Missals and the Kyriale under
+`HoursApp/Resources/Missal` contain none: their chant is from GregoBase, under
+CC0.
 
 The editable GABC of every one of these scores, exactly as the app stores it,
-is reproduced under `Content`, one file for each distinct transcription (2,567
+is reproduced under `Content`, one file for each distinct transcription (2,570
 files). The manifest alongside each export records, for every covered score,
 its database and row, its own identifier, its source URL, the recorded
 upstream checksum, the GABC checksum, any modification the app records, and
@@ -41,8 +41,8 @@ a score.
   `https://github.com/Nocturnale-Romanum/nocturnale-romanum`
 - Pinned upstream revision:
   `84ce1514306be54bf4e693c9e8aa3bfd5e5aa3f2`
-- 3,074 scores, 1,730 in the Roman 1960 database and 1,344 in the Roman 1954
-  database, reproduced in 2,547 files under `Content/Nocturnale-Romanum/gabc`
+- 3,077 scores, 1,730 in the Roman 1960 database and 1,347 in the Roman 1954
+  database, reproduced in 2,550 files under `Content/Nocturnale-Romanum/gabc`
 
 Hours has modified these transcriptions. None is distributed exactly as it is
 published upstream.
@@ -67,12 +67,14 @@ In the Roman 1960 database:
   under the transcription's notes, one syllable to each group of notes.
 
 In the Roman 1954 database, added between 2026-10-11 and 2026-10-15 from the
-pinned revision, each with its header replaced by a `name:` line and the NABC
-layer, the Euouae, and presentational markup removed:
+pinned revision unless noted below, each with its header replaced by a `name:`
+line and the NABC layer, the Euouae, and presentational markup removed:
 
-- 540 antiphons. 114 of them are only the opening that is intoned before the
-  psalm, as far as the words the breviary prints there. 41 are the same
-  transcriptions as scores of the Roman 1960 database.
+- 543 antiphons. 117 of them are only the opening that is intoned before the
+  psalm, as far as the words the breviary prints there; 3 of these, the
+  Allelúja intoned before each nocturn of Matins in Paschal Time, were added
+  on 2026-11-02. 41 are the same transcriptions as scores of the Roman 1960
+  database.
 - 722 responsories of Matins, each sung over its respond, its verse and the
   repeat, and over the Gloria Patri where the breviary says it: 23 are
   without the Gloria Patri the piece sets, which is not said there. The

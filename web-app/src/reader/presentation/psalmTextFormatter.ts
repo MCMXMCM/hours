@@ -1,8 +1,8 @@
+import type { GregorianLyricStyle } from "@/core/notation";
 import {
   characterCount,
   characters,
   dropLast,
-  folding,
   hasSuffix,
   isLetter,
   isNumber,
@@ -29,37 +29,39 @@ export interface PsalmTextLine {
   readonly latin: string;
   readonly english: string | null;
   /**
+   * The syllables sung to a cadence's accented notes, set in heavy type.
    * Swift's `[Range<String.Index>]`: ranges of `latin`, in the UTF-16 offsets
    * `String.prototype.slice` takes.
    */
   readonly emphasizedRanges: readonly StringRange[];
+  /**
+   * The syllables sung to the notes preparatory to an accent, set in italics
+   * as the Liber Usualis sets them; ranges as `emphasizedRanges`.
+   */
+  readonly preparatoryRanges: readonly StringRange[];
 }
 
 const missingTranslationPlaceholder = "\u{2063}";
 const emphasisStartMarker = "\u{F0000}";
 const emphasisEndMarker = "\u{F0001}";
+const preparatoryStartMarker = "\u{F0002}";
+const preparatoryEndMarker = "\u{F0003}";
 
-const latinDiphthongs: ReadonlySet<string> = new Set(["ae", "au", "oe"]);
-const inseparableConsonantPairs: ReadonlySet<string> = new Set([
-  "bl",
-  "br",
-  "ch",
-  "cl",
-  "cr",
-  "dr",
-  "fl",
-  "fr",
-  "gl",
-  "gn",
-  "gr",
-  "gu",
-  "ph",
-  "pl",
-  "pr",
-  "qu",
-  "th",
-  "tr",
-]);
+/** The markers around a syllable of the style in pointed text: an accented
+ * syllable's, a preparatory one's, or none. */
+function markers(
+  style: GregorianLyricStyle,
+): { start: string; end: string } | null {
+  switch (style) {
+    case "accented":
+      return { start: emphasisStartMarker, end: emphasisEndMarker };
+    case "preparatory":
+      return { start: preparatoryStartMarker, end: preparatoryEndMarker };
+    case "regular":
+    case "rubric":
+      return null;
+  }
+}
 
 /**
  * A string as Swift indexes it: its Characters, and the UTF-16 offset at which
@@ -131,10 +133,8 @@ function lines(
       number,
       latin: pointedLatin.text,
       english: lineEnglish,
-      emphasizedRanges:
-        pointedLatin.ranges.length === 0
-          ? emphasizedSyllableRanges(pointedLatin.text)
-          : pointedLatin.ranges,
+      emphasizedRanges: pointedLatin.accents,
+      preparatoryRanges: pointedLatin.preparatory,
     };
   });
 }
@@ -169,38 +169,64 @@ function versesOfLines(values: string[]): string[] {
 }
 
 function removingEmphasisMarkers(value: string): string {
-  return replacingOccurrences(
-    replacingOccurrences(value, emphasisStartMarker, ""),
+  return [
+    emphasisStartMarker,
     emphasisEndMarker,
-    "",
-  );
+    preparatoryStartMarker,
+    preparatoryEndMarker,
+  ].reduce((text, marker) => replacingOccurrences(text, marker, ""), value);
 }
 
+/** The text without its markers, and the ranges of its accented and its
+ * preparatory syllables. Syllables of one kind that meet are one range
+ * (dex-tris), so that they are set as one word. */
 function extractingEmphasis(value: string): {
   text: string;
-  ranges: StringRange[];
+  accents: StringRange[];
+  preparatory: StringRange[];
 } {
   let text = "";
-  const rangeOffsets: CharacterRange[] = [];
-  let rangeStart: number | null = null;
+  const accentOffsets: CharacterRange[] = [];
+  const preparatoryOffsets: CharacterRange[] = [];
+  let accentStart: number | null = null;
+  let preparatoryStart: number | null = null;
+
+  function close(start: number | null, offsets: CharacterRange[]): void {
+    const count = characterCount(text);
+    if (start === null || start >= count) return;
+    const last = offsets.length > 0 ? offsets[offsets.length - 1] : null;
+    if (last !== null && last.upperBound === start) {
+      offsets[offsets.length - 1] = {
+        lowerBound: last.lowerBound,
+        upperBound: count,
+      };
+    } else {
+      offsets.push({ lowerBound: start, upperBound: count });
+    }
+  }
 
   for (const character of characters(value)) {
     if (character === emphasisStartMarker) {
-      rangeStart = characterCount(text);
+      accentStart = characterCount(text);
     } else if (character === emphasisEndMarker) {
-      const count = characterCount(text);
-      if (rangeStart !== null && rangeStart < count) {
-        rangeOffsets.push({ lowerBound: rangeStart, upperBound: count });
-      }
-      rangeStart = null;
+      close(accentStart, accentOffsets);
+      accentStart = null;
+    } else if (character === preparatoryStartMarker) {
+      preparatoryStart = characterCount(text);
+    } else if (character === preparatoryEndMarker) {
+      close(preparatoryStart, preparatoryOffsets);
+      preparatoryStart = null;
     } else {
       text += character;
     }
   }
 
   const view = characterView(text);
-  const ranges = rangeOffsets.map((offset) => stringRange(view, offset));
-  return { text, ranges };
+  return {
+    text,
+    accents: accentOffsets.map((offset) => stringRange(view, offset)),
+    preparatory: preparatoryOffsets.map((offset) => stringRange(view, offset)),
+  };
 }
 
 function scriptureVerseNumber(value: string): number | null {
@@ -218,191 +244,6 @@ function scriptureVerseNumber(value: string): number | null {
     return null;
   }
   return swiftInt(parts[1]);
-}
-
-function emphasizedSyllableRanges(value: string): StringRange[] {
-  // Point the prose text like the corresponding psalm-tone score:
-  // emphasize the lexical accent nearest each half-verse cadence.
-  // Liturgical Latin marks polysyllabic stress with an acute accent;
-  // unmarked endings fall back to the natural penultimate syllable.
-  const view = characterView(value);
-  const mediants: number[] = [];
-  for (let index = 0; index < view.characters.length; index += 1) {
-    if (view.characters[index] === "*") mediants.push(index);
-  }
-  if (mediants.length === 0) return [];
-
-  const ranges: CharacterRange[] = [];
-  let segmentStart = 0;
-  for (const mediant of mediants) {
-    const range = finalAccentRange(view, {
-      lowerBound: segmentStart,
-      upperBound: mediant,
-    });
-    if (range !== null) {
-      ranges.push(range);
-    }
-    segmentStart = mediant + 1;
-  }
-  const range = finalAccentRange(view, {
-    lowerBound: segmentStart,
-    upperBound: view.characters.length,
-  });
-  if (range !== null) {
-    ranges.push(range);
-  }
-  return ranges.map((characterRange) => stringRange(view, characterRange));
-}
-
-function finalAccentRange(
-  value: CharacterView,
-  segment: CharacterRange,
-): CharacterRange | null {
-  let finalLetter = -1;
-  for (
-    let index = segment.upperBound - 1;
-    index >= segment.lowerBound;
-    index -= 1
-  ) {
-    if (isLetter(value.characters[index])) {
-      finalLetter = index;
-      break;
-    }
-  }
-  if (finalLetter < 0) {
-    return null;
-  }
-
-  let wordStart = finalLetter;
-  while (wordStart > segment.lowerBound) {
-    const previous = wordStart - 1;
-    if (!isLetter(value.characters[previous])) break;
-    wordStart = previous;
-  }
-  const wordEnd = finalLetter + 1;
-  const wordRange: CharacterRange = {
-    lowerBound: wordStart,
-    upperBound: wordEnd,
-  };
-  const nuclei = vowelNuclei(value, wordRange);
-  if (nuclei.length === 0) return wordRange;
-
-  const firstAccented = nuclei.findIndex((nucleus) =>
-    containsAcuteAccent(
-      value.characters.slice(nucleus.lowerBound, nucleus.upperBound).join(""),
-    ),
-  );
-  const accentedNucleus =
-    firstAccented >= 0 ? firstAccented : Math.max(0, nuclei.length - 2);
-  const lowerBound =
-    accentedNucleus === 0
-      ? wordRange.lowerBound
-      : syllableBoundary(
-          value,
-          nuclei[accentedNucleus - 1],
-          nuclei[accentedNucleus],
-        );
-  const upperBound =
-    accentedNucleus === nuclei.length - 1
-      ? wordRange.upperBound
-      : syllableBoundary(
-          value,
-          nuclei[accentedNucleus],
-          nuclei[accentedNucleus + 1],
-        );
-  return { lowerBound, upperBound };
-}
-
-function vowelNuclei(
-  value: CharacterView,
-  wordRange: CharacterRange,
-): CharacterRange[] {
-  const result: CharacterRange[] = [];
-  let index = wordRange.lowerBound;
-
-  while (index < wordRange.upperBound) {
-    const character = value.characters[index];
-    if (!(
-      isLatinVowel(character) && !isConsonantalVowel(value, index, wordRange)
-    )) {
-      index += 1;
-      continue;
-    }
-
-    let upperBound = index + 1;
-    if (upperBound < wordRange.upperBound) {
-      const pair =
-        unaccentedLowercase(character) +
-        unaccentedLowercase(value.characters[upperBound]);
-      if (latinDiphthongs.has(pair)) {
-        upperBound += 1;
-      }
-    }
-    result.push({ lowerBound: index, upperBound });
-    index = upperBound;
-  }
-  return result;
-}
-
-function isConsonantalVowel(
-  value: CharacterView,
-  index: number,
-  wordRange: CharacterRange,
-): boolean {
-  const vowel = unaccentedLowercase(value.characters[index]);
-  const previous =
-    index > wordRange.lowerBound
-      ? unaccentedLowercase(value.characters[index - 1])
-      : null;
-  const nextIndex = index + 1;
-  const nextIsVowel =
-    nextIndex < wordRange.upperBound &&
-    isLatinVowel(value.characters[nextIndex]);
-
-  if (vowel === "i" && nextIsVowel) {
-    return (
-      index === wordRange.lowerBound ||
-      (previous !== null &&
-        ["a", "e", "i", "o", "u", "y", "æ", "œ"].includes(previous))
-    );
-  }
-  return (
-    vowel === "u" && (previous === "q" || (previous === "g" && nextIsVowel))
-  );
-}
-
-function syllableBoundary(
-  value: CharacterView,
-  leftNucleus: CharacterRange,
-  rightNucleus: CharacterRange,
-): number {
-  const consonantIndices: number[] = [];
-  for (
-    let index = leftNucleus.upperBound;
-    index < rightNucleus.lowerBound;
-    index += 1
-  ) {
-    consonantIndices.push(index);
-  }
-  if (consonantIndices.length === 0) {
-    return rightNucleus.lowerBound;
-  }
-  if (!(consonantIndices.length > 1)) {
-    return consonantIndices[0];
-  }
-
-  const lastPair = consonantIndices
-    .slice(-2)
-    .map((index) => unaccentedLowercase(value.characters[index]))
-    .join("");
-  if (inseparableConsonantPairs.has(lastPair)) {
-    return lastPairStart(consonantIndices);
-  }
-  return consonantIndices[consonantIndices.length - 1];
-}
-
-function lastPairStart(indices: readonly number[]): number {
-  return indices[indices.length - 2];
 }
 
 function paragraphs(value: string): string[] {
@@ -552,39 +393,17 @@ function versePrefix(value: string): VersePrefix {
   };
 }
 
-// Swift's private `Character` extension.
-
-function isLatinVowel(character: string): boolean {
-  return ["a", "e", "i", "o", "u", "y", "æ", "œ"].includes(
-    unaccentedLowercase(character),
-  );
-}
-
-function unaccentedLowercase(character: string): string {
-  return folding(character, {
-    caseInsensitive: true,
-    diacriticInsensitive: true,
-  }).toLowerCase();
-}
-
-// Swift's private `Substring` extension.
-
-function containsAcuteAccent(substring: string): boolean {
-  return (
-    substring.includes("\u{301}") ||
-    substring.normalize("NFD").includes("\u{301}")
-  );
-}
-
 export const PsalmTextFormatter = {
   missingTranslationPlaceholder,
   emphasisStartMarker,
   emphasisEndMarker,
+  preparatoryStartMarker,
+  preparatoryEndMarker,
+  markers,
   lines,
   isSetVerseByLine,
   removingEmphasisMarkers,
   scriptureVerseNumber,
-  emphasizedSyllableRanges,
   scriptureParagraphs,
   strippingScriptureReference,
   strippingVersePrefix,

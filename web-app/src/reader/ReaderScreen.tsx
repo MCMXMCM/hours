@@ -655,6 +655,7 @@ export function Reader({
       if (eventID === undefined) return;
       automaticScrollTarget.current = null;
       setSelected({ score, sectionID: section.id });
+      playback.prepare(score);
       playback.play(score, eventID);
     },
     [playback],

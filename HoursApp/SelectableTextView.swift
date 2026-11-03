@@ -51,11 +51,16 @@ struct SelectableTextView: UIViewRepresentable {
     var foreground: Foreground = .primary
     var lineSpacing: CGFloat = 0
     var emphasizedRanges: [Range<String.Index>] = []
+    /// The preparatory syllables of a pointed verse, set in the italic.
+    var preparatoryRanges: [Range<String.Index>] = []
     var highlightsAsterisks = false
     /// Whether the marks a breviary prints in red are red: a versicle's and
     /// a response's, an antiphon's, the cross and the signs of the chant's
-    /// pauses, each before its words at the left edge.
+    /// pauses, each before its words at the left edge; and the rubrics among
+    /// the words (OfficeRubrics), in red italic.
     var marksRubrics = false
+    /// Whether the text is a rubric's own part (`OfficeRubrics.isRubric`).
+    var isRubric = false
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -206,11 +211,28 @@ struct SelectableTextView: UIViewRepresentable {
                 range: NSRange(range, in: configuration.text)
             )
         }
+        let italicBaseFont = UIFont(
+            name: "EBGaramond-Italic",
+            size: configuration.fontSize
+        ) ?? UIFont.italicSystemFont(ofSize: configuration.fontSize)
+        let italicFont = UIFontMetrics(forTextStyle: .body).scaledFont(
+            for: italicBaseFont,
+            compatibleWith: traitCollection
+        )
+        for range in configuration.preparatoryRanges {
+            result.addAttribute(
+                .font,
+                value: italicFont,
+                range: NSRange(range, in: configuration.text)
+            )
+        }
 
         if configuration.marksRubrics {
             Self.markRubrics(
                 in: result,
                 font: font,
+                italicFont: italicFont,
+                isRubric: configuration.isRubric,
                 color: configuration.foreground == .primary
                     ? MissalTypography.rubric
                     : MissalTypography.rubric.withAlphaComponent(0.78)
@@ -257,6 +279,8 @@ struct SelectableTextView: UIViewRepresentable {
     private static func markRubrics(
         in text: NSMutableAttributedString,
         font: UIFont,
+        italicFont: UIFont,
+        isRubric: Bool,
         color: UIColor
     ) {
         let string = text.string as NSString
@@ -292,6 +316,11 @@ struct SelectableTextView: UIViewRepresentable {
                 range = NSRange(location: NSMaxRange(found), length: string.length - NSMaxRange(found))
             }
         }
+        // In EB Garamond's italic, which an antiphon's slant is not added to.
+        for range in OfficeRubrics.ranges(in: text.string, isRubric: isRubric) {
+            text.addAttributes([.foregroundColor: color, .font: italicFont], range: range)
+            text.removeAttribute(.obliqueness, range: range)
+        }
     }
 
     private var configuration: Configuration {
@@ -302,8 +331,10 @@ struct SelectableTextView: UIViewRepresentable {
             foreground: foreground,
             lineSpacing: lineSpacing,
             emphasizedRanges: emphasizedRanges,
+            preparatoryRanges: preparatoryRanges,
             highlightsAsterisks: highlightsAsterisks,
             marksRubrics: marksRubrics,
+            isRubric: isRubric,
             dynamicTypeSize: dynamicTypeSize
         )
     }
@@ -333,8 +364,10 @@ struct SelectableTextView: UIViewRepresentable {
         let foreground: Foreground
         let lineSpacing: CGFloat
         let emphasizedRanges: [Range<String.Index>]
+        let preparatoryRanges: [Range<String.Index>]
         let highlightsAsterisks: Bool
         let marksRubrics: Bool
+        let isRubric: Bool
         let dynamicTypeSize: DynamicTypeSize
     }
 }

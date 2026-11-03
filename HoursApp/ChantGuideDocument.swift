@@ -45,7 +45,6 @@ nonisolated struct ChantGuideExample: Codable, Identifiable, Sendable {
     let caption: String
     let source: String
     let variants: [ChantGuideVariant]
-    var pitchReference: ChantScore { variants[0].score }
 }
 
 nonisolated struct ChantGuideVariant: Codable, Identifiable, Sendable {

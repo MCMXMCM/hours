@@ -464,40 +464,6 @@ export const CantorGuideSynthesizer = {
     return semitones;
   },
 
-  centeredTransposition(
-    events: readonly ChantEvent[],
-    targetOffset: number,
-    clef: GABCClef = GABCClefs.c3,
-  ): number {
-    const offsets = events.map((event) =>
-      CantorGuideSynthesizer.semitoneOffset(event, clef),
-    );
-    const counts = new Map<number, number>();
-    for (const offset of offsets) {
-      counts.set(offset, (counts.get(offset) ?? 0) + 1);
-    }
-    // `max(by:)`. The order is total, so the dictionary's own order, which
-    // Swift leaves unspecified, cannot change the result.
-    let dominant: { key: number; value: number } | null = null;
-    for (const [key, value] of counts) {
-      const right = { key, value };
-      if (dominant === null) {
-        dominant = right;
-        continue;
-      }
-      const left: { key: number; value: number } = dominant;
-      const areInIncreasingOrder =
-        left.value === right.value
-          ? left.key < right.key
-          : left.value < right.value;
-      if (areInIncreasingOrder) dominant = right;
-    }
-    if (dominant === null) {
-      return targetOffset;
-    }
-    return targetOffset - dominant.key;
-  },
-
   frequency(
     event: ChantEvent,
     transposition: number,

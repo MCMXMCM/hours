@@ -188,8 +188,8 @@ export function PrayerOptionsSheet({
           </div>
           <p className="form__footer">
             Choose the sampled harp, modeled organ, or simple pitch-pipe tone.
-            The reciting tone is placed at the selected schola pitch and
-            register.
+            Each chant is sung as it is written, its do at the selected schola
+            pitch and register.
           </p>
         </section>
 

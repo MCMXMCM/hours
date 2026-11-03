@@ -1,11 +1,11 @@
 GPL chant transcriptions
 
-Hours includes 3,109 chant scores from three collections published under the
+Hours includes 3,112 chant scores from three collections published under the
 GNU General Public License version 3 only (GPL-3.0-only): 1,746 in its Roman
-1960 edition and 1,363 in its Roman 1954 edition. The full license is
+1960 edition and 1,366 in its Roman 1954 edition. The full license is
 included as GPL-3.0.txt.
 
-Nocturnale Romanum (3,074 scores)
+Nocturnale Romanum (3,077 scores)
 Upstream repository:
 https://github.com/Nocturnale-Romanum/nocturnale-romanum
 Pinned revision:
@@ -23,7 +23,7 @@ https://github.com/xmarteo/Antiphonale_Romanum
 Pinned revision:
 988498498631e5463ea5ef638f23118bf23ebc54
 
-Hours has modified these transcriptions. Between 2026-07-24 and 2026-10-25
+Hours has modified these transcriptions. Between 2026-07-24 and 2026-11-02
 selected scores were given new headers; their adiastematic neume layer,
 Euouae, and presentational markup were removed; some were divided, shortened
 to the part the Office sings, or set to other words; and all were assigned

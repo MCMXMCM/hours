@@ -41,13 +41,18 @@ function resize(from, to, pixels) {
   );
 }
 
-// EB Garamond, as WOFF2. The variable weight axis is preserved.
-const font = readFileSync(join(resources, "EBGaramond-VariableFont_wght.ttf"));
+// EB Garamond, roman and italic, as WOFF2. The variable weight axis is
+// preserved.
 mkdirSync(join(publicDirectory, "fonts"), { recursive: true });
-writeFileSync(
-  join(publicDirectory, "fonts", "EBGaramond-VariableFont_wght.woff2"),
-  await wawoff2.compress(font),
-);
+for (const face of [
+  "EBGaramond-VariableFont_wght",
+  "EBGaramond-Italic-VariableFont_wght",
+]) {
+  writeFileSync(
+    join(publicDirectory, "fonts", `${face}.woff2`),
+    await wawoff2.compress(readFileSync(join(resources, `${face}.ttf`))),
+  );
+}
 copy(
   join(resources, "EBGaramond-OFL.txt"),
   join(publicDirectory, "fonts", "EBGaramond-OFL.txt"),

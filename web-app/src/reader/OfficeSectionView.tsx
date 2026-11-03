@@ -14,6 +14,7 @@ import {
   OfficeHeadingTranslation,
   OfficePrayerText,
   OfficeReaderSectionBuilder,
+  OfficeRubrics,
   PsalmTextFormatter,
 } from "./presentation/index.ts";
 import type { ScorePreparation } from "./readerScores.ts";
@@ -225,6 +226,7 @@ function PsalmTextSection({
                     fontSize={21}
                     lineSpacing={3}
                     emphasizedRanges={line.emphasizedRanges}
+                    preparatoryRanges={line.preparatoryRanges}
                     label={
                       line.number != null
                         ? `${line.number}. ${line.latin}`
@@ -316,6 +318,9 @@ export const OfficeSectionView = memo(function OfficeSectionView({
   // italic after its red "Ant.", at the size of the psalm's verses.
   const isAntiphonText =
     !showsScore && !isMass && OfficeReaderSectionBuilder.isAntiphon(section);
+  // A part that is a rubric in its whole, a citation or a direction, set as
+  // a breviary prints a rubric.
+  const isRubricText = !showsScore && OfficeRubrics.isRubric(section);
   const rubric = OfficeSections.userFacingRubric(section);
   // The heading's English: the edition's, or the usual English of a heading
   // it prints in Latin alone.
@@ -464,6 +469,7 @@ export const OfficeSectionView = memo(function OfficeSectionView({
             )}
             fontSize={isAntiphonText ? 21 : 23}
             lineSpacing={isAntiphonText ? 3 : 7}
+            rubric={isRubricText}
             className="office-section__prose"
           />
         </div>
@@ -480,6 +486,7 @@ export const OfficeSectionView = memo(function OfficeSectionView({
             )}
             fontSize={isAntiphonText ? 21 : 23}
             lineSpacing={isAntiphonText ? 3 : 7}
+            rubric={isRubricText}
             className="office-section__prose"
           />
         </div>
@@ -500,6 +507,7 @@ export const OfficeSectionView = memo(function OfficeSectionView({
             lineSpacing={isAntiphonText ? 3 : 5}
             italic={showsScore}
             secondary
+            rubric={isRubricText}
             className="office-section__english"
           />
         ))}
